@@ -12,7 +12,27 @@ export function truncate(text: string, maxLength: number) {
 }
 
 export function buildPublishedAt(range: string, index: number) {
-  if (range === "day") return `Today • ${String(7 + (index % 12)).padStart(2, "0")}:${index % 2 === 0 ? "15" : "45"}`
-  if (range === "week") return `This week • Day ${1 + (index % 7)}`
-  return `This month • Week ${1 + (index % 4)}`
+  const now = new Date()
+  
+  if (range === "day") {
+    return `Today • ${String(7 + (index % 12)).padStart(2, "0")}:${index % 2 === 0 ? "15" : "45"}`
+  }
+  
+  if (range === "week") {
+    // Go back 0-6 days from today
+    const daysBack = index % 7
+    const date = new Date(now)
+    date.setDate(date.getDate() - daysBack)
+    const hours = 8 + (index % 10)
+    const minutes = index % 2 === 0 ? "00" : "30"
+    return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • ${String(hours).padStart(2, "0")}:${minutes}`
+  }
+  
+  // month range
+  const daysBack = index % 28
+  const date = new Date(now)
+  date.setDate(date.getDate() - daysBack)
+  const hours = 8 + (index % 10)
+  const minutes = index % 2 === 0 ? "00" : "30"
+  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • ${String(hours).padStart(2, "0")}:${minutes}`
 }

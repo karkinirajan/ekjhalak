@@ -31,87 +31,65 @@ export function NewsCard({ item }: NewsCardProps) {
 
   return (
     <>
-      <Card className={cn("rounded-[28px] border shadow-none transition", palette.card)}>
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className={cn("rounded-full px-2.5 py-1", palette.badge)}>
+      <Card className={cn("border rounded-md transition-all duration-200", palette.card)}>
+        <CardHeader className="pb-1 pt-3 px-4">
+          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+            <Badge variant="outline" className={cn("rounded-md px-2 py-0.5 text-xs", palette.badge)}>
               {badge}
             </Badge>
             <span className={cn("text-xs", palette.muted)}>{item.source}</span>
+            <span className={cn("text-xs", palette.muted)}>·</span>
             <span className={cn("text-xs", palette.muted)}>{item.publishedAt}</span>
           </div>
-          <CardTitle className={cn("text-lg leading-snug", palette.text)}>{item.title}</CardTitle>
-          <CardDescription className={cn("leading-6", primaryIsNp ? "font-np" : "", palette.subtext)}>
-            {truncate(primary, 190)}
+          <CardTitle className={cn("text-base font-semibold leading-snug", palette.text)}>{item.title}</CardTitle>
+          <CardDescription className={cn("text-sm leading-relaxed mt-1", primaryIsNp ? "font-np" : "", palette.subtext)}>
+            {truncate(primary, 1200)}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div
+        <CardContent className="flex flex-wrap items-center gap-2 px-4 pb-4">
+          <Button
+            size="sm"
+            className={cn("rounded-md h-8 px-3", palette.accent)}
+            onClick={() => setBriefOpen(true)}
+          >
+            {t.readBrief}
+          </Button>
+          <a
+            href={item.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
             className={cn(
-              "rounded-2xl border p-3 text-sm leading-6",
-              secondaryIsNp ? "font-np" : "",
-              palette.soft,
-              palette.muted
+              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all h-8",
+              palette.ghost
             )}
           >
-            {truncate(secondary, 150)}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              className={cn("rounded-2xl", palette.accent)}
-              onClick={() => setBriefOpen(true)}
-            >
-              {t.readBrief}
-            </Button>
-            <a
-              href={item.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className={cn(
-                "inline-flex items-center gap-1 rounded-2xl px-3 py-1.5 text-sm font-medium transition-all",
-                palette.ghost
-              )}
-            >
-              <ExternalLink className="h-4 w-4" />
-              {t.sourceLink}
-            </a>
-          </div>
+            <ExternalLink className="h-3.5 w-3.5" />
+            {t.sourceLink}
+          </a>
         </CardContent>
       </Card>
 
       <Sheet open={briefOpen} onOpenChange={setBriefOpen}>
         <SheetContent
           side="right"
-          className={cn("w-full overflow-y-auto sm:max-w-lg", palette.shell)}
+          className={cn("w-full overflow-y-auto sm:max-w-md p-4", palette.shell)}
         >
-          <SheetTitle className={cn("pr-8 text-xl font-semibold leading-snug", palette.text)}>
+          <SheetTitle className={cn("pr-6 text-lg font-semibold leading-snug", palette.text)}>
             {item.title}
           </SheetTitle>
-          <div className={cn("mt-1 flex flex-wrap items-center gap-2", palette.muted)}>
-            <Badge variant="outline" className={cn("rounded-full px-2.5 py-1", palette.badge)}>
+          <div className={cn("mt-1 flex flex-wrap items-center gap-1.5", palette.muted)}>
+            <Badge variant="outline" className={cn("rounded-md px-2 py-0.5 text-xs", palette.badge)}>
               {badge}
             </Badge>
             <span className="text-xs">{item.source}</span>
+            <span className="text-xs">·</span>
             <span className="text-xs">{item.publishedAt}</span>
           </div>
 
-          <div className="mt-6 space-y-5">
+          <div className="mt-4 space-y-4">
             <div>
-              <div className={cn("mb-2 text-xs font-medium uppercase tracking-[0.2em]", palette.muted)}>
-                {primaryIsNp ? t.langLabelNp : t.langLabelEn}
-              </div>
-              <p className={cn("text-sm leading-7", primaryIsNp ? "font-np" : "", palette.subtext)}>
+              <p className={cn("text-sm leading-relaxed", primaryIsNp ? "font-np" : "", palette.subtext)}>
                 {primary}
-              </p>
-            </div>
-
-            <div className={cn("rounded-2xl border p-4", palette.panel)}>
-              <div className={cn("mb-2 text-xs font-medium uppercase tracking-[0.2em]", palette.muted)}>
-                {secondaryIsNp ? t.langLabelNp : t.langLabelEn}
-              </div>
-              <p className={cn("text-sm leading-7", secondaryIsNp ? "font-np" : "", palette.muted)}>
-                {secondary}
               </p>
             </div>
 
@@ -120,7 +98,7 @@ export function NewsCard({ item }: NewsCardProps) {
               target="_blank"
               rel="noreferrer"
               className={cn(
-                "inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-medium transition-all",
+                "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all h-9",
                 palette.ghost
               )}
             >

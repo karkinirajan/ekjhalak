@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { demoData, type RangeKey } from "@/lib/news-pipeline"
+import { emptyData, type RangeKey } from "@/lib/news-pipeline"
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   const range = rawRange as RangeKey
-  const rangeData = demoData[range]
+  const rangeData = emptyData[range]
   const items =
     bucket === "national"
       ? rangeData.national

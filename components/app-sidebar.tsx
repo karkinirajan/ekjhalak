@@ -1,76 +1,107 @@
-"use client"
+"use client";
 
+import { useState } from "react";
 import {
-  BadgeCheck,
   CalendarDays,
-  Home,
+  ChevronDown,
   LayoutDashboard,
   Newspaper,
-  Settings2,
   Shield,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
-import { useTheme } from "@/components/theme-provider"
-import { sourceRegistry, researchStack, LOCAL_TIMEZONE } from "@/lib/news-sources"
-import type { RangeKey } from "@/lib/news-pipeline"
+  BookOpenCheck,
+  FlagTriangleRight,
+  Globe,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider";
+import {
+  sourceRegistry,
+} from "@/lib/news-sources";
+import type { RangeKey } from "@/lib/news-pipeline";
 
 interface AppSidebarProps {
-  range: RangeKey
-  setRange: (value: RangeKey) => void
-  bucket: "all" | "national" | "international"
-  setBucket: (value: "all" | "national" | "international") => void
-  status: string
+  range: RangeKey;
+  setRange: (value: RangeKey) => void;
+  bucket: "all" | "national" | "international";
+  setBucket: (value: "all" | "national" | "international") => void;
 }
 
-export function AppSidebar({ range, setRange, bucket, setBucket, status }: AppSidebarProps) {
-  const { palette, language, t } = useTheme()
+export function AppSidebar({
+  range,
+  setRange,
+  bucket,
+  setBucket,
+}: AppSidebarProps) {
+  const { palette, language, t } = useTheme();
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
   const navItems = [
-    { key: "today", label: t.navToday, icon: Newspaper, range: "day" as RangeKey },
-    { key: "week", label: t.navWeek, icon: CalendarDays, range: "week" as RangeKey },
-    { key: "month", label: t.navMonth, icon: LayoutDashboard, range: "month" as RangeKey },
-  ]
+    {
+      key: "today",
+      label: t.navToday,
+      icon: Newspaper,
+      range: "day" as RangeKey,
+    },
+    {
+      key: "week",
+      label: t.navWeek,
+      icon: CalendarDays,
+      range: "week" as RangeKey,
+    },
+    {
+      key: "month",
+      label: t.navMonth,
+      icon: LayoutDashboard,
+      range: "month" as RangeKey,
+    },
+  ];
 
   return (
     <div
       className={cn(
-        "sticky top-[61px] flex max-h-[calc(100vh-61px)] flex-col gap-3 overflow-y-auto rounded-[24px] border p-3 shadow-xl backdrop-blur-xl",
-        palette.shell
+        "flex flex-col h-full gap-2 overflow-y-auto border p-2.5 shadow-sm backdrop-blur-lg",
+        palette.shell,
       )}
     >
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-1 pt-1">
-        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border", palette.soft)}>
-          <Newspaper className="h-4 w-4" />
+      <div className="flex items-center gap-2.5 px-2 py-1">
+        <div
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center border rounded-md shadow-sm transition-transform hover:scale-105",
+            palette.soft,
+          )}
+        >
+          <BookOpenCheck className="h-5 w-5" />
         </div>
-        <div>
-          <div className={cn("text-sm font-semibold", palette.text)}>ClutterFree News</div>
-          <div className={cn("text-xs", palette.muted)}>{t.appTagline}</div>
+        <div className="flex flex-col leading-tight">
+          <div className={cn("text-base font-bold tracking-tight", palette.text)}>
+            एक झलक
+          </div>
+          <p className={cn("text-sm opacity-70", palette.muted)}>सररर एक झलक न्युज पढ्नुहोस्</p>
         </div>
       </div>
 
       <Separator className="opacity-50" />
 
       {/* Navigation */}
-      <div className="space-y-0.5">
+      <div className="space-y-1.5">
         {navItems.map((item) => {
-          const Icon = item.icon
-          const active = range === item.range
+          const Icon = item.icon;
+          const active = range === item.range;
           return (
             <button
               key={item.key}
               onClick={() => setRange(item.range)}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition",
-                active ? palette.accent : palette.ghost
+                "flex w-full items-center gap-2.5 px-3 py-2 text-xs transition rounded-md",
+                active ? palette.accent : palette.ghost,
               )}
             >
-              <Icon className="h-4 w-4" />
-              <span>{item.label}</span>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{item.label}</span>
             </button>
-          )
+          );
         })}
       </div>
 
@@ -78,135 +109,103 @@ export function AppSidebar({ range, setRange, bucket, setBucket, status }: AppSi
 
       {/* Feed lens */}
       <div>
-        <div className={cn("mb-2 px-1 text-xs uppercase tracking-[0.2em]", palette.muted)}>
-          {t.feedLensLabel}
-        </div>
-        <div className="grid gap-1.5">
-          {(
-            [
-              { id: "all", label: t.feedAll },
-              { id: "national", label: t.feedNational },
-              { id: "international", label: t.feedInternational },
-            ] as const
-          ).map((item) => (
-            <Button
-              key={item.id}
-              variant="ghost"
-              onClick={() => setBucket(item.id)}
-              className={cn(
-                "h-9 justify-start rounded-xl border text-sm",
-                bucket === item.id ? palette.accent : palette.ghost
-              )}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <Separator className="opacity-50" />
-
-      {/* Trusted sources */}
-      <div>
-        <div className={cn("mb-2 flex items-center gap-1.5 px-1 text-sm font-medium", palette.text)}>
-          <Shield className="h-3.5 w-3.5" />
-          {t.trustedSourcesTitle}
-        </div>
-        <div className={cn("mb-2 px-1 text-xs", palette.muted)}>{t.trustedSourcesDesc}</div>
-        <div className="space-y-3">
-          <div>
-            <div className={cn("mb-1.5 px-1 text-xs uppercase tracking-[0.18em]", palette.muted)}>
-              {t.sectionNepal}
-            </div>
-            <div className="space-y-1">
-              {sourceRegistry.national.map((source) => (
-                <a
-                  key={source.name}
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={cn("block rounded-xl border px-2.5 py-2 transition", palette.card)}
-                >
-                  <div className={cn("text-xs font-medium", palette.text)}>{source.name}</div>
-                  <div className={cn("text-xs", palette.muted)}>{source.note}</div>
-                </a>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className={cn("mb-1.5 px-1 text-xs uppercase tracking-[0.18em]", palette.muted)}>
-              {t.sectionWorld}
-            </div>
-            <div className="space-y-1">
-              {sourceRegistry.international.map((source) => (
-                <a
-                  key={source.name}
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={cn("block rounded-xl border px-2.5 py-2 transition", palette.card)}
-                >
-                  <div className={cn("text-xs font-medium", palette.text)}>{source.name}</div>
-                  <div className={cn("text-xs", palette.muted)}>{source.note}</div>
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="opacity-50" />
-
-      {/* Research stack */}
-      <div>
-        <div className={cn("mb-2 flex items-center gap-1.5 px-1 text-sm font-medium", palette.text)}>
-          <BadgeCheck className="h-3.5 w-3.5" />
-          {t.researchStackTitle}
-        </div>
-        <div className={cn("mb-2 px-1 text-xs", palette.muted)}>{t.researchStackDesc}</div>
-        <div className="space-y-1">
-          {researchStack.map((item) => (
-            <div key={item.name} className={cn("rounded-xl border px-2.5 py-2", palette.panel)}>
-              <div className={cn("text-xs font-medium", palette.text)}>{item.name}</div>
-              <div className={cn("text-xs", palette.subtext)}>
-                {language === "np" ? item.roleNp : item.role}
-              </div>
-              <div className={cn("text-xs", palette.muted)}>
-                {language === "np" ? item.noteNp : item.note}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <Separator className="opacity-50" />
-
-      {/* API contract */}
-      <div className="pb-2">
-        <div className={cn("mb-2 flex items-center gap-1.5 px-1 text-sm font-medium", palette.text)}>
-          <Settings2 className="h-3.5 w-3.5" />
-          {t.apiContractTitle}
-        </div>
-        <div className={cn("mb-2 px-1 text-xs", palette.muted)}>{t.apiContractDesc}</div>
         <div
           className={cn(
-            "rounded-xl border px-2.5 py-2 font-mono text-xs leading-5",
-            palette.panel,
-            palette.subtext
+            "mb-1.5 px-1 text-xs uppercase tracking-wide",
+            palette.muted,
           )}
         >
-          GET /api/news
-          <br />
-          ?range=day|week|month
-          <br />
-          &amp;bucket=all|national|intl
-          <br />
-          &amp;limit=100&amp;lang=en|np
-          <br />
-          <span className={palette.muted}>refresh: 21:00 {LOCAL_TIMEZONE}</span>
+          {t.feedLensLabel}
         </div>
-        <p className={cn("mt-2 px-1 text-xs leading-5", palette.muted)}>{status}</p>
+        <div className="flex flex-col gap-1.5">
+          {(
+            [
+              { id: "national", label: t.feedNational, icon: FlagTriangleRight },
+              { id: "international", label: t.feedInternational, icon: Globe },
+            ] as const
+          ).map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.id}
+                variant="outline"
+                size="sm"
+                onClick={() => setBucket(item.id)}
+                className={cn(
+                  "h-9 w-full justify-start px-3 text-xs rounded-md gap-2.5",
+                  bucket === item.id ? palette.accent : palette.ghost,
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {item.label}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Separator className="opacity-50" />
+
+      {/* Trusted sources - Dropdown */}
+      <div className="pb-1">
+        <button
+          onClick={() => setSourcesOpen(!sourcesOpen)}
+        >
+          <div className={cn(
+            "flex w-full items-center justify-between px-3 py-2 text-xs font-medium transition rounded-md",
+            palette.ghost,
+          )}>
+            <div className="flex items-center gap-2.5">
+              <Shield className="h-3.5 w-3.5 shrink-0" />
+              {t.trustedSourcesTitle}
+            </div>
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", sourcesOpen && "rotate-180")} />
+          </div>
+        </button>
+        
+        {sourcesOpen && (
+          <div className="mt-1 space-y-2 pl-2">
+            <div>
+              <div className={cn("mb-1 text-[10px] uppercase tracking-wide", palette.muted)}>
+                {t.sectionNepal}
+              </div>
+              <div className="space-y-0.5">
+                {sourceRegistry.national.map((source) => (
+                  <div
+                    key={source.name}
+                    className={cn(
+                      "px-2 py-1 text-xs rounded-sm",
+                      palette.soft,
+                      palette.text,
+                    )}
+                  >
+                    {source.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className={cn("mb-1 text-[10px] uppercase tracking-wide", palette.muted)}>
+                {t.sectionInternational}
+              </div>
+              <div className="space-y-0.5">
+                {sourceRegistry.international.map((source) => (
+                  <div
+                    key={source.name}
+                    className={cn(
+                      "px-2 py-1 text-xs rounded-sm",
+                      palette.soft,
+                      palette.text,
+                    )}
+                  >
+                    {source.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }

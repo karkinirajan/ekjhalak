@@ -16,33 +16,31 @@ export function PaginationBar({ page, totalPages, onPageChange }: PaginationBarP
   const safeTotal = Math.max(totalPages, 1)
 
   return (
-    <div className={cn("flex flex-wrap items-center justify-between gap-3 rounded-3xl border px-4 py-3", palette.panel)}>
-      <div className={cn("text-sm", palette.muted)}>
+    <div className={cn("flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2", palette.panel)}>
+      <div className={cn("text-xs", palette.muted)}>
         {t.pagePre}{" "}
         <span className={cn("font-semibold", palette.text)}>{page}</span>{" "}
         {t.pageOf}{" "}
         <span className={cn("font-semibold", palette.text)}>{safeTotal}</span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Button
-          variant="ghost"
-          size="sm"
+          variant="outline"
+          size="icon-xs"
           onClick={() => onPageChange(Math.max(1, page - 1))}
           disabled={page <= 1}
-          className={cn("rounded-2xl", palette.ghost)}
+          className={cn("rounded-md", palette.ghost)}
         >
-          <ChevronLeft className="mr-1 h-4 w-4" />
-          {t.prev}
+          <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
         <Button
-          variant="ghost"
-          size="sm"
+          variant="outline"
+          size="icon-xs"
           onClick={() => onPageChange(Math.min(safeTotal, page + 1))}
           disabled={page >= safeTotal}
-          className={cn("rounded-2xl", palette.ghost)}
+          className={cn("rounded-md", palette.ghost)}
         >
-          {t.next}
-          <ChevronRight className="ml-1 h-4 w-4" />
+          <ChevronRight className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>
