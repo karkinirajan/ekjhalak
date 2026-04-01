@@ -43,21 +43,6 @@ export interface NewsItem {
   duplicateCount?: number;
 }
 
-// ── Legacy ──────────────────────────────────────────────────────────────────
-// NewsData is kept for type-checking. The live API returns a flat NewsItem array.
-
-export interface NewsData {
-  day: { national: NewsItem[]; international: NewsItem[] };
-  week: { national: NewsItem[]; international: NewsItem[] };
-  month: { national: NewsItem[]; international: NewsItem[] };
-}
-
-export const emptyData: NewsData = {
-  day: { national: [], international: [] },
-  week: { national: [], international: [] },
-  month: { national: [], international: [] },
-};
-
 // ── API response types ───────────────────────────────────────────────────────
 
 export interface SourceStatusMeta {

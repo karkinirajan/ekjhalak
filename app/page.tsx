@@ -1,8 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -10,20 +8,52 @@ import { useTheme } from "@/components/theme-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 import { NewsCard } from "@/components/news-card";
 import { PaginationBar } from "@/components/pagination-bar";
+import { BrandImage } from "@/components/brand-image";
+import { TopNavbar } from "@/components/top-navbar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
 import type { NewsItem, NewsFeedResponse, RangeKey } from "@/lib/news-pipeline";
 
-const TopNavbar = dynamic(
-  () => import("@/components/top-navbar").then((mod) => mod.TopNavbar),
-  { ssr: false },
-);
-
 const PAGE_SIZE = 20;
-const REFRESH_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes (server cache is 5min)
+const REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 
 type LoadState = "idle" | "loading" | "refreshing" | "error";
+
+// ── Skeleton card (defined at module scope to keep React component identity stable) ──
+
+interface SkeletonCardProps {
+  palette: ReturnType<typeof useTheme>["palette"];
+}
+
+function SkeletonCard({ palette }: SkeletonCardProps) {
+  return (
+    <div
+      className={cn(
+        "border rounded-lg overflow-hidden animate-pulse",
+        palette.card,
+      )}
+      aria-hidden="true"
+    >
+      <div className={cn("w-full h-36", palette.soft)} />
+      <div className="p-4 space-y-2.5">
+        <div className="flex gap-2">
+          <div className={cn("h-4 w-16 rounded", palette.soft)} />
+          <div className={cn("h-4 w-24 rounded", palette.soft)} />
+        </div>
+        <div className={cn("h-4 w-4/5 rounded", palette.soft)} />
+        <div className={cn("h-3 w-full rounded", palette.soft)} />
+        <div className={cn("h-3 w-5/6 rounded", palette.soft)} />
+        <div className="flex gap-2 pt-1">
+          <div className={cn("h-8 w-20 rounded-md", palette.soft)} />
+          <div className={cn("h-8 w-16 rounded-md", palette.soft)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Page component ────────────────────────────────────────────────────────────
 
 export default function ClutterFreeNewsPage() {
   const { palette, language, setLanguage, t, themeMode, setThemeMode } =
@@ -42,28 +72,21 @@ export default function ClutterFreeNewsPage() {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [meta, setMeta] = useState<NewsFeedResponse["meta"] | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("idle");
-  const [currentYear, setCurrentYear] = useState<number | null>(null);
 
-  // Track whether we have ever loaded data successfully
   const hasData = useRef(false);
+  const feedTopRef = useRef<HTMLDivElement>(null);
 
-  // ── Fetch feed from API ──────────────────────────────────────────────────
+  // ── Fetch feed ──────────────────────────────────────────────────────────────
 
   const fetchFeed = useCallback(
     async (isBackground = false) => {
       if (!isBackground) {
         setLoadState(hasData.current ? "refreshing" : "loading");
       }
-
       try {
         const url = `/api/news?range=${range}&bucket=${bucket}&limit=200`;
-        const res = await fetch(url, {
-          // Always get fresh data from the server (server handles its own 10-min cache)
-          cache: "no-store",
-        });
-
+        const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
         const data: NewsFeedResponse = await res.json();
         setItems(data.items);
         setMeta(data.meta);
@@ -72,7 +95,7 @@ export default function ClutterFreeNewsPage() {
       } catch (err) {
         console.error("[page] fetchFeed error:", err);
         if (!hasData.current) setLoadState("error");
-        else setLoadState("idle"); // Keep showing stale data on background refresh failure
+        else setLoadState("idle");
       }
     },
     [range, bucket],
@@ -84,29 +107,18 @@ export default function ClutterFreeNewsPage() {
     fetchFeed(false);
   }, [fetchFeed]);
 
-  useEffect(() => {
-    setCurrentYear(new Date().getFullYear());
-  }, []);
-
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
   }, [range, bucket, sourceFilter, language, search]);
 
-  // Auto-refresh every 5 minutes (background — doesn't show loading state)
+  // Auto-refresh every 3 minutes (background)
   useEffect(() => {
     const id = setInterval(() => fetchFeed(true), REFRESH_INTERVAL_MS);
     return () => clearInterval(id);
   }, [fetchFeed]);
 
-  // Document title
-  useEffect(() => {
-    const titleSuffix =
-      language === "np" ? "स्वदेश र विदेश" : "National & International";
-    document.title = `एक झलक — ${titleSuffix}`;
-  }, [language]);
-
-  // ── Filter + search (client-side, applied after API filtering) ────────────
+  // ── Filtering ───────────────────────────────────────────────────────────────
 
   const applySearch = useCallback(() => {
     setSearch(searchDraft.trim());
@@ -114,11 +126,9 @@ export default function ClutterFreeNewsPage() {
 
   const filteredItems = useMemo(() => {
     let result = items;
-
     if (sourceFilter) {
       result = result.filter((item) => item.sourceId === sourceFilter);
     }
-
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter((item) =>
@@ -128,7 +138,6 @@ export default function ClutterFreeNewsPage() {
           .includes(q),
       );
     }
-
     return result;
   }, [items, sourceFilter, search]);
 
@@ -139,6 +148,13 @@ export default function ClutterFreeNewsPage() {
     safePage * PAGE_SIZE,
   );
 
+  // ── Pagination with scroll-to-top ───────────────────────────────────────────
+
+  const handlePageChange = useCallback((newPage: number) => {
+    setPage(newPage);
+    feedTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   const rangeLabel =
     range === "day"
       ? t.rangeDay
@@ -146,42 +162,19 @@ export default function ClutterFreeNewsPage() {
         ? t.rangeWeek
         : t.rangeMonth;
 
-  // ── Skeleton ─────────────────────────────────────────────────────────────
-
-  const SkeletonCard = () => (
-    <div
-      className={cn(
-        "border rounded-lg overflow-hidden animate-pulse",
-        palette.card,
-      )}
-    >
-      <div className={cn("w-full h-36", palette.soft)} />
-      <div className="p-4 space-y-2.5">
-        <div className="flex gap-2">
-          <div className={cn("h-4 w-16 rounded", palette.soft)} />
-          <div className={cn("h-4 w-24 rounded", palette.soft)} />
-        </div>
-        <div className={cn("h-4 w-4/5 rounded", palette.soft)} />
-        <div className={cn("h-3 w-full rounded", palette.soft)} />
-        <div className={cn("h-3 w-5/6 rounded", palette.soft)} />
-        <div className="flex gap-2 pt-1">
-          <div className={cn("h-8 w-20 rounded-md", palette.soft)} />
-          <div className={cn("h-8 w-16 rounded-md", palette.soft)} />
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div
       className={cn(
-        "min-h-screen bg-gradient-to-br flex",
+        "min-h-screen bg-linear-to-br flex",
         palette.app,
         palette.page,
       )}
     >
-      {/* Sidebar */}
-      <aside className="hidden w-[260px] shrink-0 lg:flex flex-col fixed left-0 top-0 h-screen z-40">
+      {/* Sidebar — fixed, desktop only */}
+      <aside
+        className="hidden w-65 shrink-0 lg:flex flex-col fixed left-0 top-0 h-screen z-40"
+        aria-label="Navigation and filters"
+      >
         <AppSidebar
           range={range}
           setRange={setRange}
@@ -194,7 +187,7 @@ export default function ClutterFreeNewsPage() {
       </aside>
 
       {/* Main content */}
-      <div className="flex min-w-0 flex-1 flex-col lg:ml-[260px]">
+      <div className="flex min-w-0 flex-1 flex-col lg:ml-65">
         <TopNavbar
           searchDraft={searchDraft}
           setSearchDraft={setSearchDraft}
@@ -220,6 +213,9 @@ export default function ClutterFreeNewsPage() {
         />
 
         <div className="flex min-w-0 flex-1 flex-col gap-3 p-2 pt-2 lg:p-3">
+          {/* Feed scroll anchor */}
+          <div ref={feedTopRef} className="sr-only" aria-hidden="true" />
+
           {/* News feed card */}
           <Card className={cn("border rounded-md", palette.shell)}>
             <CardContent className="space-y-2 px-4 pt-4 pb-4">
@@ -227,12 +223,14 @@ export default function ClutterFreeNewsPage() {
               {loadState === "loading" && (
                 <div
                   className="space-y-2"
-                  aria-label="Loading news feed"
+                  aria-label={t.loadingStories}
                   aria-busy="true"
+                  role="status"
                 >
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <SkeletonCard key={i} />
+                    <SkeletonCard key={i} palette={palette} />
                   ))}
+                  <span className="sr-only">{t.loadingStories}</span>
                 </div>
               )}
 
@@ -246,17 +244,14 @@ export default function ClutterFreeNewsPage() {
                   )}
                   role="alert"
                 >
-                  <p>
-                    Could not load news feed. Check your connection or try
-                    again.
-                  </p>
+                  <p>{t.errorFeed}</p>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => fetchFeed(false)}
                     className={cn("rounded-md", palette.ghost)}
                   >
-                    Retry
+                    {t.retryLabel}
                   </Button>
                 </div>
               )}
@@ -265,9 +260,16 @@ export default function ClutterFreeNewsPage() {
               {loadState !== "loading" && loadState !== "error" && (
                 <>
                   {paginatedItems.length > 0 ? (
-                    paginatedItems.map((item) => (
-                      <NewsCard key={item.id} item={item} />
-                    ))
+                    <div
+                      role="feed"
+                      aria-label={`${rangeLabel} ${t.rangeSuffix}`}
+                      aria-busy={loadState === "refreshing"}
+                      className="space-y-2"
+                    >
+                      {paginatedItems.map((item) => (
+                        <NewsCard key={item.id} item={item} />
+                      ))}
+                    </div>
                   ) : (
                     <div
                       className={cn(
@@ -277,13 +279,13 @@ export default function ClutterFreeNewsPage() {
                       )}
                       role="status"
                     >
-                      {hasData.current ? t.noStories : "Loading stories…"}
+                      {hasData.current ? t.noStories : t.loadingStories}
                     </div>
                   )}
                   <PaginationBar
                     page={safePage}
                     totalPages={totalPages}
-                    onPageChange={setPage}
+                    onPageChange={handlePageChange}
                   />
                 </>
               )}
@@ -299,8 +301,8 @@ export default function ClutterFreeNewsPage() {
           >
             <div className="flex items-center justify-center gap-6">
               <div className={cn("flex items-center gap-1.5", palette.muted)}>
-                <span>
-                  {currentYear ? `© ${currentYear} एक झलक` : "© एक झलक"}
+                <span suppressHydrationWarning>
+                  © {new Date().getFullYear()} एक झलक
                 </span>
               </div>
               <div className={cn("flex items-center gap-1.5", palette.subtext)}>
@@ -308,7 +310,7 @@ export default function ClutterFreeNewsPage() {
                 <a
                   href="https://kneeraazon.com"
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noreferrer noopener"
                   className={cn("font-medium hover:underline", palette.text)}
                 >
                   Nirajan Karki
@@ -321,10 +323,7 @@ export default function ClutterFreeNewsPage() {
 
       {/* Mobile menu sheet */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent
-          side="left"
-          className={cn("w-[280px] p-0", palette.shell)}
-        >
+        <SheetContent side="left" className={cn("w-70 p-0", palette.shell)}>
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <div
             className={cn(
@@ -333,18 +332,11 @@ export default function ClutterFreeNewsPage() {
             )}
           >
             {/* Brand */}
-            <div className="mt-3 flex h-[74px] w-full items-center justify-center overflow-hidden px-2 py-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.png"
-                alt="एक झलक"
-                width={427}
-                height={144}
-                loading="eager"
-                decoding="async"
-                className="h-full w-full object-cover object-center mix-blend-multiply dark:mix-blend-screen"
-              />
-            </div>
+            <BrandImage
+              priority
+              containerClassName="mt-3"
+              imageClassName="max-h-18"
+            />
 
             <Separator className="opacity-50" />
 
@@ -366,6 +358,7 @@ export default function ClutterFreeNewsPage() {
                     setLanguage("en");
                     setMobileMenuOpen(false);
                   }}
+                  aria-pressed={language === "en"}
                   className={cn(
                     "h-9 text-xs rounded-md",
                     language === "en" ? palette.accent : palette.ghost,
@@ -380,6 +373,7 @@ export default function ClutterFreeNewsPage() {
                     setLanguage("np");
                     setMobileMenuOpen(false);
                   }}
+                  aria-pressed={language === "np"}
                   className={cn(
                     "h-9 text-xs rounded-md",
                     language === "np" ? palette.accent : palette.ghost,

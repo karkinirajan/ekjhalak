@@ -422,7 +422,7 @@ export const SOURCES: Source[] = [
     country: "US",
     language: "en",
     categories: ["world", "politics", "breaking"],
-    rssUrl: "http://rss.cnn.com/rss/edition_world.rss",
+    rssUrl: "https://rss.cnn.com/rss/edition_world.rss",
     homepageUrl: "https://www.cnn.com",
     priority: 8,
     active: true,

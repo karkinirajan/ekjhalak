@@ -7,12 +7,13 @@ const en = {
   switchToLive: "Switch to live",
   switchToDemo: "Switch to demo",
   langButton: "EN → NP",
+  langToggleLabel: "Switch to Nepali",
   navOverview: "Overview",
   navToday: "Today",
   navWeek: "This Week",
   navMonth: "This Month",
   feedLensLabel: "Feed lens",
-  feedAll: "World",
+  feedAll: "All",
   feedNational: "National",
   feedInternational: "International",
   themeLabel: "Theme",
@@ -32,8 +33,7 @@ const en = {
   apiContractTitle: "API contract",
   apiContractDesc: "Live mode will plug into this endpoint",
   briefingDesc:
-    "के ठीक, के बेठीक, के सत्य, के हावा छुट्याउँदै कपालै दुखिसक्यो ।\
- अबदेखि सबै यहीँ पढ्ने हो। एकै ठाउँमा सबै, भरपर्दो समाचार। ढुक्कै !!!",
+    "All the news you need — Nepal and the world — clean, ad-free, and bilingual. One place, trusted sources.",
   tabToday: "Today",
   tabWeek: "Week",
   tabMonth: "Month",
@@ -50,7 +50,7 @@ const en = {
   statTimelineNote: "Today, week, or month ranking.",
   statFeedTitle: "Feed lens",
   statFeedNote: "National and International news.",
-  feedValueAll: "50 + 50",
+  feedValueAll: "All",
   feedValueNational: "Nepal",
   feedValueInternational: "International",
   langValue: "EN → NP",
@@ -67,8 +67,24 @@ const en = {
   langLabelEn: "English",
   langLabelNp: "नेपाली",
 
+  // Source filter
+  filteredBySource: "Filtered by source",
+  clearFilter: "Clear filter",
+  filtered: "filtered",
+
+  // Sidebar legend
+  legendLive: "Live — click to filter",
+  legendError: "Fetch error — using last cache",
+  legendNoRss: "No RSS — not available",
+  legendRefresh: "Feed refreshes every 5 minutes",
+
+  // Feed states
   noStories:
-    "No stories match this search. Try a different phrase and the newsroom maze will open another corridor.",
+    "No stories match this filter. Try a different range or source.",
+  loadingStories: "Loading stories…",
+  errorFeed: "Could not load news feed. Check your connection or try again.",
+  retryLabel: "Retry",
+
   statusDemo:
     "Using demo data. Connect your backend to switch to live AI-researched summaries.",
   statusLoading: "Fetching live AI-prepared stories from your backend…",
@@ -86,12 +102,13 @@ const np: I18nDict = {
   switchToLive: "लाइभ समाचार",
   switchToDemo: "डेमो हेर्नुहोस्",
   langButton: "NP → EN",
+  langToggleLabel: "अंग्रेजीमा स्विच गर्नुहोस्",
   navOverview: "सबै खबर",
   navToday: "आजको",
   navWeek: "यो हप्ताको",
   navMonth: "यो महिनाको",
   feedLensLabel: "खबरको प्रकार",
-  feedAll: "विश्व",
+  feedAll: "सबै",
   feedNational: "स्वदेश",
   feedInternational: "विदेश",
   themeLabel: "थिम",
@@ -145,7 +162,23 @@ const np: I18nDict = {
   langLabelEn: "English",
   langLabelNp: "नेपाली",
 
+  // Source filter
+  filteredBySource: "स्रोत अनुसार",
+  clearFilter: "हटाउनुहोस्",
+  filtered: "छानिएको",
+
+  // Sidebar legend
+  legendLive: "लाइभ — क्लिक गरेर छान्नुहोस्",
+  legendError: "त्रुटि — पुरानो क्यास देखाइएको",
+  legendNoRss: "RSS छैन — उपलब्ध छैन",
+  legendRefresh: "फिड हरेक ५ मिनेटमा अपडेट",
+
+  // Feed states
   noStories: "तपाईंले खोज्नुभएको कुरा भेटिएन। अर्कै केही खोज्नुहोस् न।",
+  loadingStories: "समाचार लोड गर्दैछौं…",
+  errorFeed: "समाचार लोड गर्न सकिएन। इन्टरनेट जाँच्नुहोस् वा पुनः प्रयास गर्नुहोस्।",
+  retryLabel: "पुनः प्रयास",
+
   statusDemo: "अहिले डेमो मात्र हो। लाइभ समाचारका लागि कनेक्सन चाहिन्छ।",
   statusLoading: "ताजा समाचार खोज्दैछौं…",
   statusConnected: "सिस्टम जोडिएको छ। समाचार तयार छ।",

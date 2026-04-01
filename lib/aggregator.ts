@@ -1,6 +1,6 @@
 // lib/aggregator.ts
 // Orchestrates parallel RSS ingestion across all active sources.
-// Results are cached with Next.js unstable_cache (10-minute revalidation).
+// Results are cached with Next.js unstable_cache (5-minute revalidation).
 // Server-only.
 
 import { unstable_cache } from "next/cache";

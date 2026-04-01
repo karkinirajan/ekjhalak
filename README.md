@@ -1,10 +1,12 @@
-# Ek Jhalak — Nepal & World News Aggregator
+# एक झलक — Nepal & World News
 
-Ek Jhalak is a fast, bilingual news briefing app that brings Nepal and international headlines into one clean interface. It aggregates trusted RSS sources, removes duplicate stories, supports English and Nepali reading, and presents the feed with a focused, mobile-friendly experience built on Next.js.
+Nepali news consumption has quietly become exhausting. Facebook timelines bury serious reporting under reactions and reposts. TikTok delivers clips stripped of context. WhatsApp groups circulate screenshots of screenshots — with no source, no date, no accountability. By the time a story reaches you, it has been amplified, clipped, and stripped of everything that made it verifiable. The noise is relentless. The signal is thin.
 
-Real-time news aggregator pulling from 14 live RSS/Atom sources covering Nepal and the world, built with Next.js 16 App Router.
+Ek Jhalak (एक झलक — "a single glance") was built as an antidote to that. It pulls from a curated set of trusted Nepali and international publishers — Kathmandu Post, Setopati, BBC, The Guardian, Al Jazeera, and more — and presents everything in one clean, chronological, ad-free interface. No algorithmic ranking. No engagement bait. No infinite scroll. Just the news, directly from the source, in the order it happened.
 
-Live: [ekjhalak.vercel.app](https://ekjhalak.vercel.app)
+It is bilingual by design. Native Nepali content from Setopati, Ratopati, and Nagarik News is shown in Devanagari. English-language stories are readable in English or translated to Nepali on demand. The interface adapts cleanly to both scripts. The goal is one reliable place where you can actually read the news — fast, honest, and clutter-free.
+
+Live: [www.ekjhalak.news](https://www.ekjhalak.news)
 
 ---
 

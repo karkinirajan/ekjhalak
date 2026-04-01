@@ -9,6 +9,31 @@ import type { NewsItem } from "./news-pipeline";
 
 const LOCAL_TZ = "Asia/Kathmandu";
 
+function extractPublishedDateFromUrl(url: string): Date | null {
+  const match = url.match(/\/(20\d{2})\/(\d{2})\/(\d{2})(?:\/|$)/);
+  if (!match) return null;
+
+  const [, year, month, day] = match;
+  // Use midday UTC so date-only URLs remain on the same calendar day after
+  // timezone conversion in Asia/Kathmandu.
+  const derived = new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day), 12),
+  );
+  return Number.isNaN(derived.getTime()) ? null : derived;
+}
+
+function buildSummary(title: string, description: string): string {
+  const cleanTitle = title.trim();
+  const cleanDescription = description.trim();
+  if (!cleanDescription) return cleanTitle;
+  if (cleanDescription.length >= 180) return cleanDescription;
+  if (!cleanTitle) return cleanDescription;
+  if (cleanDescription.toLowerCase().startsWith(cleanTitle.toLowerCase())) {
+    return cleanDescription;
+  }
+  return `${cleanTitle}. ${cleanDescription}`;
+}
+
 // ── URL normalization ─────────────────────────────────────────────────────────
 
 /** Tracking query parameters that should be removed before fingerprinting */
@@ -70,12 +95,19 @@ export function fingerprintUrl(url: string): string {
  * Format a unix millisecond timestamp for display in Asia/Kathmandu timezone.
  * Examples: "3m ago", "Today • 07:15", "Yesterday • 15:30", "Apr 1 • 09:00"
  */
-export function formatPublishedAt(timestampMs: number): string {
-  const now = Date.now();
-  const diffMs = now - timestampMs;
-  const diffMinutes = Math.floor(diffMs / 60_000);
-
+export function formatPublishedAt(
+  timestampMs: number,
+  includeTime = true,
+): string {
   const date = new Date(timestampMs);
+  const dateStr = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: LOCAL_TZ,
+  });
+
+  if (!includeTime) return dateStr;
 
   const timeStr = date.toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -84,31 +116,6 @@ export function formatPublishedAt(timestampMs: number): string {
     timeZone: LOCAL_TZ,
   });
 
-  if (diffMinutes < 1) return "Just now";
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-
-  // Check if date is "today" in Kathmandu time
-  const todayStr = new Date().toLocaleDateString("en-US", {
-    timeZone: LOCAL_TZ,
-  });
-  const itemStr = date.toLocaleDateString("en-US", { timeZone: LOCAL_TZ });
-
-  if (itemStr === todayStr) return `Today • ${timeStr}`;
-
-  // Check if "yesterday"
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toLocaleDateString("en-US", {
-    timeZone: LOCAL_TZ,
-  });
-  if (itemStr === yesterdayStr) return `Yesterday • ${timeStr}`;
-
-  // Older: "Apr 1 • 09:00"
-  const dateStr = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: LOCAL_TZ,
-  });
   return `${dateStr} • ${timeStr}`;
 }
 
@@ -119,9 +126,11 @@ export function formatPublishedAt(timestampMs: number): string {
  * Chooses the current time as fallback if pubDate is missing.
  */
 export function normalizeStory(raw: RawStory, source: Source): NewsItem {
-  // Timestamp: use pubDate if available, cap at now to avoid future dates
+  // Timestamp: use pubDate if available, otherwise derive from the article URL,
+  // and cap at now to avoid future dates.
   const now = Date.now();
-  const rawTs = raw.pubDate ? raw.pubDate.getTime() : now;
+  const derivedPubDate = raw.pubDate ?? extractPublishedDateFromUrl(raw.url);
+  const rawTs = derivedPubDate ? derivedPubDate.getTime() : now;
   const publishedTimestamp = Math.min(rawTs, now);
 
   const id = fingerprintUrl(raw.url);
@@ -137,10 +146,10 @@ export function normalizeStory(raw: RawStory, source: Source): NewsItem {
     source: source.name,
     sourceId: source.id,
     sourceUrl: raw.url,
-    publishedAt: formatPublishedAt(publishedTimestamp),
+    publishedAt: formatPublishedAt(publishedTimestamp, Boolean(raw.pubDate)),
     publishedTimestamp,
-    summaryEn: isNepaliSource ? "" : raw.description,
-    summaryNp: isNepaliSource ? raw.description : "",
+    summaryEn: isNepaliSource ? "" : buildSummary(raw.title, raw.description),
+    summaryNp: isNepaliSource ? buildSummary(raw.title, raw.description) : "",
     imageUrl: raw.imageUrl ?? undefined,
     category: source.categories[0],
   };

@@ -7,6 +7,7 @@ import {
   RefreshCw,
   Search,
   Sun,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardDescription, CardTitle } from "@/components/ui/card";
@@ -62,6 +63,7 @@ export function TopNavbar({
   sourceFilterLabel,
 }: TopNavbarProps) {
   const { palette, t } = useTheme();
+  const isSpinning = loadState === "loading" || loadState === "refreshing";
 
   return (
     <div className="sticky top-0 z-50 -mx-2 lg:-mx-3">
@@ -80,6 +82,7 @@ export function TopNavbar({
               imageClassName="max-h-16 sm:max-h-20"
             />
 
+            {/* ── Controls row ─────────────────────────────────────────── */}
             <div className="flex w-full items-center justify-end gap-2">
               <form
                 className="flex min-w-0 flex-1 items-center gap-2"
@@ -87,18 +90,21 @@ export function TopNavbar({
                   e.preventDefault();
                   applySearch();
                 }}
+                role="search"
               >
                 <div className="relative flex-1 min-w-0">
                   <Search
                     className={cn(
-                      "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2",
+                      "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none",
                       palette.muted,
                     )}
+                    aria-hidden="true"
                   />
                   <Input
                     value={searchDraft}
                     onChange={(e) => setSearchDraft(e.target.value)}
                     placeholder={t.searchPlaceholder}
+                    aria-label={t.searchPlaceholder}
                     className={cn(
                       "h-8 w-full rounded-md pl-9 text-sm",
                       palette.input,
@@ -110,9 +116,9 @@ export function TopNavbar({
                   variant="outline"
                   size="icon-sm"
                   className={cn("shrink-0 rounded-md", palette.ghost)}
-                  aria-label="Search news"
+                  aria-label={t.searchPlaceholder}
                 >
-                  <Search className="h-4 w-4" />
+                  <Search className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </form>
 
@@ -120,18 +126,16 @@ export function TopNavbar({
                 variant="outline"
                 size="icon-sm"
                 onClick={() => fetchFeed(false)}
-                disabled={loadState === "loading" || loadState === "refreshing"}
+                disabled={isSpinning}
                 className={cn("shrink-0 rounded-md", palette.ghost)}
                 aria-label="Refresh feed"
               >
                 <RefreshCw
-                  className={cn(
-                    "h-4 w-4",
-                    (loadState === "loading" || loadState === "refreshing") &&
-                      "animate-spin",
-                  )}
+                  className={cn("h-4 w-4", isSpinning && "animate-spin")}
+                  aria-hidden="true"
                 />
               </Button>
+
               <Button
                 variant="outline"
                 size="icon-sm"
@@ -142,20 +146,23 @@ export function TopNavbar({
                 aria-label={themeMode === "dark" ? t.themeLight : t.themeDark}
               >
                 {themeMode === "dark" ? (
-                  <Sun className="h-4 w-4" />
+                  <Sun className="h-4 w-4" aria-hidden="true" />
                 ) : (
-                  <MoonStar className="h-4 w-4" />
+                  <MoonStar className="h-4 w-4" aria-hidden="true" />
                 )}
               </Button>
+
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setLanguage(language === "en" ? "np" : "en")}
                 className={cn("hidden h-8 shrink-0 sm:flex", palette.ghost)}
+                aria-label={t.langToggleLabel}
               >
-                <Languages className="mr-1.5 h-4 w-4" />
+                <Languages className="mr-1.5 h-4 w-4" aria-hidden="true" />
                 {t.langButton}
               </Button>
+
               <Button
                 variant="outline"
                 size="icon-sm"
@@ -163,10 +170,11 @@ export function TopNavbar({
                 className={cn("shrink-0 rounded-md lg:hidden", palette.ghost)}
                 aria-label="Open navigation menu"
               >
-                <Menu className="h-4 w-4" />
+                <Menu className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
 
+            {/* ── Mobile range + bucket filters ────────────────────────── */}
             <div className="flex flex-col gap-2 lg:hidden">
               <div className="flex flex-col gap-1">
                 <div
@@ -190,6 +198,7 @@ export function TopNavbar({
                       variant="outline"
                       size="sm"
                       onClick={() => setRange(item.key)}
+                      aria-pressed={range === item.key}
                       className={cn(
                         "h-8 rounded-md text-xs",
                         range === item.key ? palette.accent : palette.ghost,
@@ -226,6 +235,7 @@ export function TopNavbar({
                         setBucket(item.key);
                         setSourceFilter(null);
                       }}
+                      aria-pressed={bucket === item.key}
                       className={cn(
                         "h-8 rounded-md text-xs",
                         bucket === item.key ? palette.accent : palette.ghost,
@@ -238,6 +248,7 @@ export function TopNavbar({
               </div>
             </div>
 
+            {/* ── Desktop stats + heading ───────────────────────────────── */}
             <div className="hidden gap-4 lg:flex lg:flex-col xl:flex-row xl:items-end xl:justify-between">
               <div>
                 <CardTitle
@@ -271,7 +282,7 @@ export function TopNavbar({
                     {filteredCount}
                   </div>
                 </div>
-                <div className="h-6 w-px bg-border opacity-50" />
+                <div className="h-6 w-px bg-border opacity-50" aria-hidden="true" />
                 <div className="flex flex-col">
                   <div className="text-[11px] font-bold uppercase tracking-wide opacity-70">
                     {t.statTimelineTitle}
@@ -280,7 +291,7 @@ export function TopNavbar({
                     {rangeLabel}
                   </div>
                 </div>
-                <div className="h-6 w-px bg-border opacity-50" />
+                <div className="h-6 w-px bg-border opacity-50" aria-hidden="true" />
                 <div className="flex flex-col">
                   <div className="text-[11px] font-bold uppercase tracking-wide opacity-70">
                     {t.statFeedTitle}
@@ -296,23 +307,25 @@ export function TopNavbar({
               </div>
             </div>
 
+            {/* ── Active source filter indicator ────────────────────────── */}
             {sourceFilter && (
               <div
                 className={cn("flex items-center gap-2 text-xs", palette.muted)}
               >
-                <span>Filtered by source:</span>
+                <span>{t.filteredBySource}:</span>
                 <span className={cn("font-medium", palette.text)}>
                   {sourceFilterLabel ?? sourceFilter}
                 </span>
                 <button
                   onClick={() => setSourceFilter(null)}
                   className={cn(
-                    "underline underline-offset-2 hover:no-underline",
+                    "inline-flex items-center gap-1 underline underline-offset-2 hover:no-underline",
                     palette.muted,
                   )}
-                  aria-label="Clear source filter"
+                  aria-label={t.clearFilter}
                 >
-                  Clear
+                  <X className="h-3 w-3" aria-hidden="true" />
+                  {t.clearFilter}
                 </button>
               </div>
             )}

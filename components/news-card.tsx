@@ -28,13 +28,12 @@ export function NewsCard({ item }: NewsCardProps) {
 
   // ── Single-language display ───────────────────────────────────────────────
   // Show only the selected language. Fall back to English when a Nepali
-  // summary isn't yet available and mark it as a fallback.
+  // summary isn't yet available.
   const isNepaliMode = language === "np";
   const summary = isNepaliMode
     ? item.summaryNp || item.summaryEn
     : item.summaryEn;
   const isNepali = isNepaliMode && !!item.summaryNp;
-  const isFallback = isNepaliMode && !item.summaryNp && !!item.summaryEn;
 
   const badge = item.bucket === "national" ? t.badgeNepal : t.badgeWorld;
   const readAtLabel = isNepaliMode
@@ -143,18 +142,6 @@ export function NewsCard({ item }: NewsCardProps) {
                 >
                   {truncate(summary, 280)}
                 </CardDescription>
-              )}
-
-              {/* Subtle fallback note when NP is selected but no NP text exists */}
-              {isFallback && (
-                <p
-                  className={cn(
-                    "mt-0.5 text-[11px] italic opacity-75",
-                    palette.muted,
-                  )}
-                >
-                  (नेपाली अनुवाद उपलब्ध छैन)
-                </p>
               )}
             </CardHeader>
 
@@ -276,18 +263,6 @@ export function NewsCard({ item }: NewsCardProps) {
             >
               {item.title}
             </SheetTitle>
-
-            {/* Language fallback notice */}
-            {isFallback && (
-              <p
-                className={cn(
-                  "text-[11px] italic opacity-50 -mt-2",
-                  palette.muted,
-                )}
-              >
-                (नेपाली अनुवाद अझै उपलब्ध छैन — अंग्रेजीमा देखाइएको छ)
-              </p>
-            )}
 
             {/* ── Summary content ───────────────────────────────────── */}
             {/*

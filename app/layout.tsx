@@ -16,7 +16,7 @@ const notoDevanagari = Noto_Sans_Devanagari({
   display: "swap",
 });
 
-const SITE_URL = "https://ekjhalak.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekjhalak.news";
 const SITE_NAME = "एक झलक";
 const SITE_DESCRIPTION =
   "Fast, bilingual news aggregator for Nepal and the world. Read the latest national and international headlines in English and Nepali — clean, ad-free, and real-time.";
@@ -39,6 +39,7 @@ export const metadata: Metadata = {
     "international news",
     "national news Nepal",
     "एक झलक",
+    "ek jhalak",
   ],
   authors: [{ name: "EkJhalak" }],
   creator: "EkJhalak",
@@ -99,6 +100,25 @@ export const metadata: Metadata = {
   },
 };
 
+// JSON-LD structured data for the news aggregator
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "एक झलक",
+  alternateName: "Ek Jhalak",
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+  inLanguage: ["en", "ne"],
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${SITE_URL}/?search={search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -110,6 +130,12 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${notoDevanagari.variable}`}
     >
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body suppressHydrationWarning>
         <ThemeProvider>{children}</ThemeProvider>
       </body>

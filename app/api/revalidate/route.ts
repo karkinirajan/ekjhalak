@@ -6,7 +6,7 @@ import { revalidateTag } from "next/cache";
  * Called by Vercel Cron or any trusted trigger.
  *
  * Protect with a secret token in production:
- *   POST /api/revalidate?secret=YOUR_SECRET
+ *   POST /api/revalidate?secret=YOUR_REVALIDATE_SECRET
  *
  * Set REVALIDATE_SECRET in Vercel environment variables.
  */
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  revalidateTag("news-feed", "default");
+  revalidateTag("news-feed", "max");
 
   return NextResponse.json({
     revalidated: true,

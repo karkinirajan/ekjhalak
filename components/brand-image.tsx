@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 
 interface BrandImageProps {
@@ -18,9 +20,10 @@ export function BrandImage({
         containerClassName,
       )}
     >
+      {/* mix-blend-multiply hides the white background on light shells;
+          mix-blend-screen inverts it on dark shells — one file, both themes. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        suppressHydrationWarning
         src="/logo.png"
         alt="एक झलक"
         width={427}

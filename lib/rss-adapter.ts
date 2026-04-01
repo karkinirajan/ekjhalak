@@ -22,6 +22,16 @@ export interface RawStory {
   guid: string;
 }
 
+const DESCRIPTION_FIELDS = [
+  "content:encoded",
+  "content",
+  "description",
+  "summary",
+  "excerpt",
+  "dc:description",
+  "media:description",
+] as const;
+
 // ── XML Parser configuration ─────────────────────────────────────────────────
 
 const PARSER = new XMLParser({
@@ -83,6 +93,20 @@ function extractText(value: unknown): string {
     if ("#text" in v) return String(v["#text"] ?? "");
   }
   return "";
+}
+
+function extractBestDescription(item: Record<string, unknown>): string {
+  let best = "";
+
+  for (const field of DESCRIPTION_FIELDS) {
+    const raw = extractText(item[field]);
+    const cleaned = stripHtml(raw);
+    if (cleaned.length > best.length) {
+      best = cleaned;
+    }
+  }
+
+  return best;
 }
 
 // ── Image extraction ──────────────────────────────────────────────────────────
@@ -178,7 +202,7 @@ function parseRss2Items(container: Record<string, unknown>): RawStory[] {
     // RDF/RSS 1.0 items store the URL in rdf:about attribute rather than <link>
     const rdfAbout = String(item["@_rdf:about"] ?? item["@_about"] ?? "");
     const link = extractText(item.link) || extractText(item.guid) || rdfAbout;
-    const description = stripHtml(extractText(item.description));
+    const description = extractBestDescription(item);
     const pubDate =
       parseDate(extractText(item.pubDate)) ??
       parseDate(extractText(item["dc:date"])); // RDF feeds often use dc:date
@@ -198,9 +222,7 @@ function parseAtomEntries(feed: Record<string, unknown>): RawStory[] {
   return rawEntries.map((entry: Record<string, unknown>): RawStory => {
     const title = stripHtml(extractText(entry.title));
     const url = extractAtomLink(entry.link);
-    const description = stripHtml(
-      extractText(entry.summary) || extractText(entry.content),
-    );
+    const description = extractBestDescription(entry);
     const pubDate = parseDate(
       extractText(entry.published) || extractText(entry.updated),
     );
@@ -214,7 +236,7 @@ function parseAtomEntries(feed: Record<string, unknown>): RawStory[] {
 // ── Main fetch function ───────────────────────────────────────────────────────
 
 const FETCH_TIMEOUT_MS = 10_000;
-const MAX_DESCRIPTION_LENGTH = 1200;
+const MAX_DESCRIPTION_LENGTH = 2200;
 
 /**
  * Fetch and parse an RSS or Atom feed.
