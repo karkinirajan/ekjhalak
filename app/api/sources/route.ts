@@ -4,7 +4,7 @@ import { getCachedFeed } from "@/lib/aggregator"
 
 export async function GET() {
   // Get status from the latest cached feed — no fresh fetch triggered here
-  let sourceStatuses: Record<string, { ok: boolean; itemCount: number; fetchedAt: number; error?: string }> = {}
+  const sourceStatuses: Record<string, { ok: boolean; itemCount: number; fetchedAt: number; error?: string }> = {}
 
   try {
     const feed = await getCachedFeed()

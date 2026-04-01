@@ -144,7 +144,7 @@ function SourceRow({
         isActive
           ? isSelected
             ? palette.accent
-            : cn("hover:bg-white/5", palette.text)
+            : cn("hover:opacity-80", palette.ghost)
           : cn("cursor-not-allowed text-[11px] opacity-75", palette.muted),
       )}
     >

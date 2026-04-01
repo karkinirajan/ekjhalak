@@ -132,6 +132,17 @@ export default function RootLayout({
       className={`${inter.variable} ${notoDevanagari.variable}`}
     >
       <head>
+        {/*
+         * Blocking theme script — runs synchronously before any paint.
+         * Reads the saved preference from localStorage and sets a data attribute
+         * on the root element so ThemeProvider can initialize without a flash.
+         * Must use dangerouslySetInnerHTML (not an external script) to be truly blocking.
+         */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('cfn-theme');document.documentElement.setAttribute('data-cfn-theme',t==='light'?'light':'dark')}catch(e){}})()`,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -140,7 +151,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:bg-white focus:text-black focus:px-4 focus:py-2 focus:top-2 focus:left-2 focus:rounded-md"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:bg-[#4f5dff] focus:text-white focus:px-4 focus:py-2 focus:top-2 focus:left-2 focus:rounded-md focus:shadow-lg focus:text-sm focus:font-medium"
         >
           Skip to main content
         </a>

@@ -49,14 +49,15 @@ AggregatedFeed  { items: NewsItem[], sourceStatuses, fetchedAt }
 
 Two independent cache layers run in series:
 
-| Layer            | Mechanism                                   | TTL    | Scope                |
-| ---------------- | ------------------------------------------- | ------ | -------------------- |
-| Per-source fetch | `fetch(..., { next: { revalidate: 300 } })` | 5 min  | One RSS URL          |
-| Full aggregation | `unstable_cache` tagged `"news-feed"`       | 10 min | All sources combined |
+| Layer            | Mechanism                                   | TTL   | Scope                |
+| ---------------- | ------------------------------------------- | ----- | -------------------- |
+| Per-source fetch | `fetch(..., { next: { revalidate: 300 } })` | 5 min | One RSS URL          |
+| Full aggregation | `unstable_cache` tagged `"news-feed"`       | 5 min | All sources combined |
+| Page HTML        | ISR (`export const revalidate = 300`)       | 5 min | Rendered page        |
 
 A cache miss at the aggregation layer fetches all sources in parallel. A hit returns the stored `AggregatedFeed` immediately with no upstream I/O.
 
-On-demand invalidation: call `revalidateTag("news-feed")` (e.g. from a webhook or admin route) to force a fresh fetch on the next request.
+On-demand invalidation: `POST /api/revalidate` calls `revalidateTag("news-feed", "max")` to bust the tag across all cache layers. A Vercel Cron running every 5 minutes keeps the cache warm.
 
 ---
 
@@ -171,20 +172,24 @@ Filtering is applied against `item.publishedTimestamp` relative to `feed.fetched
 # Clone and install
 git clone <repo>
 cd ek-jhalak
-pnpm install
+npm install
+
+# Copy and configure environment (optional — app works without keys)
+cp .env.example .env.local
+# Set GROQ_API_KEY to enable EN→NP translation and summarization
 
 # Run dev server
-pnpm dev
+npm run dev
 # → http://localhost:3000
 
 # Check source health
-curl http://localhost:3000/api/sources | jq '.[] | {name, ok, itemCount}'
+curl http://localhost:3000/api/sources | jq '.sources[] | {name, active, status}'
 
 # Check news feed
 curl 'http://localhost:3000/api/news?range=day' | jq '{total: (.items | length), sources: [.meta.sourceStatuses[] | {name, ok, itemCount}]}'
 ```
 
-**No environment variables required** for local development. The aggregator fetches public RSS feeds directly.
+**No environment variables required** for local development. The aggregator fetches public RSS feeds directly. Without `GROQ_API_KEY`, translation is skipped and English summaries are shown in both language modes.
 
 ---
 
@@ -225,13 +230,45 @@ Set `REVALIDATE_SECRET` in Vercel environment variables. Without it, the endpoin
 
 **Native NP sources:** Setopati, Ratopati, and Nagarik News deliver content in Nepali script. Their `summaryNp` is populated directly from the RSS `description` field — no translation required.
 
-**EN→NP translation:** `summaryNp` is intentionally empty for English-language sources. To add automatic translation:
+**EN→NP translation:** English-language sources have their titles and summaries translated inside the `unstable_cache` boundary in `lib/aggregator.ts` — so translation runs once per 5-minute window, not on every request.
 
-1. Hook into `normalizeStory()` in `lib/feed-normalizer.ts`
-2. Call your translation API (Azure Translator, Gemini Flash, etc.) asynchronously
-3. Cache translated summaries — never make translation a blocking step in the aggregation path
+Translation cascade (priority order):
+
+1. **Groq LLM** (`llama-3.3-70b-versatile`) — batch mode, ~15 texts per API call, good Nepali quality. Requires `GROQ_API_KEY`.
+2. **Google Translate** — paid, highest quality. Requires `GOOGLE_TRANSLATE_API_KEY`.
+3. **LibreTranslate** — free self-hosted or public endpoints. Requires `LIBRETRANSLATE_API_URL`.
+4. **MyMemory** — free fallback, rate-limited. No key needed (set `MYMEMORY_EMAIL` for higher quota).
+
+If all providers are unavailable, items show English summaries in Nepali mode.
 
 **Typography:** Both `Inter` (Latin) and `Noto Sans Devanagari` are loaded via `next/font/google`. The `font-np` CSS utility class applies the Devanagari font stack. It is used automatically in NewsCard and NewsCard brief sheet when rendering Nepali content.
+
+---
+
+## Environment Variables
+
+| Variable | Required | Default | Purpose |
+|---|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | Production | `https://www.ekjhalak.news` | Metadata, sitemap, OG tags |
+| `GROQ_API_KEY` | Recommended | — | EN→NP translation + summarization |
+| `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | Groq model override |
+| `GOOGLE_TRANSLATE_API_KEY` | No | — | Translation fallback |
+| `LIBRETRANSLATE_API_URL` | No | — | LibreTranslate endpoint |
+| `LIBRETRANSLATE_API_KEY` | No | — | LibreTranslate auth (if required) |
+| `MYMEMORY_EMAIL` | No | — | Last-resort free translation fallback |
+| `REVALIDATE_SECRET` | Production | — | Protects POST /api/revalidate |
+
+See `.env.example` for full documentation.
+
+---
+
+## Theming
+
+Two themes: **Night Ink** (dark, default) and **Clean Slate** (light). Preference stored in `localStorage` under key `cfn-theme`.
+
+A blocking inline script in `<head>` sets `data-cfn-theme` on the root element before first paint — `ThemeProvider` reads this attribute as the initial state, preventing a flash of the wrong theme on load.
+
+The Nepali script uses `Noto Sans Devanagari` loaded via `next/font/google`. Apply with the `.font-np` utility class.
 
 ---
 

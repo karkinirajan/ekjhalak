@@ -13,7 +13,7 @@ export default async function Page() {
     feed = await getCachedFeed();
   } catch (err) {
     console.error("[page] getCachedFeed failed:", err);
-    feed = { items: [], sourceStatuses: [], fetchedAt: Date.now() };
+    feed = { items: [], sourceStatuses: [], fetchedAt: 0 };
   }
 
   const initialData: NewsFeedResponse = {

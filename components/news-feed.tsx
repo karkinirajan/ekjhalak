@@ -116,6 +116,11 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Update document lang attribute so screen readers announce language correctly
+  useEffect(() => {
+    document.documentElement.lang = language === "np" ? "ne" : "en";
+  }, [language]);
+
   // Reset page when filters change
   useEffect(() => {
     setPage(1);

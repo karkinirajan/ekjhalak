@@ -1,5 +1,4 @@
-"use client";
-
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface BrandImageProps {
@@ -20,14 +19,12 @@ export function BrandImage({
         containerClassName,
       )}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src="/logo.png"
         alt="एक झलक"
         width={427}
         height={144}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
+        priority={priority}
         className={cn(
           "block h-auto max-h-full w-auto max-w-full object-contain object-center",
           imageClassName,

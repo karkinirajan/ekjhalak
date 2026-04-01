@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ExternalLink, Layers2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,17 +74,17 @@ export function NewsCard({ item }: NewsCardProps) {
             {showImage && (
               <div
                 className={cn(
-                  "w-full sm:w-1/3 shrink-0 overflow-hidden",
+                  // relative + explicit height required for next/image fill mode
+                  "relative w-full sm:w-1/3 shrink-0 overflow-hidden h-36 sm:h-auto sm:min-h-35",
                   palette.image,
                 )}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={item.imageUrl!}
                   alt={title}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-36 sm:h-full sm:min-h-35 object-cover"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 33vw"
+                  className="object-cover"
                   onError={() => setImgError(true)}
                 />
               </div>
@@ -216,13 +217,13 @@ export function NewsCard({ item }: NewsCardProps) {
         >
           {/* Hero image — compact inside the sheet */}
           {showImage && (
-            <div className={cn("w-full overflow-hidden", palette.image)}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+            <div className={cn("relative w-full h-48 overflow-hidden", palette.image)}>
+              <Image
                 src={item.imageUrl!}
                 alt={title}
-                loading="lazy"
-                className="w-full h-48 object-cover"
+                fill
+                sizes="(max-width: 768px) 100vw, 672px"
+                className="object-cover"
               />
             </div>
           )}

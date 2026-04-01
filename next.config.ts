@@ -30,8 +30,10 @@ const securityHeaders = [
     value: "on",
   },
   {
+    // CSP frame-ancestors 'none' is the modern equivalent; X-Frame-Options DENY
+    // adds compatibility for older browsers that don't parse CSP.
     key: "X-Frame-Options",
-    value: "SAMEORIGIN",
+    value: "DENY",
   },
   {
     key: "X-Content-Type-Options",

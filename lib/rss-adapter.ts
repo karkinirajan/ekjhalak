@@ -258,7 +258,7 @@ export async function fetchRssFeed(url: string): Promise<RawStory[]> {
       signal: controller.signal,
       headers: {
         "User-Agent":
-          "EkJhalak-NewsAggregator/1.0 (+https://ekjhalak.vercel.app)",
+          "EkJhalak-NewsAggregator/1.0 (+https://www.ekjhalak.news)",
         Accept:
           "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
       },
@@ -407,7 +407,7 @@ async function scrapeArticleDescription(articleUrl: string): Promise<string> {
       signal: controller.signal,
       headers: {
         "User-Agent":
-          "EkJhalak-NewsAggregator/1.0 (+https://ekjhalak.vercel.app)",
+          "EkJhalak-NewsAggregator/1.0 (+https://www.ekjhalak.news)",
         Accept: "text/html",
       },
       next: { revalidate: 300 },
