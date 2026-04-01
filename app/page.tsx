@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {} from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,13 @@ import { NewsCard } from "@/components/news-card";
 import { PaginationBar } from "@/components/pagination-bar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { TopNavbar } from "@/components/top-navbar";
 
 import type { NewsItem, NewsFeedResponse, RangeKey } from "@/lib/news-pipeline";
+
+const TopNavbar = dynamic(
+  () => import("@/components/top-navbar").then((mod) => mod.TopNavbar),
+  { ssr: false },
+);
 
 const PAGE_SIZE = 20;
 const REFRESH_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes (server cache is 5min)
@@ -190,32 +195,31 @@ export default function ClutterFreeNewsPage() {
 
       {/* Main content */}
       <div className="flex min-w-0 flex-1 flex-col lg:ml-[260px]">
-        <div className="flex min-w-0 flex-1 flex-col gap-3 p-2 pt-0 lg:p-3 lg:pt-0 overflow-y-auto">
-          <TopNavbar
-            searchDraft={searchDraft}
-            setSearchDraft={setSearchDraft}
-            applySearch={applySearch}
-            fetchFeed={fetchFeed}
-            loadState={loadState}
-            themeMode={themeMode}
-            setThemeMode={setThemeMode}
-            language={language}
-            setLanguage={setLanguage}
-            setMobileMenuOpen={setMobileMenuOpen}
-            range={range}
-            setRange={setRange}
-            bucket={bucket}
-            setBucket={setBucket}
-            setSourceFilter={setSourceFilter}
-            rangeLabel={rangeLabel}
-            filteredCount={filteredItems.length}
-            sourceFilter={sourceFilter}
-            sourceFilterLabel={
-              items.find((item) => item.sourceId === sourceFilter)?.source ??
-              null
-            }
-          />
+        <TopNavbar
+          searchDraft={searchDraft}
+          setSearchDraft={setSearchDraft}
+          applySearch={applySearch}
+          fetchFeed={fetchFeed}
+          loadState={loadState}
+          themeMode={themeMode}
+          setThemeMode={setThemeMode}
+          language={language}
+          setLanguage={setLanguage}
+          setMobileMenuOpen={setMobileMenuOpen}
+          range={range}
+          setRange={setRange}
+          bucket={bucket}
+          setBucket={setBucket}
+          setSourceFilter={setSourceFilter}
+          rangeLabel={rangeLabel}
+          filteredCount={filteredItems.length}
+          sourceFilter={sourceFilter}
+          sourceFilterLabel={
+            items.find((item) => item.sourceId === sourceFilter)?.source ?? null
+          }
+        />
 
+        <div className="flex min-w-0 flex-1 flex-col gap-3 p-2 pt-2 lg:p-3">
           {/* News feed card */}
           <Card className={cn("border rounded-md", palette.shell)}>
             <CardContent className="space-y-2 px-4 pt-4 pb-4">

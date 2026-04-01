@@ -80,6 +80,93 @@ export function TopNavbar({
               imageClassName="max-h-16 sm:max-h-20"
             />
 
+            <div className="flex w-full items-center justify-end gap-2">
+              <form
+                className="flex min-w-0 flex-1 items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  applySearch();
+                }}
+              >
+                <div className="relative flex-1 min-w-0">
+                  <Search
+                    className={cn(
+                      "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2",
+                      palette.muted,
+                    )}
+                  />
+                  <Input
+                    value={searchDraft}
+                    onChange={(e) => setSearchDraft(e.target.value)}
+                    placeholder={t.searchPlaceholder}
+                    className={cn(
+                      "h-8 w-full rounded-md pl-9 text-sm",
+                      palette.input,
+                    )}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="icon-sm"
+                  className={cn("shrink-0 rounded-md", palette.ghost)}
+                  aria-label="Search news"
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </form>
+
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => fetchFeed(false)}
+                disabled={loadState === "loading" || loadState === "refreshing"}
+                className={cn("shrink-0 rounded-md", palette.ghost)}
+                aria-label="Refresh feed"
+              >
+                <RefreshCw
+                  className={cn(
+                    "h-4 w-4",
+                    (loadState === "loading" || loadState === "refreshing") &&
+                      "animate-spin",
+                  )}
+                />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() =>
+                  setThemeMode(themeMode === "dark" ? "light" : "dark")
+                }
+                className={cn("shrink-0 rounded-md", palette.ghost)}
+                aria-label={themeMode === "dark" ? t.themeLight : t.themeDark}
+              >
+                {themeMode === "dark" ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <MoonStar className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLanguage(language === "en" ? "np" : "en")}
+                className={cn("hidden h-8 shrink-0 sm:flex", palette.ghost)}
+              >
+                <Languages className="mr-1.5 h-4 w-4" />
+                {t.langButton}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => setMobileMenuOpen(true)}
+                className={cn("shrink-0 rounded-md lg:hidden", palette.ghost)}
+                aria-label="Open navigation menu"
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+            </div>
+
             <div className="flex flex-col gap-2 lg:hidden">
               <div className="flex flex-col gap-1">
                 <div
@@ -207,93 +294,6 @@ export function TopNavbar({
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="flex w-full items-center justify-end gap-2">
-              <form
-                className="flex min-w-0 flex-1 items-center gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  applySearch();
-                }}
-              >
-                <div className="relative flex-1 min-w-0">
-                  <Search
-                    className={cn(
-                      "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2",
-                      palette.muted,
-                    )}
-                  />
-                  <Input
-                    value={searchDraft}
-                    onChange={(e) => setSearchDraft(e.target.value)}
-                    placeholder={t.searchPlaceholder}
-                    className={cn(
-                      "h-8 w-full rounded-md pl-9 text-sm",
-                      palette.input,
-                    )}
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  variant="outline"
-                  size="icon-sm"
-                  className={cn("shrink-0 rounded-md", palette.ghost)}
-                  aria-label="Search news"
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-              </form>
-
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={() => fetchFeed(false)}
-                disabled={loadState === "loading" || loadState === "refreshing"}
-                className={cn("shrink-0 rounded-md", palette.ghost)}
-                aria-label="Refresh feed"
-              >
-                <RefreshCw
-                  className={cn(
-                    "h-4 w-4",
-                    (loadState === "loading" || loadState === "refreshing") &&
-                      "animate-spin",
-                  )}
-                />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={() =>
-                  setThemeMode(themeMode === "dark" ? "light" : "dark")
-                }
-                className={cn("shrink-0 rounded-md", palette.ghost)}
-                aria-label={themeMode === "dark" ? t.themeLight : t.themeDark}
-              >
-                {themeMode === "dark" ? (
-                  <Sun className="h-4 w-4" />
-                ) : (
-                  <MoonStar className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLanguage(language === "en" ? "np" : "en")}
-                className={cn("hidden h-8 shrink-0 sm:flex", palette.ghost)}
-              >
-                <Languages className="mr-1.5 h-4 w-4" />
-                {t.langButton}
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={() => setMobileMenuOpen(true)}
-                className={cn("shrink-0 rounded-md lg:hidden", palette.ghost)}
-                aria-label="Open navigation menu"
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
             </div>
 
             {sourceFilter && (
