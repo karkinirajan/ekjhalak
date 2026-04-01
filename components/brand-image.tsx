@@ -20,8 +20,6 @@ export function BrandImage({
         containerClassName,
       )}
     >
-      {/* mix-blend-multiply hides the white background on light shells;
-          mix-blend-screen inverts it on dark shells — one file, both themes. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/logo.png"
@@ -31,7 +29,7 @@ export function BrandImage({
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         className={cn(
-          "block h-auto max-h-full w-auto max-w-full object-contain object-center mix-blend-multiply dark:mix-blend-screen",
+          "block h-auto max-h-full w-auto max-w-full object-contain object-center",
           imageClassName,
         )}
       />

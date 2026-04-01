@@ -44,9 +44,9 @@ const PARSER = new XMLParser({
     enabled: true,
     maxEntitySize: 100_000,
     maxExpansionDepth: 20,
-    maxTotalExpansions: 20_000,
-    maxExpandedLength: 2_000_000,
-    maxEntityCount: 2000,
+    maxTotalExpansions: 50_000,
+    maxExpandedLength: 5_000_000,
+    maxEntityCount: 5000,
   },
   htmlEntities: true,
   trimValues: true,
@@ -236,7 +236,12 @@ function parseAtomEntries(feed: Record<string, unknown>): RawStory[] {
 // ── Main fetch function ───────────────────────────────────────────────────────
 
 const FETCH_TIMEOUT_MS = 10_000;
+const ENRICH_TIMEOUT_MS = 5_000;
 const MAX_DESCRIPTION_LENGTH = 2200;
+/** Descriptions shorter than this trigger article-page enrichment */
+const SHORT_DESCRIPTION_THRESHOLD = 200;
+/** Max concurrent article-page fetches for enrichment */
+const ENRICH_CONCURRENCY = 4;
 
 /**
  * Fetch and parse an RSS or Atom feed.
@@ -305,11 +310,190 @@ export async function fetchRssFeed(url: string): Promise<RawStory[]> {
   }
 
   // Filter out empty/invalid stories and trim description length
-  return stories
+  const filtered = stories
     .filter((s) => s.title.length > 2 && s.url.length > 5)
     .map((s) => ({
       ...s,
       description: s.description.slice(0, MAX_DESCRIPTION_LENGTH),
     }))
     .slice(0, 30);
+
+  // Enrich stories that have short descriptions by scraping article pages
+  await enrichShortDescriptions(filtered);
+
+  return filtered;
+}
+
+// ── Article page enrichment ───────────────────────────────────────────────────
+
+/** Detect navigation/boilerplate text (e.g. "Home News Sport Business ...") */
+function looksLikeBoilerplate(text: string): boolean {
+  // Many short capitalized words in sequence = likely nav menu
+  const words = text.split(/\s+/);
+  if (words.length > 8) {
+    const shortCapWords = words.filter(
+      (w) => w.length <= 12 && /^[A-Z]/.test(w),
+    );
+    if (shortCapWords.length / words.length > 0.6) return true;
+  }
+  // Common boilerplate patterns
+  if (
+    /^(Home|News|Sport|Menu|Navigation|Copyright|Follow us|Share|Subscribe|Sign up|Cookie|Accept|Related)/i.test(
+      text,
+    )
+  )
+    return true;
+  return false;
+}
+
+/** Count meaningful <p> tags in an HTML fragment */
+function countParagraphs(fragment: string): number {
+  let count = 0;
+  const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = pRegex.exec(fragment)) !== null) {
+    const text = stripHtml(m[1]);
+    if (text.length > 50 && !looksLikeBoilerplate(text)) count++;
+  }
+  return count;
+}
+
+/**
+ * Find the best content container in HTML. Tries common article container
+ * patterns and picks the one with the most paragraph content.
+ * Falls back to full HTML with nav/header/footer stripped.
+ */
+function findArticleBody(html: string): string {
+  const patterns = [
+    /<article[^>]*class="[^"]*(?:story|article|post|content)[^"]*"[^>]*>([\s\S]+)<\/article>/i,
+    /<section[^>]*class="[^"]*(?:story|article|content)[^"]*"[^>]*>([\s\S]+)<\/section>/i,
+    /<div[^>]*class="[^"]*(?:article-body|story-body|post-content|entry-content|story-section)[^"]*"[^>]*>([\s\S]+?)<\/div>/i,
+  ];
+
+  let best = "";
+  let bestScore = 0;
+
+  for (const pattern of patterns) {
+    const m = html.match(pattern);
+    if (m && m[1].length > 200) {
+      const score = countParagraphs(m[1]);
+      if (score > bestScore) {
+        bestScore = score;
+        best = m[1];
+      }
+    }
+  }
+
+  if (bestScore > 0) return best;
+
+  // Remove <header>, <footer>, <nav>, <aside> sections to reduce noise
+  return html
+    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "")
+    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "")
+    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "")
+    .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, "");
+}
+
+/**
+ * Extract body text from an article page by pulling `<p>` tag content.
+ * Falls back to og:description / meta description if body extraction fails.
+ */
+async function scrapeArticleDescription(articleUrl: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ENRICH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(articleUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "EkJhalak-NewsAggregator/1.0 (+https://ekjhalak.vercel.app)",
+        Accept: "text/html",
+      },
+      next: { revalidate: 300 },
+    });
+
+    if (!response.ok) return "";
+
+    const html = await response.text();
+    const searchHtml = findArticleBody(html);
+
+    // 1. Try extracting <p> tags from the article body (best quality)
+    const paragraphs: string[] = [];
+    const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+    let match: RegExpExecArray | null;
+    while ((match = pRegex.exec(searchHtml)) !== null) {
+      const text = stripHtml(match[1]);
+      // Skip short paragraphs (captions, bylines) and boilerplate
+      if (text.length > 50 && !looksLikeBoilerplate(text)) {
+        paragraphs.push(text);
+      }
+    }
+
+    if (paragraphs.length > 0) {
+      // Take enough paragraphs to build a substantial description
+      let combined = "";
+      for (const p of paragraphs) {
+        if (combined.length >= MAX_DESCRIPTION_LENGTH) break;
+        combined += (combined ? " " : "") + p;
+      }
+      return combined.slice(0, MAX_DESCRIPTION_LENGTH);
+    }
+
+    // 2. Fallback: og:description or meta description
+    const ogMatch =
+      html.match(
+        /<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i,
+      ) ??
+      html.match(
+        /<meta\s+content=["']([^"']+)["']\s+(?:property|name)=["']og:description["']/i,
+      );
+    if (ogMatch && ogMatch[1].length > 50) return stripHtml(ogMatch[1]);
+
+    const metaMatch =
+      html.match(
+        /<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i,
+      ) ??
+      html.match(
+        /<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i,
+      );
+    if (metaMatch && metaMatch[1].length > 50) return stripHtml(metaMatch[1]);
+
+    return "";
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Enrich stories in-place: for any story whose description is shorter than
+ * SHORT_DESCRIPTION_THRESHOLD, attempt to scrape a better description from
+ * the article page. Runs with limited concurrency to avoid overwhelming sources.
+ */
+async function enrichShortDescriptions(stories: RawStory[]): Promise<void> {
+  const toEnrich = stories.filter(
+    (s) => s.description.length < SHORT_DESCRIPTION_THRESHOLD && s.url,
+  );
+
+  if (toEnrich.length === 0) return;
+
+  // Process in batches to limit concurrency
+  for (let i = 0; i < toEnrich.length; i += ENRICH_CONCURRENCY) {
+    const batch = toEnrich.slice(i, i + ENRICH_CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map((s) => scrapeArticleDescription(s.url)),
+    );
+
+    for (let j = 0; j < batch.length; j++) {
+      const result = results[j];
+      if (
+        result.status === "fulfilled" &&
+        result.value.length > batch[j].description.length
+      ) {
+        batch[j].description = result.value.slice(0, MAX_DESCRIPTION_LENGTH);
+      }
+    }
+  }
 }
