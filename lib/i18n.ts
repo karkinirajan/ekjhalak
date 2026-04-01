@@ -1,4 +1,4 @@
-export type Lang = "en" | "np"
+export type Lang = "en" | "np";
 
 const en = {
   appTagline: "National & International briefings",
@@ -12,15 +12,16 @@ const en = {
   navWeek: "This Week",
   navMonth: "This Month",
   feedLensLabel: "Feed lens",
-  feedAll: "National + International",
+  feedAll: "World",
   feedNational: "National",
   feedInternational: "International",
   themeLabel: "Theme",
   themeDark: "Night Ink",
-  themeLight: "Paper Dusk",
+  themeLight: "Warm Parchment",
   dailyRefreshTitle: "Daily refresh",
   dailyRefreshTime: "9:00 PM",
-  dailyRefreshNote: "Same trusted sources, refreshed summaries, bilingual output.",
+  dailyRefreshNote:
+    "Same trusted sources, refreshed summaries, bilingual output.",
   sourcesLabel: "Sources",
   trustedSourcesTitle: "Sources",
   trustedSourcesDesc: "Curated Nepali and international publishers",
@@ -30,7 +31,8 @@ const en = {
   researchStackDesc: "Free-first pipeline for daily updates",
   apiContractTitle: "API contract",
   apiContractDesc: "Live mode will plug into this endpoint",
-  briefingDesc: "जसले जे नि भन्छ, जसले जे नि देखाउँछ। के ठीक, के बेठीक, के सत्य, के हावा छुट्याउँदै कपालै दुखिसक्यो ।\
+  briefingDesc:
+    "के ठीक, के बेठीक, के सत्य, के हावा छुट्याउँदै कपालै दुखिसक्यो ।\
  अबदेखि सबै यहीँ पढ्ने हो। एकै ठाउँमा सबै, भरपर्दो समाचार। ढुक्कै !!!",
   tabToday: "Today",
   tabWeek: "Week",
@@ -67,13 +69,15 @@ const en = {
 
   noStories:
     "No stories match this search. Try a different phrase and the newsroom maze will open another corridor.",
-  statusDemo: "Using demo data. Connect your backend to switch to live AI-researched summaries.",
+  statusDemo:
+    "Using demo data. Connect your backend to switch to live AI-researched summaries.",
   statusLoading: "Fetching live AI-prepared stories from your backend…",
   statusConnected: "Live endpoint connected. Content is ready.",
-  statusUnavailable: "Live endpoint not available. Falling back to demo content.",
-}
+  statusUnavailable:
+    "Live endpoint not available. Falling back to demo content.",
+};
 
-export type I18nDict = typeof en
+export type I18nDict = typeof en;
 
 const np: I18nDict = {
   appTagline: "अहिलेको मुख्य खबर",
@@ -87,12 +91,12 @@ const np: I18nDict = {
   navWeek: "यो हप्ताको",
   navMonth: "यो महिनाको",
   feedLensLabel: "खबरको प्रकार",
-  feedAll: "सबै (स्वदेश + विदेश)",
+  feedAll: "विश्व",
   feedNational: "स्वदेश",
   feedInternational: "विदेश",
   themeLabel: "थिम",
   themeDark: "डार्क मोड",
-  themeLight: "लाइट मोड",
+  themeLight: "उज्यालो मोड",
   dailyRefreshTitle: "दैनिक अपडेट",
   dailyRefreshTime: "बेलुका ९:०० बजे",
   dailyRefreshNote: "भरपर्दो स्रोतबाट छानिएका खबरहरू।",
@@ -105,7 +109,8 @@ const np: I18nDict = {
   researchStackDesc: "समाचार संकलन गर्ने तरिका",
   apiContractTitle: "प्राविधिक कुरा",
   apiContractDesc: "हाम्रो सिस्टमको कनेक्सन",
-  briefingDesc: "जसले जे नि भन्छ, जसले जे नि देखाउँछ। के ठीक, के बेठीक, के सत्य, के हावा छुट्याउँदै कपालै दुखिसक्यो ।\
+  briefingDesc:
+    "के ठीक, के बेठीक, के सत्य, के हावा छुट्याउँदै कपालै दुखिसक्यो ।\
  अबदेखि सबै यहीँ पढ्ने हो। एकै ठाउँमा सबै, भरपर्दो समाचार। ढुक्कै !!!",
   tabToday: "आज",
   tabWeek: "हप्ता",
@@ -145,6 +150,6 @@ const np: I18nDict = {
   statusLoading: "ताजा समाचार खोज्दैछौं…",
   statusConnected: "सिस्टम जोडिएको छ। समाचार तयार छ।",
   statusUnavailable: "अहिले लाइभ समाचार चल्न सकेन। डेमो हेर्दै गर्नुहोस्।",
-}
+};
 
-export const i18n = { en, np }
+export const i18n = { en, np };

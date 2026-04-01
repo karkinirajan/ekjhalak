@@ -16,10 +16,85 @@ const notoDevanagari = Noto_Sans_Devanagari({
   display: "swap",
 });
 
+const SITE_URL = "https://ekjhalak.vercel.app";
+const SITE_NAME = "एक झलक";
+const SITE_DESCRIPTION =
+  "Fast, bilingual news aggregator for Nepal and the world. Read the latest national and international headlines in English and Nepali — clean, ad-free, and real-time.";
+
 export const metadata: Metadata = {
-  title: "एक झलक — National & International",
-  description:
-    "Bilingual national and international news hub — clean, fast, ad-free. Daily coverage with English and Nepali summaries.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "एक झलक — Nepal & World News",
+    template: "%s | एक झलक",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: [
+    "Nepal news",
+    "Nepali news",
+    "नेपाल समाचार",
+    "bilingual news",
+    "news aggregator",
+    "international news",
+    "national news Nepal",
+    "एक झलक",
+  ],
+  authors: [{ name: "EkJhalak" }],
+  creator: "EkJhalak",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    alternateLocale: "ne_NP",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: "एक झलक — Nepal & World News",
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "एक झलक — Bilingual News Aggregator",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "एक झलक — Nepal & World News",
+    description: SITE_DESCRIPTION,
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    other: [
+      { rel: "manifest", url: "/site.webmanifest" },
+      {
+        rel: "android-chrome",
+        url: "/android-chrome-192x192.png",
+        sizes: "192x192",
+      },
+      {
+        rel: "android-chrome",
+        url: "/android-chrome-512x512.png",
+        sizes: "512x512",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -33,7 +108,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${notoDevanagari.variable}`}
     >
-      <body>
+      <body suppressHydrationWarning>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

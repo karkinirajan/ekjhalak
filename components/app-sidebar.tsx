@@ -1,6 +1,5 @@
-"use client"
-
-import { useState } from "react"
+"use client";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   CalendarDays,
@@ -12,28 +11,25 @@ import {
   LayoutDashboard,
   Newspaper,
   Shield,
-  BookOpenCheck,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
-import { useTheme } from "@/components/theme-provider"
-import { sourceRegistry } from "@/lib/source-registry"
-import type { RangeKey } from "@/lib/news-pipeline"
-import type { SourceStatusMeta } from "@/lib/news-pipeline"
+  Timer,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider";
+import { sourceRegistry } from "@/lib/source-registry";
+import type { RangeKey } from "@/lib/news-pipeline";
+import type { SourceStatusMeta } from "@/lib/news-pipeline";
 
 interface AppSidebarProps {
-  range: RangeKey
-  setRange: (value: RangeKey) => void
-  bucket: "all" | "national" | "international"
-  setBucket: (value: "all" | "national" | "international") => void
-  /** Currently active source filter (source id or null for all) */
-  sourceFilter: string | null
-  setSourceFilter: (id: string | null) => void
-  /** Live fetch status from the most recent aggregation */
-  sourceStatuses: SourceStatusMeta[]
-  /** Compact mode for mobile sheet — omits brand header */
-  compact?: boolean
+  range: RangeKey;
+  setRange: (value: RangeKey) => void;
+  bucket: "all" | "national" | "international";
+  setBucket: (value: "all" | "national" | "international") => void;
+  sourceFilter: string | null;
+  setSourceFilter: (id: string | null) => void;
+  sourceStatuses: SourceStatusMeta[];
+  compact?: boolean;
 }
 
 export function AppSidebar({
@@ -46,51 +42,97 @@ export function AppSidebar({
   sourceStatuses,
   compact = false,
 }: AppSidebarProps) {
-  const { palette, t } = useTheme()
-  const [sourcesOpen, setSourcesOpen] = useState(false)
+  const { palette, t } = useTheme();
+  const [sourcesOpen, setSourcesOpen] = useState(true);
+  const [now, setNow] = useState<number | null>(null);
 
-  // Build a status lookup map keyed by source id
-  const statusById = Object.fromEntries(sourceStatuses.map((s) => [s.id, s]))
+  useEffect(() => {
+    setNow(Date.now());
+
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const statusById = useMemo(
+    () => Object.fromEntries(sourceStatuses.map((s) => [s.id, s])),
+    [sourceStatuses],
+  );
+
+  const activeCounts = useMemo(() => {
+    const national = sourceStatuses.filter(
+      (s) => s.ok && sourceRegistry.national.some((src) => src.id === s.id),
+    ).length;
+    const international = sourceStatuses.filter(
+      (s) =>
+        s.ok && sourceRegistry.international.some((src) => src.id === s.id),
+    ).length;
+
+    return { national, international };
+  }, [sourceStatuses]);
 
   const navItems = [
-    { key: "today", label: t.navToday, icon: Newspaper, range: "day" as RangeKey },
-    { key: "week", label: t.navWeek, icon: CalendarDays, range: "week" as RangeKey },
-    { key: "month", label: t.navMonth, icon: LayoutDashboard, range: "month" as RangeKey },
-  ]
+    {
+      key: "today",
+      label: t.navToday,
+      icon: Newspaper,
+      range: "day" as RangeKey,
+    },
+    {
+      key: "week",
+      label: t.navWeek,
+      icon: CalendarDays,
+      range: "week" as RangeKey,
+    },
+    {
+      key: "month",
+      label: t.navMonth,
+      icon: LayoutDashboard,
+      range: "month" as RangeKey,
+    },
+  ];
 
-  const nationalSources = sourceRegistry.national
-  const internationalSources = sourceRegistry.international
+  const nationalSources = sourceRegistry.national;
+  const internationalSources = sourceRegistry.international;
 
-  function SourceRow({
-    source,
-  }: {
-    source: (typeof nationalSources)[0]
-  }) {
-    const status = statusById[source.id]
-    const isActive = source.active
-    const isSelected = sourceFilter === source.id
+  function SourceRow({ source }: { source: (typeof nationalSources)[0] }) {
+    const status = statusById[source.id];
+    const isActive = source.active;
+    const isSelected = sourceFilter === source.id;
+    const hasError = isActive && status && !status.ok;
+    const isLive = isActive && status?.ok;
 
-    let statusIcon: React.ReactNode
+    // Format last fetch age
+    const fetchAge = useMemo(() => {
+      if (!status?.fetchedAt || now === null) return null;
+      const diffMin = Math.floor((now - status.fetchedAt) / 60_000);
+      if (diffMin < 1) return "just now";
+      if (diffMin === 1) return "1m ago";
+      if (diffMin < 60) return `${diffMin}m ago`;
+      return `${Math.floor(diffMin / 60)}h ago`;
+    }, [now, status]);
+
+    let statusIcon: React.ReactNode;
     if (!isActive) {
-      // Inactive — no RSS configured
-      statusIcon = <Circle className="h-2.5 w-2.5 shrink-0 opacity-30" />
+      statusIcon = <Circle className="h-2.5 w-2.5 shrink-0 opacity-55" />;
     } else if (!status) {
-      // Active but not yet fetched
-      statusIcon = <Circle className="h-2.5 w-2.5 shrink-0 opacity-50" />
-    } else if (status.ok) {
+      statusIcon = <Circle className="h-2.5 w-2.5 shrink-0 opacity-40" />;
+    } else if (isLive) {
       statusIcon = (
-        <CheckCircle2 className={cn("h-2.5 w-2.5 shrink-0", "text-emerald-500")} />
-      )
+        <CheckCircle2 className="h-2.5 w-2.5 shrink-0 text-emerald-500" />
+      );
     } else {
       statusIcon = (
-        <AlertCircle className={cn("h-2.5 w-2.5 shrink-0", "text-red-400 opacity-70")} />
-      )
+        <AlertCircle className="h-2.5 w-2.5 shrink-0 text-red-400 opacity-80" />
+      );
     }
 
     const handleClick = () => {
-      if (!isActive) return
-      setSourceFilter(isSelected ? null : source.id)
-    }
+      if (!isActive) return;
+      setSourceFilter(isSelected ? null : source.id);
+    };
 
     return (
       <button
@@ -99,69 +141,76 @@ export function AppSidebar({
         aria-pressed={isSelected}
         title={
           !isActive
-            ? `${source.name} — ${source.note} (no RSS)`
-            : status?.error
-              ? `${source.name} — fetch error: ${status.error}`
-              : source.note
+            ? `${source.name} — ${source.note} (no RSS configured)`
+            : hasError
+              ? `${source.name} — fetch error: ${status?.error ?? "unknown"}`
+              : `${source.name} — ${source.note}${fetchAge ? ` • ${fetchAge}` : ""}`
         }
         className={cn(
-          "flex w-full items-center gap-2 px-2 py-1 text-xs rounded-sm transition-all",
+          "group flex w-full items-center gap-2 px-2 py-1.5 text-xs rounded-sm transition-all",
           isActive
             ? isSelected
               ? palette.accent
               : cn("hover:bg-white/5", palette.text)
-            : cn("opacity-40 cursor-default", palette.muted),
+            : cn("cursor-not-allowed text-[11px] opacity-75", palette.muted),
         )}
       >
         {statusIcon}
-        <span className="flex-1 truncate text-left">{source.name}</span>
-        {status?.ok && status.itemCount > 0 && (
-          <span className={cn("text-[10px] tabular-nums opacity-60", palette.muted)}>
-            {status.itemCount}
+        <span className="flex-1 truncate text-left leading-tight">
+          {source.name}
+        </span>
+        {/* Language badge for NP sources */}
+        {source.language === "np" && isActive && (
+          <span
+            className={cn("text-[9px] px-1 rounded opacity-60", palette.soft)}
+          >
+            NP
+          </span>
+        )}
+        {isLive && status!.itemCount > 0 && (
+          <span
+            className={cn("text-[10px] tabular-nums opacity-50", palette.muted)}
+          >
+            {status!.itemCount}
           </span>
         )}
       </button>
-    )
+    );
   }
+
+  // Count active+ok sources total
+  const liveSourceCount = sourceStatuses.filter((s) => s.ok).length;
 
   const content = (
     <div
       className={cn(
-        "flex flex-col h-full gap-2 overflow-y-auto border p-2.5 shadow-sm backdrop-blur-lg",
-        compact ? "border-none shadow-none p-0" : "",
+        "flex flex-col h-full gap-2 overflow-y-auto border backdrop-blur-lg",
+        compact ? "border-none p-0 shadow-none" : "p-2.5 shadow-sm",
         palette.shell,
       )}
     >
-      {/* Brand — hidden in compact mode */}
+      {/* Brand */}
       {!compact && (
-        <>
-          <div className="flex items-center gap-2.5 px-2 py-1">
-            <div
-              className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center border rounded-md shadow-sm transition-transform hover:scale-105",
-                palette.soft,
-              )}
-            >
-              <BookOpenCheck className="h-5 w-5" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <div className={cn("text-base font-bold tracking-tight", palette.text)}>
-                एक झलक
-              </div>
-              <p className={cn("text-sm opacity-70", palette.muted)}>
-                सररर एक झलक न्युज पढ्नुहोस्
-              </p>
-            </div>
-          </div>
-          <Separator className="opacity-50" />
-        </>
+        <div className="flex h-[74px] w-full items-center justify-center overflow-hidden px-2 py-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            suppressHydrationWarning
+            src="/logo.png"
+            alt="एक झलक"
+            width={427}
+            height={144}
+            loading="eager"
+            decoding="async"
+            className="h-full w-full object-cover object-center mix-blend-multiply dark:mix-blend-screen"
+          />
+        </div>
       )}
 
       {/* Navigation */}
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {navItems.map((item) => {
-          const Icon = item.icon
-          const active = range === item.range
+          const Icon = item.icon;
+          const active = range === item.range;
           return (
             <button
               key={item.key}
@@ -175,54 +224,79 @@ export function AppSidebar({
               <Icon className="h-4 w-4 shrink-0" />
               <span className="truncate">{item.label}</span>
             </button>
-          )
+          );
         })}
       </div>
 
-      <Separator className="opacity-50" />
+      <Separator className="opacity-40" />
 
-      {/* Feed lens */}
+      {/* Area filter */}
       <div>
-        <div className={cn("mb-1.5 px-1 text-xs uppercase tracking-wide", palette.muted)}>
+        <div
+          className={cn(
+            "mb-1.5 px-1 text-[10px] uppercase tracking-widest font-medium",
+            palette.muted,
+          )}
+        >
           {t.feedLensLabel}
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           {(
             [
-              { id: "national", label: t.feedNational, icon: FlagTriangleRight },
-              { id: "international", label: t.feedInternational, icon: Globe },
+              {
+                id: "national",
+                label: t.feedNational,
+                icon: FlagTriangleRight,
+                count: activeCounts.national,
+              },
+              {
+                id: "international",
+                label: t.feedInternational,
+                icon: Globe,
+                count: activeCounts.international,
+              },
             ] as const
           ).map((item) => {
-            const Icon = item.icon
-            const active = bucket === item.id
+            const Icon = item.icon;
+            const active = bucket === item.id;
+
             return (
               <Button
                 key={item.id}
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setBucket(item.id)
-                  // Clear source filter when switching bucket
-                  setSourceFilter(null)
+                  setBucket(item.id);
+                  setSourceFilter(null);
                 }}
                 aria-pressed={active}
                 className={cn(
-                  "h-9 w-full justify-start px-3 text-xs rounded-md gap-2.5",
+                  "h-9 w-full justify-start gap-2.5 rounded-md px-3 text-xs",
                   active ? palette.accent : palette.ghost,
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.count > 0 && (
+                  <span
+                    className={cn(
+                      "text-[10px] tabular-nums opacity-50",
+                      active ? "" : palette.muted,
+                    )}
+                  >
+                    {item.count}
+                  </span>
+                )}
               </Button>
-            )
+            );
           })}
         </div>
       </div>
 
-      <Separator className="opacity-50" />
+      <Separator className="opacity-40" />
 
-      {/* Sources — collapsible with live status */}
-      <div className="pb-1">
+      {/* Sources — collapsible */}
+      <div className="pb-1 min-h-0">
         <button
           onClick={() => setSourcesOpen(!sourcesOpen)}
           aria-expanded={sourcesOpen}
@@ -236,34 +310,59 @@ export function AppSidebar({
           >
             <div className="flex items-center gap-2.5">
               <Shield className="h-3.5 w-3.5 shrink-0" />
-              {t.trustedSourcesTitle}
+              <span>{t.trustedSourcesTitle}</span>
+              {liveSourceCount > 0 && (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold",
+                    palette.badge,
+                  )}
+                >
+                  {liveSourceCount} live
+                </span>
+              )}
               {sourceFilter && (
-                <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] leading-none", palette.accent)}>
-                  1
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] leading-none",
+                    palette.accent,
+                  )}
+                >
+                  filtered
                 </span>
               )}
             </div>
             <ChevronDown
-              className={cn("h-3.5 w-3.5 transition-transform", sourcesOpen && "rotate-180")}
+              className={cn(
+                "h-3.5 w-3.5 transition-transform duration-200",
+                sourcesOpen && "rotate-180",
+              )}
             />
           </div>
         </button>
 
         {sourcesOpen && (
-          <div className="mt-1 space-y-2 pl-2">
-            {/* Clear filter shortcut */}
+          <div className="mt-1 space-y-2 pl-1">
             {sourceFilter && (
               <button
                 onClick={() => setSourceFilter(null)}
-                className={cn("text-[10px] px-2 py-0.5 underline underline-offset-2 hover:no-underline", palette.muted)}
+                className={cn(
+                  "text-[10px] px-2 py-0.5 underline underline-offset-2 hover:no-underline transition-colors",
+                  palette.muted,
+                )}
               >
-                Clear source filter
+                ✕ Clear filter
               </button>
             )}
 
-            {/* National sources */}
+            {/* National */}
             <div>
-              <div className={cn("mb-1 text-[10px] uppercase tracking-wide px-2", palette.muted)}>
+              <div
+                className={cn(
+                  "mb-1 px-2 text-[10px] uppercase tracking-widest font-medium",
+                  palette.muted,
+                )}
+              >
                 {t.sectionNepal}
               </div>
               <div className="space-y-0.5">
@@ -273,9 +372,14 @@ export function AppSidebar({
               </div>
             </div>
 
-            {/* International sources */}
+            {/* International */}
             <div>
-              <div className={cn("mb-1 text-[10px] uppercase tracking-wide px-2", palette.muted)}>
+              <div
+                className={cn(
+                  "mb-1 px-2 text-[10px] uppercase tracking-widest font-medium",
+                  palette.muted,
+                )}
+              >
                 {t.sectionInternational}
               </div>
               <div className="space-y-0.5">
@@ -286,25 +390,34 @@ export function AppSidebar({
             </div>
 
             {/* Legend */}
-            <div className={cn("mt-2 space-y-1 px-2 pt-1 border-t opacity-60", palette.muted)}>
-              <div className="flex items-center gap-1.5 text-[10px]">
+            <div
+              className={cn(
+                "mt-1.5 space-y-1 px-2 pt-2 border-t",
+                palette.muted,
+              )}
+            >
+              <div className="flex items-center gap-1.5 text-[10px] opacity-60">
                 <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
-                <span>Live — click to filter by source</span>
+                <span>Live — click to filter</span>
               </div>
-              <div className="flex items-center gap-1.5 text-[10px]">
+              <div className="flex items-center gap-1.5 text-[10px] opacity-60">
                 <AlertCircle className="h-2.5 w-2.5 text-red-400" />
-                <span>Fetch error — using cache if available</span>
+                <span>Fetch error — using last cache</span>
               </div>
-              <div className="flex items-center gap-1.5 text-[10px]">
-                <Circle className="h-2.5 w-2.5 opacity-30" />
-                <span>No RSS available</span>
+              <div className="flex items-center gap-1.5 text-[10px] opacity-40">
+                <Circle className="h-2.5 w-2.5" />
+                <span>No RSS — not available</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] opacity-50 pt-0.5">
+                <Timer className="h-2.5 w-2.5" />
+                <span>Feed refreshes every 5 minutes</span>
               </div>
             </div>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 
-  return content
+  return content;
 }

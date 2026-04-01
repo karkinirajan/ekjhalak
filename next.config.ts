@@ -1,4 +1,4 @@
-import type { NextConfig } from "next"
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
@@ -9,6 +9,13 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "risingnepaldaily.com" },
       { protocol: "https", hostname: "ekantipur.com" },
       { protocol: "https", hostname: "www.gorkhapatraonline.com" },
+      // New Nepal sources
+      { protocol: "https", hostname: "myrepublica.nagariknetwork.com" },
+      { protocol: "https", hostname: "thehimalayantimes.com" },
+      { protocol: "https", hostname: "en.setopati.com" },
+      { protocol: "https", hostname: "www.setopati.com" },
+      { protocol: "https", hostname: "ratopati.com" },
+      { protocol: "https", hostname: "nagariknews.nagariknetwork.com" },
       // International sources
       { protocol: "https", hostname: "feeds.reuters.com" },
       { protocol: "https", hostname: "www.aljazeera.com" },
@@ -25,6 +32,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.politico.eu" },
       { protocol: "https", hostname: "cdn.cnn.com" },
       { protocol: "http", hostname: "rss.cnn.com" },
+      { protocol: "https", hostname: "www.scmp.com" },
+      { protocol: "https", hostname: "cdn.i-scmp.com" },
       // Generic CDN patterns that news sites use
       { protocol: "https", hostname: "**.cloudfront.net" },
       { protocol: "https", hostname: "**.cloudinary.com" },
@@ -34,6 +43,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "i2.wp.com" },
     ],
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

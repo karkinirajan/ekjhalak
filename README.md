@@ -45,10 +45,10 @@ AggregatedFeed  { items: NewsItem[], sourceStatuses, fetchedAt }
 
 Two independent cache layers run in series:
 
-| Layer | Mechanism | TTL | Scope |
-|-------|-----------|-----|-------|
-| Per-source fetch | `fetch(..., { next: { revalidate: 600 } })` | 10 min | One RSS URL |
-| Full aggregation | `unstable_cache` tagged `"news-feed"` | 10 min | All sources combined |
+| Layer            | Mechanism                                   | TTL    | Scope                |
+| ---------------- | ------------------------------------------- | ------ | -------------------- |
+| Per-source fetch | `fetch(..., { next: { revalidate: 300 } })` | 5 min  | One RSS URL          |
+| Full aggregation | `unstable_cache` tagged `"news-feed"`       | 10 min | All sources combined |
 
 A cache miss at the aggregation layer fetches all sources in parallel. A hit returns the stored `AggregatedFeed` immediately with no upstream I/O.
 
@@ -62,39 +62,47 @@ Sources are defined in `lib/source-registry.ts`. Each source has:
 
 ```ts
 interface Source {
-  id: string          // stable slug, used as DB-style key
-  name: string
-  bucket: "national" | "international"
-  country: string     // ISO 3166-1 alpha-2
-  language: "en" | "np" | "multi"
-  categories: string[]
-  rssUrl: string | null  // null = no public feed
-  homepageUrl: string
-  priority: number    // 1–10; higher wins dedup ties, controls sidebar order
-  active: boolean     // false = skip during aggregation
-  note: string
-  urlPrefix?: string  // only keep items whose URL starts with this (e.g. CNN ad filter)
+  id: string; // stable slug, used as DB-style key
+  name: string;
+  bucket: "national" | "international";
+  country: string; // ISO 3166-1 alpha-2
+  language: "en" | "np" | "multi";
+  categories: string[];
+  rssUrl: string | null; // null = no public feed
+  homepageUrl: string;
+  priority: number; // 1–10; higher wins dedup ties, controls sidebar order
+  active: boolean; // false = skip during aggregation
+  note: string;
+  urlPrefix?: string; // only keep items whose URL starts with this (e.g. CNN ad filter)
+  credibilityScore?: number; // 1–10 editorial quality signal, shown in UI
 }
 ```
 
-**Active sources (14 confirmed working):**
+**Active sources (22 confirmed):**
 
-| Source | Bucket | Format |
-|--------|--------|--------|
-| Kathmandu Post | National | RSS 2.0 |
-| Onlinekhabar English | National | RSS 2.0 |
-| The Rising Nepal | National | RSS 2.0 |
-| BBC | International | Atom 1.0 |
-| Al Jazeera | International | RSS 2.0 |
-| The Guardian | International | Atom 1.0 |
-| DW | International | RDF/RSS 1.0 |
-| France 24 | International | RSS 2.0 |
-| The Hindu | International | RSS 2.0 |
-| Times of India | International | RSS 2.0 |
-| NDTV | International | RSS 2.0 (FeedBurner) |
-| The New York Times | International | RSS 2.0 |
-| Politico Europe | International | RSS 2.0 |
-| CNN | International | RSS 2.0 (ad-filtered) |
+| Source                   | Bucket        | Language |
+| ------------------------ | ------------- | -------- |
+| Kathmandu Post           | National      | EN       |
+| Onlinekhabar English     | National      | EN       |
+| My Republica             | National      | EN       |
+| The Himalayan Times      | National      | EN       |
+| The Rising Nepal         | National      | EN       |
+| Setopati English         | National      | EN       |
+| Setopati                 | National      | **NP**   |
+| Ratopati                 | National      | **NP**   |
+| Nagarik News             | National      | **NP**   |
+| BBC                      | International | EN       |
+| Al Jazeera               | International | EN       |
+| The Guardian             | International | EN       |
+| DW                       | International | EN       |
+| France 24                | International | EN       |
+| The Hindu                | International | EN       |
+| Times of India           | International | EN       |
+| NDTV                     | International | EN       |
+| The New York Times       | International | EN       |
+| Politico Europe          | International | EN       |
+| CNN                      | International | EN       |
+| South China Morning Post | International | EN       |
 
 **Inactive sources** (registered but not fetched): Reuters (blocks server-side IPs), AP News (no free RSS), Washington Post/WSJ/Bloomberg (paywalled), eKantipur/Gorkhapatra (feed issues), Instagram sources.
 
@@ -104,11 +112,13 @@ interface Source {
 
 Items arrive sorted by priority descending (high-priority source version wins).
 
-**Pass 1 — URL fingerprint:** SHA-256 of the canonical URL (tracking params stripped), first 12 hex chars as `id`. Exact collisions are dropped.
+**Pass 1 — URL fingerprint:** SHA-256 of the canonical URL (tracking params stripped), first 12 hex chars as `id`. Exact collisions are dropped; the canonical item records the alternate `sourceId` in `alternateSourceIds[]`.
 
-**Pass 2 — Title similarity:** For each unpruned item, compare against all already-kept items published within a 2-hour window. Tokenize titles (lowercase, strip punctuation, 3+ char words), compute Jaccard similarity. If ≥ 0.65 → duplicate, drop.
+**Pass 2 — Title similarity:** For each unpruned item, compare against all already-kept items published within a 2-hour window. Tokenize titles (lowercase, strip punctuation, 3+ char words), compute Jaccard similarity. If ≥ 0.65 → duplicate, drop; canonical item records `alternateSourceIds` and `duplicateCount`.
 
-This removes cross-source reposts (e.g. Reuters story syndicated to multiple outlets) while keeping genuinely different articles on the same topic.
+**UI surface:** The NewsCard shows "also reported by N sources" when `alternateSourceIds.length > 0`, and the reading sheet lists those source names.
+
+This removes cross-source reposts while preserving source diversity and attribution.
 
 ---
 
@@ -116,11 +126,11 @@ This removes cross-source reposts (e.g. Reuters story syndicated to multiple out
 
 The `/api/news` endpoint accepts `?range=day|week|month`:
 
-| Range | Cutoff |
-|-------|--------|
-| `day` | 24 hours |
-| `week` | 7 days |
-| `month` | 30 days |
+| Range   | Cutoff   |
+| ------- | -------- |
+| `day`   | 24 hours |
+| `week`  | 7 days   |
+| `month` | 30 days  |
 
 Filtering is applied against `item.publishedTimestamp` relative to `feed.fetchedAt`. Items without a parseable publication date are assigned `Date.now()` at ingest time and always appear in `day`.
 
@@ -181,6 +191,7 @@ curl 'http://localhost:3000/api/news?range=day' | jq '{total: (.items | length),
 Query params: `range=day|week|month` (default: `day`), `bucket=national|international`
 
 Response:
+
 ```json
 {
   "items": [...],
@@ -198,11 +209,31 @@ Response:
 
 Returns all registered sources with live fetch status merged in.
 
+### `POST /api/revalidate?secret=SECRET`
+
+On-demand cache invalidation. Busts the `"news-feed"` tag immediately — next request triggers a fresh aggregation. Use from a Vercel Cron job (every 5 minutes) for near-real-time freshness.
+
+Set `REVALIDATE_SECRET` in Vercel environment variables. Without it, the endpoint is open (fine for dev/staging).
+
+---
+
+## Nepali Language Support
+
+**Native NP sources:** Setopati, Ratopati, and Nagarik News deliver content in Nepali script. Their `summaryNp` is populated directly from the RSS `description` field — no translation required.
+
+**EN→NP translation:** `summaryNp` is intentionally empty for English-language sources. To add automatic translation:
+
+1. Hook into `normalizeStory()` in `lib/feed-normalizer.ts`
+2. Call your translation API (Azure Translator, Gemini Flash, etc.) asynchronously
+3. Cache translated summaries — never make translation a blocking step in the aggregation path
+
+**Typography:** Both `Inter` (Latin) and `Noto Sans Devanagari` are loaded via `next/font/google`. The `font-np` CSS utility class applies the Devanagari font stack. It is used automatically in NewsCard and NewsCard brief sheet when rendering Nepali content.
+
 ---
 
 ## Production Notes
 
-- **Cold start:** First request after a deploy triggers parallel fetching of all 14 sources (~3–5s). Subsequent requests within 10 minutes are cache hits.
+- **Cold start:** First request after a deploy triggers parallel fetching of all active sources (~3–5s). Subsequent requests within 10 minutes are cache hits.
 - **Image optimization:** `next/image` is configured with `remotePatterns` for all active source domains. Unknown image hosts fall back gracefully (no image shown).
 - **Error isolation:** A source that times out, returns HTTP 4xx/5xx, or emits malformed XML produces a `SourceStatusMeta` with `ok: false`. The rest of the feed is unaffected.
 - **Cache invalidation:** To force an immediate refresh (e.g. after adding a source), delete `.next/cache` and restart the server, or call `revalidateTag("news-feed")` from a protected admin route.

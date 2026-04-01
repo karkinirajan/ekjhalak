@@ -3,33 +3,34 @@
 // Results are cached with Next.js unstable_cache (10-minute revalidation).
 // Server-only.
 
-import { unstable_cache } from "next/cache"
-import { ACTIVE_SOURCES } from "./source-registry"
-import { fetchRssFeed } from "./rss-adapter"
-import { normalizeStory } from "./feed-normalizer"
-import { deduplicate } from "./deduplicator"
-import type { NewsItem, SourceStatusMeta } from "./news-pipeline"
-import type { Source } from "./source-registry"
+import { unstable_cache } from "next/cache";
+import { ACTIVE_SOURCES } from "./source-registry";
+import { fetchRssFeed } from "./rss-adapter";
+import { normalizeStory } from "./feed-normalizer";
+import { deduplicate } from "./deduplicator";
+import { batchTranslateToNepali } from "./translator";
+import type { NewsItem, SourceStatusMeta } from "./news-pipeline";
+import type { Source } from "./source-registry";
 
 export interface AggregatedFeed {
   /** All deduplicated stories, sorted newest-first */
-  items: NewsItem[]
+  items: NewsItem[];
   /** Per-source fetch outcome */
-  sourceStatuses: SourceStatusMeta[]
+  sourceStatuses: SourceStatusMeta[];
   /** Unix ms when this batch was assembled */
-  fetchedAt: number
+  fetchedAt: number;
 }
 
 // ── Per-source fetch ──────────────────────────────────────────────────────────
 
 interface SourceResult {
-  source: Source
-  items: NewsItem[]
-  status: SourceStatusMeta
+  source: Source;
+  items: NewsItem[];
+  status: SourceStatusMeta;
 }
 
 async function fetchOneSource(source: Source): Promise<SourceResult> {
-  const start = Date.now()
+  const start = Date.now();
 
   if (!source.rssUrl) {
     return {
@@ -43,18 +44,18 @@ async function fetchOneSource(source: Source): Promise<SourceResult> {
         fetchedAt: start,
         error: "No RSS URL configured",
       },
-    }
+    };
   }
 
   try {
-    const rawStories = await fetchRssFeed(source.rssUrl)
+    const rawStories = await fetchRssFeed(source.rssUrl);
 
     // Apply optional URL prefix filter (e.g. CNN to remove sponsored ad entries)
     const filtered = source.urlPrefix
       ? rawStories.filter((raw) => raw.url.startsWith(source.urlPrefix!))
-      : rawStories
+      : rawStories;
 
-    const items = filtered.map((raw) => normalizeStory(raw, source))
+    const items = filtered.map((raw) => normalizeStory(raw, source));
 
     return {
       source,
@@ -66,9 +67,9 @@ async function fetchOneSource(source: Source): Promise<SourceResult> {
         itemCount: items.length,
         fetchedAt: start,
       },
-    }
+    };
   } catch (err) {
-    const error = err instanceof Error ? err.message : String(err)
+    const error = err instanceof Error ? err.message : String(err);
     return {
       source,
       items: [],
@@ -80,7 +81,7 @@ async function fetchOneSource(source: Source): Promise<SourceResult> {
         fetchedAt: start,
         error,
       },
-    }
+    };
   }
 }
 
@@ -91,35 +92,54 @@ async function fetchOneSource(source: Source): Promise<SourceResult> {
  * One bad source does not affect the rest — errors are captured per-source.
  */
 async function aggregateAllSources(): Promise<AggregatedFeed> {
-  const fetchedAt = Date.now()
+  const fetchedAt = Date.now();
 
   // Sort by priority descending so high-priority sources win dedup ties
-  const sourcesToFetch = [...ACTIVE_SOURCES].sort((a, b) => b.priority - a.priority)
+  const sourcesToFetch = [...ACTIVE_SOURCES].sort(
+    (a, b) => b.priority - a.priority,
+  );
 
   const results = await Promise.allSettled(
-    sourcesToFetch.map((source) => fetchOneSource(source))
-  )
+    sourcesToFetch.map((source) => fetchOneSource(source)),
+  );
 
-  const allItems: NewsItem[] = []
-  const sourceStatuses: SourceStatusMeta[] = []
+  const allItems: NewsItem[] = [];
+  const sourceStatuses: SourceStatusMeta[] = [];
 
   for (const result of results) {
     if (result.status === "fulfilled") {
-      allItems.push(...result.value.items)
-      sourceStatuses.push(result.value.status)
+      allItems.push(...result.value.items);
+      sourceStatuses.push(result.value.status);
     } else {
       // This branch should rarely occur since fetchOneSourc catches internally
-      console.error("[aggregator] Unexpected rejection:", result.reason)
+      console.error("[aggregator] Unexpected rejection:", result.reason);
     }
   }
 
   // Sort all items newest-first before deduplication
   // (dedup keeps the first occurrence = highest-priority source's version)
-  allItems.sort((a, b) => b.publishedTimestamp - a.publishedTimestamp)
+  allItems.sort((a, b) => b.publishedTimestamp - a.publishedTimestamp);
 
-  const deduped = deduplicate(allItems)
+  const deduped = deduplicate(allItems);
 
-  return { items: deduped, sourceStatuses, fetchedAt }
+  // ── Translate English summaries to Nepali ──────────────────────────────────
+  // Only items that don't already have native Nepali content need translation.
+  // Processing happens here (inside the cache boundary) so translations are
+  // computed once per 5-minute cache window, not on every request.
+  const toTranslate = deduped.filter(
+    (item) => item.summaryEn && !item.summaryNp,
+  );
+  if (toTranslate.length > 0) {
+    const translations = await batchTranslateToNepali(
+      toTranslate.map((item) => item.summaryEn),
+      5, // max 5 concurrent API calls
+    );
+    toTranslate.forEach((item, i) => {
+      if (translations[i]) item.summaryNp = translations[i];
+    });
+  }
+
+  return { items: deduped, sourceStatuses, fetchedAt };
 }
 
 // ── Cached export ─────────────────────────────────────────────────────────────
@@ -133,7 +153,7 @@ export const getCachedFeed = unstable_cache(
   aggregateAllSources,
   ["aggregated-news-feed"],
   {
-    revalidate: 600, // 10 minutes
+    revalidate: 300, // 5 minutes — balances freshness vs. source load
     tags: ["news-feed"],
-  }
-)
+  },
+);
