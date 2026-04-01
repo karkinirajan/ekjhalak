@@ -1,6 +1,6 @@
 // lib/translator.ts
-// Translation pipeline: Groq LLM → Google → LibreTranslate → MyMemory.
-// Server-only. Azure removed for simplicity and speed.
+// Translation pipeline: Groq LLM → Google → MyMemory.
+// Server-only. Azure and LibreTranslate removed.
 // Translation results are cached in-memory for the lifetime of the serverless
 // function instance. Disk writes are intentionally avoided — Vercel's runtime
 // filesystem is read-only after deployment.
@@ -8,24 +8,11 @@
 const GOOGLE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
-const LIBRE_KEY = process.env.LIBRETRANSLATE_API_KEY ?? "";
 const MYMEMORY_EMAIL = process.env.MYMEMORY_EMAIL ?? "";
 
-const LIBRE_TIMEOUT_MS = 4_500;
-const LIBRE_COOLDOWN_MS = 10 * 60 * 1_000;
 const MYMEMORY_REQUEST_GAP_MS = 1_500;
 const MYMEMORY_COOLDOWN_MS = 30 * 60 * 1_000;
 const GROQ_COOLDOWN_MS = 2 * 60 * 1_000; // short — Groq rate limits reset fast
-
-const LIBRE_ENDPOINTS = [
-  process.env.LIBRETRANSLATE_API_URL,
-  // Public LibreTranslate-compatible endpoints. These are free-first defaults,
-  // not production guarantees. Configure LIBRETRANSLATE_API_URL for stability.
-  "https://libretranslate.com",
-  "https://translate.argosopentech.com",
-].filter((value, index, array): value is string => {
-  return Boolean(value) && array.indexOf(value) === index;
-});
 
 // In-memory cache: survives across requests within the same function instance.
 const translationCache = new Map<string, string>();
@@ -35,7 +22,6 @@ let myMemoryQueue: Promise<void> = Promise.resolve();
 let myMemoryBlockedUntil = 0;
 let hasLoggedMyMemoryCooldown = false;
 let groqBlockedUntil = 0;
-const libreBlockedUntilByUrl = new Map<string, number>();
 
 // ── Google Translate ──────────────────────────────────────────────────────────
 
@@ -159,69 +145,6 @@ async function groqBatchTranslate(texts: string[]): Promise<string[]> {
   }
 
   return arr.map(String);
-}
-
-// ── LibreTranslate ────────────────────────────────────────────────────────────
-
-function isLibreCoolingDown(endpoint: string) {
-  return (libreBlockedUntilByUrl.get(endpoint) ?? 0) > Date.now();
-}
-
-function blockLibre(endpoint: string) {
-  libreBlockedUntilByUrl.set(endpoint, Date.now() + LIBRE_COOLDOWN_MS);
-}
-
-async function libreTranslateVia(
-  endpoint: string,
-  text: string,
-): Promise<string> {
-  const res = await fetch(`${endpoint.replace(/\/$/, "")}/translate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      q: text,
-      source: "en",
-      target: "ne",
-      ...(LIBRE_KEY ? { api_key: LIBRE_KEY } : {}),
-    }),
-    signal: AbortSignal.timeout(LIBRE_TIMEOUT_MS),
-  });
-
-  if (res.status === 429 || res.status >= 500) {
-    blockLibre(endpoint);
-    throw new Error(`LibreTranslate HTTP ${res.status}`);
-  }
-
-  if (!res.ok) throw new Error(`LibreTranslate HTTP ${res.status}`);
-
-  const data = await res.json();
-  const translated = data?.translatedText ?? "";
-  if (!translated) throw new Error("LibreTranslate: empty response");
-  return translated;
-}
-
-async function libreTranslate(text: string): Promise<string> {
-  let lastError: Error | null = null;
-
-  for (const endpoint of LIBRE_ENDPOINTS) {
-    if (isLibreCoolingDown(endpoint)) continue;
-
-    try {
-      return await libreTranslateVia(endpoint, text);
-    } catch (error) {
-      lastError = error as Error;
-      if (
-        lastError.name === "TimeoutError" ||
-        /fetch failed|ENOTFOUND|EAI_AGAIN|ECONNRESET|timeout/i.test(
-          lastError.message,
-        )
-      ) {
-        blockLibre(endpoint);
-      }
-    }
-  }
-
-  throw lastError ?? new Error("LibreTranslate: no endpoints configured");
 }
 
 // ── Sentence splitting (for MyMemory 500-char limit) ─────────────────────────
@@ -364,7 +287,6 @@ export async function translateToNepali(text: string): Promise<string> {
       if (GROQ_API_KEY && !isGroqCoolingDown())
         return persist(await groqTranslate(key));
       if (GOOGLE_API_KEY) return persist(await googleTranslate(key));
-      if (LIBRE_ENDPOINTS.length > 0) return persist(await libreTranslate(key));
       if (isMyMemoryCoolingDown()) return persist("");
       return persist(await myMemoryTranslate(key));
     } catch (error) {
@@ -400,9 +322,19 @@ export async function batchTranslateToNepali(
   if (GROQ_API_KEY && !isGroqCoolingDown()) {
     const GROQ_CHUNK = 15;
     const GROQ_CHUNK_DELAY = 2_200; // ~27 req/min, under 30 limit
+    // Hard budget: Vercel static-generation pages timeout after 60s.
+    // Leave a safe margin so we return partial results rather than killing the build.
+    const GROQ_BUDGET_MS = 45_000;
+    const groqDeadline = Date.now() + GROQ_BUDGET_MS;
     const results: string[] = new Array(texts.length).fill("");
     try {
       for (let i = 0; i < texts.length; i += GROQ_CHUNK) {
+        if (Date.now() > groqDeadline) {
+          console.warn(
+            `[translator] Groq budget exceeded — returning ${i}/${texts.length} translations`,
+          );
+          return results; // return whatever completed before the deadline
+        }
         if (i > 0) await new Promise((r) => setTimeout(r, GROQ_CHUNK_DELAY));
         const chunk = texts.slice(i, i + GROQ_CHUNK);
         const translated = await groqBatchTranslate(chunk);
@@ -419,10 +351,33 @@ export async function batchTranslateToNepali(
     }
   }
 
-  // 3. Fall back to individual translation cascade
+  // 2. Groq is unavailable. Skip translation if only MyMemory is available.
+  //    MyMemory enforces a 1.5s gap per request — for batches of 50+ items
+  //    (typical at build time) this easily exceeds Vercel's 60-second
+  //    static-generation timeout and kills the build.
+  if (!GOOGLE_API_KEY) {
+    console.warn(
+      `[translator] No fast provider available for batch of ${texts.length} — skipping translation`,
+    );
+    return new Array(texts.length).fill("");
+  }
+
+  // 3. Fall back to individual translation cascade.
+  // Apply a hard time budget (30s) — if we're still going after that, return
+  // whatever translated so far. This caps worst-case build time regardless of
+  // which providers respond slowly.
+  const FALLBACK_BUDGET_MS = 30_000;
+  const deadline = Date.now() + FALLBACK_BUDGET_MS;
   const results: string[] = new Array(texts.length).fill("");
 
   for (let i = 0; i < texts.length; i += concurrency) {
+    if (Date.now() > deadline) {
+      console.warn(
+        `[translator] Fallback budget exceeded — translated ${i}/${texts.length} items`,
+      );
+      break;
+    }
+
     const batchIndices = Array.from(
       { length: Math.min(concurrency, texts.length - i) },
       (_, offset) => i + offset,

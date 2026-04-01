@@ -98,6 +98,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.france24.com" },
       { protocol: "https", hostname: "i.guim.co.uk" },
       { protocol: "https", hostname: "www.thehindu.com" },
+      { protocol: "https", hostname: "th-i.thgim.com" },
       { protocol: "https", hostname: "static.toiimg.com" },
       { protocol: "https", hostname: "feeds.feedburner.com" },
       { protocol: "https", hostname: "static.ndtv.com" },

@@ -122,12 +122,16 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
 
   const deduped = deduplicate(allItems);
 
-  // ── Translate English summaries to Nepali ──────────────────────────────────
+  // ── Summarize long English summaries via Groq ──────────────────────────────
   // Only items that don't already have native Nepali content need translation.
   // Processing happens here (inside the cache boundary) so translations are
   // computed once per 5-minute cache window, not on every request.
-  // ── Summarize long English summaries via Groq ──────────────────────────────
+  // Budget: 20s for summarization. Each groqSummarize call has its own 15s
+  // AbortSignal timeout, but the loop is sequential — cap the total.
+  const SUMMARIZE_BUDGET_MS = 20_000;
+  const summarizeDeadline = Date.now() + SUMMARIZE_BUDGET_MS;
   for (const item of deduped) {
+    if (Date.now() > summarizeDeadline) break;
     if (item.summaryEn && item.summaryEn.split(/\s+/).length > 160) {
       try {
         item.summaryEn = await groqSummarize(item.summaryEn);
