@@ -11,28 +11,17 @@ export function truncate(text: string, maxLength: number) {
   return `${text.slice(0, maxLength).trim()}…`
 }
 
-export function buildPublishedAt(range: string, index: number) {
-  const now = new Date()
-  
-  if (range === "day") {
-    return `Today • ${String(7 + (index % 12)).padStart(2, "0")}:${index % 2 === 0 ? "15" : "45"}`
-  }
-  
-  if (range === "week") {
-    // Go back 0-6 days from today
-    const daysBack = index % 7
-    const date = new Date(now)
-    date.setDate(date.getDate() - daysBack)
-    const hours = 8 + (index % 10)
-    const minutes = index % 2 === 0 ? "00" : "30"
-    return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • ${String(hours).padStart(2, "0")}:${minutes}`
-  }
-  
-  // month range
-  const daysBack = index % 28
-  const date = new Date(now)
-  date.setDate(date.getDate() - daysBack)
-  const hours = 8 + (index % 10)
-  const minutes = index % 2 === 0 ? "00" : "30"
-  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • ${String(hours).padStart(2, "0")}:${minutes}`
+/**
+ * Returns a human-readable label for how long ago a unix-ms timestamp was.
+ * Used in the "last updated" indicator.
+ */
+export function formatRelativeTime(timestampMs: number): string {
+  const diffMs = Date.now() - timestampMs
+  const diffMin = Math.floor(diffMs / 60_000)
+  if (diffMin < 1) return "Just now"
+  if (diffMin === 1) return "1 min ago"
+  if (diffMin < 60) return `${diffMin} min ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr === 1) return "1 hour ago"
+  return `${diffHr} hours ago`
 }

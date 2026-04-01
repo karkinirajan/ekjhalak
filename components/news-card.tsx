@@ -18,8 +18,13 @@ export function NewsCard({ item }: NewsCardProps) {
   const { palette, language, t } = useTheme()
   const [briefOpen, setBriefOpen] = useState(false)
 
-  const primary = language === "en" ? item.summaryEn : item.summaryNp
-  const secondary = language === "en" ? item.summaryNp : item.summaryEn
+  // Fall back to English if the Nepali summary has not yet been translated
+  const primary = language === "en"
+    ? item.summaryEn
+    : (item.summaryNp || item.summaryEn)
+  const secondary = language === "en"
+    ? (item.summaryNp || "")
+    : item.summaryEn
   const primaryIsNp = language === "np"
   const secondaryIsNp = language === "en"
 
