@@ -4,6 +4,14 @@ const AZURE_TRANSLATOR_ENDPOINT =
 const AZURE_TRANSLATOR_KEY = process.env.AZURE_TRANSLATOR_KEY;
 const AZURE_TRANSLATOR_REGION = process.env.AZURE_TRANSLATOR_REGION;
 
+// Resource-specific endpoints use /translator/text/v3.0/ prefix;
+// the global endpoint uses / directly.
+const isCustomEndpoint =
+  AZURE_TRANSLATOR_ENDPOINT !== "https://api.cognitive.microsofttranslator.com";
+const TRANSLATE_PATH = isCustomEndpoint
+  ? "/translator/text/v3.0/translate"
+  : "/translate";
+
 export interface AzureTranslationItem {
   to: string;
   text: string;
@@ -44,7 +52,7 @@ function buildAzureTranslateUrl(
     throw new Error("Target language is required");
   }
 
-  const url = new URL("/translate", AZURE_TRANSLATOR_ENDPOINT);
+  const url = new URL(TRANSLATE_PATH, AZURE_TRANSLATOR_ENDPOINT);
   url.searchParams.set("api-version", "3.0");
   if (from?.trim()) {
     url.searchParams.set("from", from.trim());
@@ -130,23 +138,41 @@ export async function translateManyWithAzure({
     return { detectedLanguage: null, translations: [] };
   }
 
-  const data = await postAzureTranslation(
-    trimmedTexts.map((text) => ({ text })),
-    from,
-    to,
-  );
+  // Azure F0 tier limits: 50,000 chars and 100 elements per request,
+  // plus ~10 req/sec rate limit. Chunk into small batches with delays.
+  const CHUNK_SIZE = 10;
+  const CHUNK_DELAY_MS = 1_100; // just over 1s to stay under rate limit
+  const allTranslations: AzureTranslationItem[][] = [];
+  let detectedLanguage: { language: string; score?: number } | null = null;
 
-  return {
-    detectedLanguage: data?.[0]?.detectedLanguage ?? null,
-    translations:
-      data?.map(
-        (entry: { translations?: Array<{ to: string; text: string }> }) =>
-          entry.translations?.map(
-            (item): AzureTranslationItem => ({
-              to: item.to,
-              text: item.text,
-            }),
-          ) ?? [],
-      ) ?? [],
-  };
+  for (let i = 0; i < trimmedTexts.length; i += CHUNK_SIZE) {
+    const chunk = trimmedTexts.slice(i, i + CHUNK_SIZE);
+
+    if (i > 0) {
+      await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS));
+    }
+
+    const data = await postAzureTranslation(
+      chunk.map((text) => ({ text })),
+      from,
+      to,
+    );
+
+    if (!detectedLanguage && data?.[0]?.detectedLanguage) {
+      detectedLanguage = data[0].detectedLanguage;
+    }
+
+    for (const entry of data ?? []) {
+      allTranslations.push(
+        entry.translations?.map(
+          (item: { to: string; text: string }): AzureTranslationItem => ({
+            to: item.to,
+            text: item.text,
+          }),
+        ) ?? [],
+      );
+    }
+  }
+
+  return { detectedLanguage, translations: allTranslations };
 }

@@ -12,6 +12,8 @@ import {
 } from "./azure-translator";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_MODEL = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
 const LIBRE_KEY = process.env.LIBRETRANSLATE_API_KEY ?? "";
 const MYMEMORY_EMAIL = process.env.MYMEMORY_EMAIL ?? "";
 
@@ -20,6 +22,7 @@ const LIBRE_COOLDOWN_MS = 10 * 60 * 1_000;
 const MYMEMORY_REQUEST_GAP_MS = 1_500;
 const MYMEMORY_COOLDOWN_MS = 30 * 60 * 1_000;
 const AZURE_COOLDOWN_MS = 15 * 60 * 1_000;
+const GROQ_COOLDOWN_MS = 2 * 60 * 1_000; // short — Groq rate limits reset fast
 
 const LIBRE_ENDPOINTS = [
   process.env.LIBRETRANSLATE_API_URL,
@@ -39,6 +42,7 @@ let myMemoryQueue: Promise<void> = Promise.resolve();
 let myMemoryBlockedUntil = 0;
 let hasLoggedMyMemoryCooldown = false;
 let azureBlockedUntil = 0;
+let groqBlockedUntil = 0;
 const libreBlockedUntilByUrl = new Map<string, number>();
 
 // ── Google Translate ──────────────────────────────────────────────────────────
@@ -82,6 +86,104 @@ function isAzureCoolingDown() {
 
 function blockAzure() {
   azureBlockedUntil = Date.now() + AZURE_COOLDOWN_MS;
+}
+
+// ── Groq LLM Translation ─────────────────────────────────────────────────────
+
+function isGroqCoolingDown() {
+  return groqBlockedUntil > Date.now();
+}
+
+function blockGroq() {
+  groqBlockedUntil = Date.now() + GROQ_COOLDOWN_MS;
+  console.warn("[translator] Groq rate limited; cooling down for 2 minutes");
+}
+
+async function groqTranslate(text: string): Promise<string> {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Translate the English text to Nepali. Output ONLY the Nepali translation, no explanation.",
+        },
+        { role: "user", content: text },
+      ],
+      temperature: 0.1,
+      max_tokens: 2048,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (res.status === 429) {
+    blockGroq();
+    throw new Error("Groq HTTP 429: rate limited");
+  }
+  if (!res.ok) throw new Error(`Groq HTTP ${res.status}`);
+
+  const data = await res.json();
+  const translated = data?.choices?.[0]?.message?.content?.trim() ?? "";
+  if (!translated) throw new Error("Groq: empty response");
+  return translated;
+}
+
+/**
+ * Translate up to ~15 texts in a single Groq API call using JSON output.
+ * Returns an array of Nepali strings in the same order as input.
+ */
+async function groqBatchTranslate(texts: string[]): Promise<string[]> {
+  const numbered = texts.map((t, i) => `${i + 1}. ${t}`).join("\n");
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: `Translate each numbered English line to Nepali. Return a JSON object with a "translations" key containing an array of Nepali strings, one per input line in order. Example:\nInput:\n1. Hello\n2. World\nOutput:\n{"translations": ["नमस्ते", "संसार"]}`,
+        },
+        { role: "user", content: numbered },
+      ],
+      temperature: 0.1,
+      max_tokens: 4096,
+      response_format: { type: "json_object" },
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (res.status === 429) {
+    blockGroq();
+    throw new Error("Groq HTTP 429: rate limited");
+  }
+  if (!res.ok) throw new Error(`Groq HTTP ${res.status}`);
+
+  const data = await res.json();
+  const content = data?.choices?.[0]?.message?.content?.trim() ?? "";
+
+  const parsed = JSON.parse(content);
+  const arr: unknown[] = Array.isArray(parsed)
+    ? parsed
+    : (parsed.translations ?? parsed.results ?? Object.values(parsed)[0]);
+
+  if (!Array.isArray(arr) || arr.length !== texts.length) {
+    throw new Error(
+      `Groq batch: expected ${texts.length} translations, got ${Array.isArray(arr) ? arr.length : "non-array"}`,
+    );
+  }
+
+  return arr.map(String);
 }
 
 // ── LibreTranslate ────────────────────────────────────────────────────────────
@@ -286,6 +388,8 @@ export async function translateToNepali(text: string): Promise<string> {
     try {
       if (isAzureTranslatorConfigured() && !isAzureCoolingDown())
         return persist(await azureTranslate(key));
+      if (GROQ_API_KEY && !isGroqCoolingDown())
+        return persist(await groqTranslate(key));
       if (GOOGLE_API_KEY) return persist(await googleTranslate(key));
       if (LIBRE_ENDPOINTS.length > 0) return persist(await libreTranslate(key));
       if (isMyMemoryCoolingDown()) return persist("");
@@ -294,12 +398,19 @@ export async function translateToNepali(text: string): Promise<string> {
       const message = (error as Error).message;
       console.warn("[translator]", message);
       if (
-        /Azure Translator HTTP 401|Azure Translator HTTP 403/i.test(message)
+        /Azure Translator HTTP 401|Azure Translator HTTP 403|Azure Translator HTTP 429/i.test(
+          message,
+        )
       ) {
         blockAzure();
       }
+      if (/Groq HTTP 429/i.test(message)) {
+        blockGroq();
+      }
 
       try {
+        if (GROQ_API_KEY && !isGroqCoolingDown())
+          return persist(await groqTranslate(key));
         if (!isMyMemoryCoolingDown()) {
           return persist(await myMemoryTranslate(key));
         }
@@ -320,6 +431,7 @@ export async function batchTranslateToNepali(
   texts: string[],
   concurrency = 1,
 ): Promise<string[]> {
+  // 1. Try Azure batch API
   if (isAzureTranslatorConfigured() && !isAzureCoolingDown()) {
     try {
       const result = await translateManyWithAzure({
@@ -335,13 +447,39 @@ export async function batchTranslateToNepali(
       const message = (error as Error).message;
       console.warn("[translator]", message);
       if (
-        /Azure Translator HTTP 401|Azure Translator HTTP 403/i.test(message)
+        /Azure Translator HTTP 401|Azure Translator HTTP 403|Azure Translator HTTP 429/i.test(
+          message,
+        )
       ) {
         blockAzure();
       }
     }
   }
 
+  // 2. Try Groq LLM batch — translate ~15 texts per API call
+  if (GROQ_API_KEY && !isGroqCoolingDown()) {
+    const GROQ_CHUNK = 15;
+    const GROQ_CHUNK_DELAY = 2_200; // ~27 req/min, under 30 limit
+    const results: string[] = new Array(texts.length).fill("");
+    try {
+      for (let i = 0; i < texts.length; i += GROQ_CHUNK) {
+        if (i > 0) await new Promise((r) => setTimeout(r, GROQ_CHUNK_DELAY));
+        const chunk = texts.slice(i, i + GROQ_CHUNK);
+        const translated = await groqBatchTranslate(chunk);
+        translated.forEach((t, j) => {
+          results[i + j] = t;
+          if (t) translationCache.set(texts[i + j].trim(), t);
+        });
+      }
+      return results;
+    } catch (error) {
+      const message = (error as Error).message;
+      console.warn("[translator]", message);
+      if (/Groq HTTP 429/i.test(message)) blockGroq();
+    }
+  }
+
+  // 3. Fall back to individual translation cascade
   const results: string[] = new Array(texts.length).fill("");
 
   for (let i = 0; i < texts.length; i += concurrency) {

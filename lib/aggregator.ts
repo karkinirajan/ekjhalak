@@ -132,7 +132,7 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
   if (toTranslate.length > 0) {
     const translations = await batchTranslateToNepali(
       toTranslate.map((item) => item.summaryEn),
-      5, // max 5 concurrent API calls
+      1, // sequential to avoid rate-limiting on free tier
     );
     toTranslate.forEach((item, i) => {
       if (translations[i]) item.summaryNp = translations[i];
