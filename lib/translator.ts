@@ -398,7 +398,8 @@ export async function batchTranslateToNepali(
 // ── Groq Summarization ────────────────────────────────────────────────────────
 
 /**
- * Summarize text to 1–3 paragraphs, each max 60 words, using Groq.
+ * Summarize text into a tight, detail-rich news brief using Groq.
+ * Target: 1–2 short paragraphs, ~40–80 words total.
  * Falls back to original text if Groq is unavailable.
  */
 export async function groqSummarize(text: string): Promise<string> {
@@ -416,12 +417,12 @@ export async function groqSummarize(text: string): Promise<string> {
         {
           role: "system",
           content:
-            "Summarize the news article into 1 to 3 short paragraphs. Each paragraph must be at most 60 words. Be concise, factual, and informative. Output only the summary text with paragraph breaks (blank lines between paragraphs). No labels, numbering, or markdown.",
+            "You are a news editor. Condense the article into 1 or 2 short paragraphs (40–80 words total). Include only the most important facts: who, what, when, where, and why. Use a neutral, newspaper tone. Pack maximum information into minimum words. Separate paragraphs with a blank line. No labels, numbering, or markdown.",
         },
         { role: "user", content: text },
       ],
-      temperature: 0.2,
-      max_tokens: 512,
+      temperature: 0.15,
+      max_tokens: 300,
     }),
     signal: AbortSignal.timeout(15_000),
   });

@@ -6,8 +6,9 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      // Next.js requires unsafe-inline for its runtime scripts & hydration chunks
-      "script-src 'self' 'unsafe-inline'",
+      // Next.js requires unsafe-inline for runtime scripts; unsafe-eval for dev-mode
+      // stack reconstruction (React never uses eval in production).
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       // Tailwind and shadcn inject inline styles
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Google Fonts static assets
