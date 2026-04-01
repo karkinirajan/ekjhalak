@@ -20,6 +20,7 @@ const SITE_URL = "https://ekjhalak.vercel.app";
 const SITE_NAME = "एक झलक";
 const SITE_DESCRIPTION =
   "Fast, bilingual news aggregator for Nepal and the world. Read the latest national and international headlines in English and Nepali — clean, ad-free, and real-time.";
+const OG_IMAGE_URL = `${SITE_URL}/og-image.png`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -51,9 +52,10 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [
       {
-        url: "/og-image.png",
+        url: OG_IMAGE_URL,
         width: 1200,
         height: 630,
+        type: "image/png",
         alt: "एक झलक — Bilingual News Aggregator",
       },
     ],
@@ -62,7 +64,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "एक झलक — Nepal & World News",
     description: SITE_DESCRIPTION,
-    images: ["/og-image.png"],
+    images: [OG_IMAGE_URL],
   },
   robots: {
     index: true,
