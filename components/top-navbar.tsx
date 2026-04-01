@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { BrandImage } from "@/components/brand-image";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 import type { RangeKey } from "@/lib/news-pipeline";
@@ -71,20 +72,13 @@ export function TopNavbar({
         )}
       />
       <div className="relative">
-        <div className="px-4 pt-4 pb-2">
+        <div className="px-4 pt-3 pb-2 sm:pt-4">
           <div className="flex flex-col gap-3">
-            <div className="mt-3 flex h-[74px] w-full items-center justify-center overflow-hidden px-2 py-2 lg:hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.png"
-                alt="एक झलक"
-                width={427}
-                height={144}
-                loading="eager"
-                decoding="async"
-                className="h-full w-full object-cover object-center mix-blend-multiply dark:mix-blend-screen"
-              />
-            </div>
+            <BrandImage
+              priority
+              containerClassName="mt-1 min-h-20 lg:hidden"
+              imageClassName="max-h-16 sm:max-h-20"
+            />
 
             <div className="flex flex-col gap-2 lg:hidden">
               <div className="flex flex-col gap-1">
@@ -153,6 +147,64 @@ export function TopNavbar({
                       {item.label}
                     </Button>
                   ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="hidden gap-4 lg:flex lg:flex-col xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <CardTitle
+                  className={cn("text-lg font-semibold", palette.text)}
+                >
+                  {rangeLabel} {t.rangeSuffix}
+                </CardTitle>
+                <CardDescription
+                  className={cn("mt-0.5 text-sm", palette.muted)}
+                >
+                  {t.briefingDesc}
+                </CardDescription>
+              </div>
+
+              <div
+                className={cn(
+                  "flex flex-wrap items-center gap-6 border-l pl-6 md:border-l-0 md:pl-0",
+                  palette.muted,
+                )}
+              >
+                <div className="flex flex-col">
+                  <div className="text-[11px] font-bold uppercase tracking-wide opacity-70">
+                    {t.statItemsTitle}
+                  </div>
+                  <div
+                    className={cn(
+                      "text-xs font-medium tabular-nums",
+                      palette.text,
+                    )}
+                  >
+                    {filteredCount}
+                  </div>
+                </div>
+                <div className="h-6 w-px bg-border opacity-50" />
+                <div className="flex flex-col">
+                  <div className="text-[11px] font-bold uppercase tracking-wide opacity-70">
+                    {t.statTimelineTitle}
+                  </div>
+                  <div className={cn("text-xs font-medium", palette.text)}>
+                    {rangeLabel}
+                  </div>
+                </div>
+                <div className="h-6 w-px bg-border opacity-50" />
+                <div className="flex flex-col">
+                  <div className="text-[11px] font-bold uppercase tracking-wide opacity-70">
+                    {t.statFeedTitle}
+                  </div>
+                  <div className={cn("text-xs font-medium", palette.text)}>
+                    {bucket === "national"
+                      ? t.sectionNepal
+                      : bucket === "international"
+                        ? t.sectionInternational
+                        : t.feedAll}
+                  </div>
                 </div>
               </div>
             </div>
@@ -242,64 +294,6 @@ export function TopNavbar({
               >
                 <Menu className="h-4 w-4" />
               </Button>
-            </div>
-
-            <div className="hidden gap-4 lg:flex lg:flex-col xl:flex-row xl:items-end xl:justify-between">
-              <div>
-                <CardTitle
-                  className={cn("text-lg font-semibold", palette.text)}
-                >
-                  {rangeLabel} {t.rangeSuffix}
-                </CardTitle>
-                <CardDescription
-                  className={cn("mt-0.5 text-sm", palette.muted)}
-                >
-                  {t.briefingDesc}
-                </CardDescription>
-              </div>
-
-              <div
-                className={cn(
-                  "flex flex-wrap items-center gap-6 border-l pl-6 md:border-l-0 md:pl-0",
-                  palette.muted,
-                )}
-              >
-                <div className="flex flex-col">
-                  <div className="text-[11px] font-bold uppercase tracking-wide opacity-70">
-                    {t.statItemsTitle}
-                  </div>
-                  <div
-                    className={cn(
-                      "text-xs font-medium tabular-nums",
-                      palette.text,
-                    )}
-                  >
-                    {filteredCount}
-                  </div>
-                </div>
-                <div className="h-6 w-px bg-border opacity-50" />
-                <div className="flex flex-col">
-                  <div className="text-[11px] font-bold uppercase tracking-wide opacity-70">
-                    {t.statTimelineTitle}
-                  </div>
-                  <div className={cn("text-xs font-medium", palette.text)}>
-                    {rangeLabel}
-                  </div>
-                </div>
-                <div className="h-6 w-px bg-border opacity-50" />
-                <div className="flex flex-col">
-                  <div className="text-[11px] font-bold uppercase tracking-wide opacity-70">
-                    {t.statFeedTitle}
-                  </div>
-                  <div className={cn("text-xs font-medium", palette.text)}>
-                    {bucket === "national"
-                      ? t.sectionNepal
-                      : bucket === "international"
-                        ? t.sectionInternational
-                        : t.feedAll}
-                  </div>
-                </div>
-              </div>
             </div>
 
             {sourceFilter && (

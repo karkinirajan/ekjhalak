@@ -13,6 +13,7 @@ import {
   Shield,
   Timer,
 } from "lucide-react";
+import { BrandImage } from "@/components/brand-image";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -191,19 +192,11 @@ export function AppSidebar({
     >
       {/* Brand */}
       {!compact && (
-        <div className="flex h-[74px] w-full items-center justify-center overflow-hidden px-2 py-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            suppressHydrationWarning
-            src="/logo.png"
-            alt="एक झलक"
-            width={427}
-            height={144}
-            loading="eager"
-            decoding="async"
-            className="h-full w-full object-cover object-center mix-blend-multiply dark:mix-blend-screen"
-          />
-        </div>
+        <BrandImage
+          priority
+          containerClassName="min-h-24 border-b border-white/10 pb-3"
+          imageClassName="max-h-16 xl:max-h-[4.5rem]"
+        />
       )}
 
       {/* Navigation */}
