@@ -32,31 +32,31 @@ export const themes = {
     image: "bg-[#1c2535]",
   },
   light: {
-    name: "Warm Parchment",
-    // ── Warm Parchment ────────────────────────────────────────────────────
-    // Solarized-inspired warm amber cream — the classic eye-friendly reading
-    // background.  Espresso-brown text on golden parchment; amber accent.
-    app: "bg-[#fdf6e3] text-[#2d1b0e]",
-    shell: "bg-[#fffef5] border-[#e3d5b8] shadow-sm",
-    panel: "bg-[#fdf8ec] border-[#e3d5b8]",
-    soft: "bg-[#f5e9cc] border-[#e3d5b8]",
-    card: "bg-[#fffef5] border-[#e3d5b8] hover:border-[#c9a96e] hover:shadow-sm hover:shadow-amber-100/60",
-    // Primary text — deep espresso brown, high contrast on the warm bg
-    text: "text-[#2d1b0e]",
-    // Secondary text — same brown at 68 % → warm and comfortable
-    subtext: "text-[#2d1b0e]/[.68]",
-    // Metadata / labels — same brown at 46 % → gentle, never grey
-    muted: "text-[#2d1b0e]/[.46]",
+    name: "Clean Slate",
+    // ── Clean Slate ───────────────────────────────────────────────────────
+    // Neutral cool-gray palette — crisp, modern reading surface with
+    // slate-charcoal text and a blue-gray accent.
+    app: "bg-[#f8f9fb] text-[#1e2631]",
+    shell: "bg-[#ffffff] border-[#e2e5ea] shadow-sm",
+    panel: "bg-[#f8f9fb] border-[#e2e5ea]",
+    soft: "bg-[#eef0f3] border-[#e2e5ea]",
+    card: "bg-[#ffffff] border-[#e2e5ea] hover:border-[#b0b8c4] hover:shadow-sm hover:shadow-gray-200/60",
+    // Primary text — deep charcoal, high contrast on white
+    text: "text-[#1e2631]",
+    // Secondary text — same charcoal at 70 %
+    subtext: "text-[#1e2631]/[.70]",
+    // Metadata / labels — same charcoal at 48 %
+    muted: "text-[#1e2631]/[.48]",
     input:
-      "bg-[#fffef5] border-[#d8c9a8] text-[#2d1b0e] placeholder:text-[#2d1b0e]/35 focus:border-[#b45309] focus:ring-1 focus:ring-[#b45309]/20",
-    // Amber-gold accent fits the warm palette perfectly
+      "bg-[#ffffff] border-[#d1d5db] text-[#1e2631] placeholder:text-[#1e2631]/35 focus:border-[#4f6ef7] focus:ring-1 focus:ring-[#4f6ef7]/20",
+    // Cool blue accent on a neutral canvas
     accent:
-      "bg-[#b45309] text-white hover:bg-[#92400e] shadow-sm shadow-amber-300/40",
+      "bg-[#4f6ef7] text-white hover:bg-[#3b5de5] shadow-sm shadow-blue-300/30",
     ghost:
-      "bg-[#fffef5] text-[#2d1b0e]/75 hover:bg-[#f5e9cc] border border-[#e3d5b8]",
-    badge: "bg-[#fef3c7] text-[#92400e] border-[#fcd34d]/70",
-    page: "from-[#f5e9cc]/50 via-[#fdf6e3] to-[#fdf6e3]",
-    image: "bg-[#f5e9cc]",
+      "bg-[#ffffff] text-[#1e2631]/75 hover:bg-[#eef0f3] border border-[#e2e5ea]",
+    badge: "bg-[#eef0f7] text-[#3b5de5] border-[#c7d0ea]/70",
+    page: "from-[#eef0f3]/50 via-[#f8f9fb] to-[#f8f9fb]",
+    image: "bg-[#eef0f3]",
   },
 } as const;
 

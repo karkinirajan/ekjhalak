@@ -1,15 +1,9 @@
 // lib/translator.ts
-// Translation pipeline: Azure Translator → Google → fast free
-// LibreTranslate-compatible endpoints → MyMemory (last fallback). Server-only.
+// Translation pipeline: Groq LLM → Google → LibreTranslate → MyMemory.
+// Server-only. Azure removed for simplicity and speed.
 // Translation results are cached in-memory for the lifetime of the serverless
 // function instance. Disk writes are intentionally avoided — Vercel's runtime
 // filesystem is read-only after deployment.
-
-import {
-  isAzureTranslatorConfigured,
-  translateManyWithAzure,
-  translateWithAzure,
-} from "./azure-translator";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -21,7 +15,6 @@ const LIBRE_TIMEOUT_MS = 4_500;
 const LIBRE_COOLDOWN_MS = 10 * 60 * 1_000;
 const MYMEMORY_REQUEST_GAP_MS = 1_500;
 const MYMEMORY_COOLDOWN_MS = 30 * 60 * 1_000;
-const AZURE_COOLDOWN_MS = 15 * 60 * 1_000;
 const GROQ_COOLDOWN_MS = 2 * 60 * 1_000; // short — Groq rate limits reset fast
 
 const LIBRE_ENDPOINTS = [
@@ -41,7 +34,6 @@ const inFlight = new Map<string, Promise<string>>();
 let myMemoryQueue: Promise<void> = Promise.resolve();
 let myMemoryBlockedUntil = 0;
 let hasLoggedMyMemoryCooldown = false;
-let azureBlockedUntil = 0;
 let groqBlockedUntil = 0;
 const libreBlockedUntilByUrl = new Map<string, number>();
 
@@ -69,23 +61,6 @@ async function googleTranslate(text: string): Promise<string> {
   const translated = data?.data?.translations?.[0]?.translatedText ?? "";
   if (!translated) throw new Error("Google Translate: empty response");
   return translated;
-}
-
-async function azureTranslate(text: string): Promise<string> {
-  const result = await translateWithAzure({
-    text,
-    from: "en",
-    to: "ne",
-  });
-  return result.translations[0]?.text ?? "";
-}
-
-function isAzureCoolingDown() {
-  return azureBlockedUntil > Date.now();
-}
-
-function blockAzure() {
-  azureBlockedUntil = Date.now() + AZURE_COOLDOWN_MS;
 }
 
 // ── Groq LLM Translation ─────────────────────────────────────────────────────
@@ -386,8 +361,6 @@ export async function translateToNepali(text: string): Promise<string> {
 
   const promise = (async () => {
     try {
-      if (isAzureTranslatorConfigured() && !isAzureCoolingDown())
-        return persist(await azureTranslate(key));
       if (GROQ_API_KEY && !isGroqCoolingDown())
         return persist(await groqTranslate(key));
       if (GOOGLE_API_KEY) return persist(await googleTranslate(key));
@@ -397,20 +370,12 @@ export async function translateToNepali(text: string): Promise<string> {
     } catch (error) {
       const message = (error as Error).message;
       console.warn("[translator]", message);
-      if (
-        /Azure Translator HTTP 401|Azure Translator HTTP 403|Azure Translator HTTP 429/i.test(
-          message,
-        )
-      ) {
-        blockAzure();
-      }
       if (/Groq HTTP 429/i.test(message)) {
         blockGroq();
       }
 
       try {
-        if (GROQ_API_KEY && !isGroqCoolingDown())
-          return persist(await groqTranslate(key));
+        if (GOOGLE_API_KEY) return persist(await googleTranslate(key));
         if (!isMyMemoryCoolingDown()) {
           return persist(await myMemoryTranslate(key));
         }
@@ -431,32 +396,7 @@ export async function batchTranslateToNepali(
   texts: string[],
   concurrency = 1,
 ): Promise<string[]> {
-  // 1. Try Azure batch API
-  if (isAzureTranslatorConfigured() && !isAzureCoolingDown()) {
-    try {
-      const result = await translateManyWithAzure({
-        texts,
-        from: "en",
-        to: "ne",
-      });
-
-      return texts.map(
-        (_, index) => result.translations[index]?.[0]?.text?.trim() ?? "",
-      );
-    } catch (error) {
-      const message = (error as Error).message;
-      console.warn("[translator]", message);
-      if (
-        /Azure Translator HTTP 401|Azure Translator HTTP 403|Azure Translator HTTP 429/i.test(
-          message,
-        )
-      ) {
-        blockAzure();
-      }
-    }
-  }
-
-  // 2. Try Groq LLM batch — translate ~15 texts per API call
+  // 1. Try Groq LLM batch — translate ~15 texts per API call
   if (GROQ_API_KEY && !isGroqCoolingDown()) {
     const GROQ_CHUNK = 15;
     const GROQ_CHUNK_DELAY = 2_200; // ~27 req/min, under 30 limit
@@ -498,4 +438,46 @@ export async function batchTranslateToNepali(
   }
 
   return results;
+}
+
+// ── Groq Summarization ────────────────────────────────────────────────────────
+
+/**
+ * Summarize text to 1–3 paragraphs, each max 60 words, using Groq.
+ * Falls back to original text if Groq is unavailable.
+ */
+export async function groqSummarize(text: string): Promise<string> {
+  if (!GROQ_API_KEY || isGroqCoolingDown()) return text;
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Summarize the news article into 1 to 3 short paragraphs. Each paragraph must be at most 60 words. Be concise, factual, and informative. Output only the summary text with paragraph breaks (blank lines between paragraphs). No labels, numbering, or markdown.",
+        },
+        { role: "user", content: text },
+      ],
+      temperature: 0.2,
+      max_tokens: 512,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (res.status === 429) {
+    blockGroq();
+    return text;
+  }
+  if (!res.ok) return text;
+
+  const data = await res.json();
+  const summary = data?.choices?.[0]?.message?.content?.trim() ?? "";
+  return summary || text;
 }

@@ -16,7 +16,8 @@ const notoDevanagari = Noto_Sans_Devanagari({
   display: "swap",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekjhalak.news";
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekjhalak.news";
 const SITE_NAME = "एक झलक";
 const SITE_DESCRIPTION =
   "Fast, bilingual news aggregator for Nepal and the world. Read the latest national and international headlines in English and Nepali — clean, ad-free, and real-time.";
@@ -137,7 +138,15 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
-        <ThemeProvider>{children}</ThemeProvider>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:bg-white focus:text-black focus:px-4 focus:py-2 focus:top-2 focus:left-2 focus:rounded-md"
+        >
+          Skip to main content
+        </a>
+        <ThemeProvider>
+          <main id="main-content">{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   );

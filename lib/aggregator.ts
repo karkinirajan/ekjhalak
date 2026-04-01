@@ -8,7 +8,7 @@ import { ACTIVE_SOURCES } from "./source-registry";
 import { fetchRssFeed } from "./rss-adapter";
 import { normalizeStory } from "./feed-normalizer";
 import { deduplicate } from "./deduplicator";
-import { batchTranslateToNepali } from "./translator";
+import { batchTranslateToNepali, groqSummarize } from "./translator";
 import type { NewsItem, SourceStatusMeta } from "./news-pipeline";
 import type { Source } from "./source-registry";
 
@@ -126,10 +126,37 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
   // Only items that don't already have native Nepali content need translation.
   // Processing happens here (inside the cache boundary) so translations are
   // computed once per 5-minute cache window, not on every request.
+  // ── Summarize long English summaries via Groq ──────────────────────────────
+  for (const item of deduped) {
+    if (item.summaryEn && item.summaryEn.split(/\s+/).length > 160) {
+      try {
+        item.summaryEn = await groqSummarize(item.summaryEn);
+      } catch {
+        // keep original if summarization fails
+      }
+    }
+  }
+
+  // ── Translate titles and summaries to Nepali ───────────────────────────────
   const toTranslate = deduped.filter(
     (item) => item.summaryEn && !item.summaryNp,
   );
   if (toTranslate.length > 0) {
+    // Translate titles
+    const titlesToTranslate = toTranslate.filter(
+      (item) => item.title && !item.titleNp,
+    );
+    if (titlesToTranslate.length > 0) {
+      const titleTranslations = await batchTranslateToNepali(
+        titlesToTranslate.map((item) => item.title),
+        1,
+      );
+      titlesToTranslate.forEach((item, i) => {
+        if (titleTranslations[i]) item.titleNp = titleTranslations[i];
+      });
+    }
+
+    // Translate summaries
     const translations = await batchTranslateToNepali(
       toTranslate.map((item) => item.summaryEn),
       1, // sequential to avoid rate-limiting on free tier

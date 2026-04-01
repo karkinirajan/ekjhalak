@@ -12,6 +12,8 @@ export interface NewsItem {
   bucket: BucketKey;
   /** Headline, HTML-stripped */
   title: string;
+  /** Nepali headline (translated or native) */
+  titleNp: string;
   /** Display name of the source publication */
   source: string;
   /** Source registry id, e.g. "kathmandu-post" */

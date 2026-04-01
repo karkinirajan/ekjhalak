@@ -143,6 +143,7 @@ export function normalizeStory(raw: RawStory, source: Source): NewsItem {
     id,
     bucket: source.bucket,
     title: raw.title,
+    titleNp: isNepaliSource ? raw.title : "",
     source: source.name,
     sourceId: source.id,
     sourceUrl: raw.url,
