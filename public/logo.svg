@@ -1,21 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+<svg viewBox="0 0 280 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="एक झलक — Ek Jhalak News">
   <defs>
-    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+    <style><![CDATA[
+      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@700&family=Inter:wght@400;500;600&display=swap');
+    ]]></style>
+    <!-- Brand gradient: indigo → violet -->
+    <linearGradient id="g-circle" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <!-- Horizontal wordmark gradient -->
+    <linearGradient id="g-word" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#6366f1"/>
       <stop offset="100%" stop-color="#8b5cf6"/>
     </linearGradient>
-    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#8b5cf6"/>
-      <stop offset="100%" stop-color="#a78bfa"/>
-    </linearGradient>
+    <!-- Soft glow behind mark -->
+    <filter id="f-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
   </defs>
-  <!-- Outer circle background -->
-  <circle cx="100" cy="100" r="96" fill="url(#g1)"/>
-  <!-- Abstract eye / lens motif -->
-  <ellipse cx="100" cy="100" rx="56" ry="36" fill="none" stroke="white" stroke-width="8" opacity="0.9"/>
-  <!-- Inner pupil -->
-  <circle cx="100" cy="100" r="18" fill="white" opacity="0.95"/>
-  <circle cx="100" cy="100" r="11" fill="url(#g2)"/>
-  <!-- Top accent line -->
-  <path d="M44 100 Q100 48 156 100" stroke="white" stroke-width="4" fill="none" opacity="0.4" stroke-linecap="round"/>
+
+  <!-- ── MARK ───────────────────────────────────────────────── -->
+  <!-- Soft background glow ring -->
+  <circle cx="36" cy="36" r="34" fill="#6366f1" opacity="0.12"/>
+  <!-- Main circle -->
+  <circle cx="36" cy="36" r="30" fill="url(#g-circle)"/>
+  <!-- Lens / aperture: two arcs forming an eye shape -->
+  <path d="M9 36 C17 17 55 17 63 36 C55 55 17 55 9 36Z"
+        fill="none" stroke="white" stroke-width="1.75" opacity="0.65" stroke-linejoin="round"/>
+  <!-- Iris ring (very subtle) -->
+  <circle cx="36" cy="36" r="10" fill="white" opacity="0.1"/>
+  <!-- White sclera -->
+  <circle cx="36" cy="36" r="7" fill="white" opacity="0.92"/>
+  <!-- Pupil (gradient) -->
+  <circle cx="36" cy="36" r="4" fill="url(#g-circle)"/>
+  <!-- Catchlight highlight -->
+  <circle cx="30.5" cy="30.5" r="1.75" fill="white" opacity="0.6"/>
+
+  <!-- ── WORDMARK ───────────────────────────────────────────── -->
+  <!-- Primary: Devanagari -->
+  <text
+    x="82" y="42"
+    font-family="'Noto Sans Devanagari', 'Mangal', 'Kokila', 'Arial Unicode MS', system-ui, sans-serif"
+    font-size="27"
+    font-weight="700"
+    fill="url(#g-word)">
+    एक झलक
+  </text>
+  <!-- Secondary: tracked Latin subtitle -->
+  <text
+    x="84" y="59"
+    font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
+    font-size="9"
+    font-weight="500"
+    letter-spacing="4.5"
+    fill="#6366f1"
+    opacity="0.5">
+    EK JHALAK
+  </text>
 </svg>
