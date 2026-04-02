@@ -31,10 +31,6 @@ export interface FeedQueryResult {
   fetchedAt: number;
 }
 
-function isDbAvailable(): boolean {
-  return Boolean(process.env.DATABASE_URL);
-}
-
 /**
  * Fetch a page of articles from the database with optional filtering.
  * Returns FeedArticle shapes ready for API serialization.

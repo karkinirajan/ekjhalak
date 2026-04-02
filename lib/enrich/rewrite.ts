@@ -131,7 +131,7 @@ export async function getOrCreateRewrite(
     `;
 
     return { title, summary, style, lang, fromDb: false };
-  } catch (_err) {
+  } catch {
     return { ...base, fromDb: false };
   }
 }

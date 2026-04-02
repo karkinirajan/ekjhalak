@@ -14,13 +14,10 @@ import sql from "@/lib/db";
 import { ACTIVE_SOURCES } from "@/lib/source-registry";
 import { fetchRssFeed } from "@/lib/rss-adapter";
 import { normalizeStory } from "@/lib/feed-normalizer";
-import { jaccardSimilarity } from "@/lib/deduplicator";
 import type { Source } from "@/lib/source-registry";
 
 const SOURCE_TIMEOUT_MS = 15_000;
 const MAX_CONCURRENT = 6;
-const JACCARD_THRESHOLD = 0.65;
-const TWO_HOURS_MS = 2 * 60 * 60 * 1_000;
 
 // ── DB availability guard ─────────────────────────────────────────────────────
 

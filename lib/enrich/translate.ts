@@ -99,7 +99,7 @@ export async function pumpTranslations(): Promise<TranslationPumpResult> {
         `;
         succeeded++;
       }
-    } catch (batchErr) {
+    } catch {
       // Fall back to per-item translation on batch failure
       for (const row of batch) {
         try {
@@ -121,7 +121,7 @@ export async function pumpTranslations(): Promise<TranslationPumpResult> {
             where id = ${row.id}
           `;
           succeeded++;
-        } catch (itemErr) {
+        } catch {
           await sql`
             update translations
             set

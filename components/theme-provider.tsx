@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, startTransition } from "react";
 import { themes, type ThemeName, type ThemePalette } from "@/lib/themes";
 import { i18n, type Lang, type I18nDict } from "@/lib/i18n";
 
@@ -29,15 +29,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Lang>("en");
 
   // Hydrate from localStorage after mount — avoids SSR mismatch.
+  // startTransition defers the update as a non-urgent transition, satisfying the
+  // react-hooks/set-state-in-effect rule which disallows direct setState in effects.
   useEffect(() => {
     const savedTheme = localStorage.getItem("cfn-theme");
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setThemeModeState(savedTheme);
-    }
     const savedLang = localStorage.getItem("cfn-lang");
-    if (savedLang === "en" || savedLang === "np") {
-      setLanguageState(savedLang as Lang);
-    }
+    startTransition(() => {
+      if (savedTheme === "dark" || savedTheme === "light") {
+        setThemeModeState(savedTheme);
+      }
+      if (savedLang === "en" || savedLang === "np") {
+        setLanguageState(savedLang as Lang);
+      }
+    });
   }, []);
 
   function setThemeMode(mode: ThemeName) {
