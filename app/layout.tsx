@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -158,6 +159,7 @@ export default function RootLayout({
         <ThemeProvider>
           <main id="main-content">{children}</main>
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
