@@ -247,16 +247,16 @@ If all providers are unavailable, items show English summaries in Nepali mode.
 
 ## Environment Variables
 
-| Variable | Required | Default | Purpose |
-|---|---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | Production | `https://www.ekjhalak.news` | Metadata, sitemap, OG tags |
-| `GROQ_API_KEY` | Recommended | — | EN→NP translation + summarization |
-| `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | Groq model override |
-| `GOOGLE_TRANSLATE_API_KEY` | No | — | Translation fallback |
-| `LIBRETRANSLATE_API_URL` | No | — | LibreTranslate endpoint |
-| `LIBRETRANSLATE_API_KEY` | No | — | LibreTranslate auth (if required) |
-| `MYMEMORY_EMAIL` | No | — | Last-resort free translation fallback |
-| `REVALIDATE_SECRET` | Production | — | Protects POST /api/revalidate |
+| Variable                   | Required    | Default                     | Purpose                               |
+| -------------------------- | ----------- | --------------------------- | ------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`     | Production  | `https://www.ekjhalak.news` | Metadata, sitemap, OG tags            |
+| `GROQ_API_KEY`             | Recommended | —                           | EN→NP translation + summarization     |
+| `GROQ_MODEL`               | No          | `llama-3.3-70b-versatile`   | Groq model override                   |
+| `GOOGLE_TRANSLATE_API_KEY` | No          | —                           | Translation fallback                  |
+| `LIBRETRANSLATE_API_URL`   | No          | —                           | LibreTranslate endpoint               |
+| `LIBRETRANSLATE_API_KEY`   | No          | —                           | LibreTranslate auth (if required)     |
+| `MYMEMORY_EMAIL`           | No          | —                           | Last-resort free translation fallback |
+| `REVALIDATE_SECRET`        | Production  | —                           | Protects POST /api/revalidate         |
 
 See `.env.example` for full documentation.
 
@@ -279,3 +279,55 @@ The Nepali script uses `Noto Sans Devanagari` loaded via `next/font/google`. App
 - **Error isolation:** A source that times out, returns HTTP 4xx/5xx, or emits malformed XML produces a `SourceStatusMeta` with `ok: false`. The rest of the feed is unaffected.
 - **Cache invalidation:** To force an immediate refresh (e.g. after adding a source), delete `.next/cache` and restart the server, or call `revalidateTag("news-feed")` from a protected admin route.
 - **Reuters:** Blocked from server-side fetches on shared-IP hosting (Vercel, Render, etc.). Re-enable with a dedicated egress IP or a proxy.
+
+---
+
+## Database Setup (Optional)
+
+By default the app runs entirely in-memory (no database needed). To enable persistent articles, translation queuing, and the subscribe feature:
+
+1. Create a [Supabase](https://supabase.com) project.
+2. Run the migration in the SQL editor:
+   ```sql
+   -- paste contents of supabase/migrations/001_initial.sql
+   ```
+3. Seed sources:
+   ```sql
+   -- paste contents of supabase/seed/sources.sql
+   ```
+4. Set `DATABASE_URL` to the **Transaction Pooler** URL (port `6543`) in your environment.
+
+---
+
+## Admin API
+
+Admin endpoints are protected by HMAC-SHA256. Set `INGEST_HMAC_SECRET`, then sign requests:
+
+```bash
+SECRET="your-secret"
+BODY='{"trigger":"manual"}'
+SIG=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | awk '{print $2}')
+curl -X POST https://www.ekjhalak.news/api/admin/ingest/run \
+  -H "Content-Type: application/json" \
+  -H "X-Hub-Signature-256: sha256=$SIG" \
+  -d "$BODY"
+```
+
+| Endpoint                      | Description                                  |
+| ----------------------------- | -------------------------------------------- |
+| `POST /api/admin/ingest/run`  | Trigger a manual ingest run                  |
+| `POST /api/admin/enrich/pump` | Process the translation queue                |
+| `GET /api/status`             | Health check (DB, last ingest, queue depth)  |
+| `GET /api/feed`               | Canonical public feed (replaces `/api/news`) |
+| `GET /api/story/[id]`         | Single article by UUID                       |
+| `GET /api/sources`            | Source list with live status                 |
+
+---
+
+## CI/CD
+
+GitHub Actions runs lint → type-check → build on every push to `main`:
+
+```
+.github/workflows/ci.yml
+```
