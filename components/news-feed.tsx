@@ -188,10 +188,15 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
           filteredCount={filteredItems.length}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col gap-4 py-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 pt-0 pb-3">
           <div ref={feedTopRef} className="sr-only" aria-hidden="true" />
 
-          <Card className={cn("border rounded-2xl", palette.shell)}>
+          <Card
+            className={cn(
+              "border-x border-b border-t-0 rounded-b-2xl rounded-t-none",
+              palette.shell,
+            )}
+          >
             <CardContent className="space-y-2 px-4 pt-4 pb-4 sm:px-6">
               {showSkeleton && (
                 <div

@@ -122,42 +122,18 @@ export default async function StoryPage({ params }: Props) {
 
             {(() => {
               const isNp = article.language === "np";
-              // News first: original-language body + title. titleNp/summaryNp
-              // and titleEn/summaryEn are resolved per-language views from the
-              // DB, so we don't fall through to the original accidentally.
-              const primaryTitle = isNp
-                ? (article.titleNp ?? article.title)
-                : (article.titleEn ?? article.title);
+              const primaryTitle = article.title;
               const primaryBody = isNp
                 ? (article.summaryNp ?? article.summary ?? "")
                 : (article.summaryEn ?? article.summary ?? "");
-              // Brief in original language
-              const primaryBrief = isNp
-                ? (article.briefNp ?? "")
-                : (article.briefEn ?? "");
-              // Full translation in other language
-              const secondaryTitle = isNp
-                ? (article.titleEn ?? null)
-                : (article.titleNp ?? null);
-              const secondaryBody = isNp
-                ? (article.summaryEn ?? "")
-                : (article.summaryNp ?? "");
-              const secondaryLang = isNp ? "en" : "ne";
               const primaryLang = isNp ? "ne" : "en";
 
               const safePrimaryTitle = sanitizeTextForDisplay(primaryTitle);
-              const safeSecondaryTitle = secondaryTitle
-                ? sanitizeTextForDisplay(secondaryTitle)
-                : null;
               const safePrimaryBody = sanitizeTextForDisplay(primaryBody);
-              const safeSecondaryBody = sanitizeTextForDisplay(secondaryBody);
-              const safePrimaryBrief = sanitizeTextForDisplay(primaryBrief);
 
               const primaryParas = splitIntoParagraphs(safePrimaryBody, 5);
-              const secondaryParas = splitIntoParagraphs(safeSecondaryBody, 5);
 
               const isPrimaryNp = primaryLang === "ne";
-              const isSecondaryNp = secondaryLang === "ne";
 
               return (
                 <>
@@ -180,9 +156,8 @@ export default async function StoryPage({ params }: Props) {
                     </span>
                   </div>
 
-                  {/* 1. NEWS — full body in the original language */}
                   {primaryParas.length > 0 && (
-                    <section className="mb-8 space-y-4">
+                    <section className="space-y-4">
                       {primaryParas.map((p, i) => (
                         <p
                           key={i}
@@ -200,86 +175,6 @@ export default async function StoryPage({ params }: Props) {
                           {p}
                         </p>
                       ))}
-                    </section>
-                  )}
-
-                  {/* 2. SUMMARY — short brief in the ORIGINAL language */}
-                  {safePrimaryBrief && (
-                    <section className="mb-8 rounded-xl bg-[#fff5ec] p-5 dark:bg-[#19253f]">
-                      <h3
-                        className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#5f6881] dark:text-[#97aacd]"
-                        lang={primaryLang}
-                      >
-                        {isPrimaryNp ? "सारांश" : "Summary"}
-                      </h3>
-                      <div className="space-y-3">
-                        {splitIntoParagraphs(safePrimaryBrief, 3).map(
-                          (p, i) => (
-                            <p
-                              key={i}
-                              className="text-base leading-relaxed"
-                              lang={primaryLang}
-                              style={
-                                isPrimaryNp
-                                  ? {
-                                      fontFamily:
-                                        "var(--font-devanagari), sans-serif",
-                                    }
-                                  : undefined
-                              }
-                            >
-                              {p}
-                            </p>
-                          ),
-                        )}
-                      </div>
-                    </section>
-                  )}
-
-                  {/* 3. TRANSLATION — full body in the OTHER language */}
-                  {secondaryParas.length > 0 && (
-                    <section className="border-t border-[#ffd9bf] pt-6 dark:border-[#273653]">
-                      <h3
-                        className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#5f6881] dark:text-[#97aacd]"
-                        lang={secondaryLang}
-                      >
-                        {isSecondaryNp ? "अनुवाद" : "English translation"}
-                      </h3>
-                      {safeSecondaryTitle && (
-                        <h2
-                          className="mb-4 text-xl font-semibold leading-snug text-[#2e3a53]/85 dark:text-[#dce6ff]/85 sm:text-2xl"
-                          lang={secondaryLang}
-                          style={
-                            isSecondaryNp
-                              ? {
-                                  fontFamily:
-                                    "var(--font-devanagari), sans-serif",
-                                }
-                              : undefined
-                          }
-                        >
-                          {safeSecondaryTitle}
-                        </h2>
-                      )}
-                      <div className="space-y-4">
-                        {secondaryParas.map((p, i) => (
-                          <p
-                            key={i}
-                            className="text-base leading-[1.9]"
-                            lang={secondaryLang}
-                            style={
-                              isSecondaryNp
-                                ? {
-                                    fontFamily:
-                                      "var(--font-devanagari), sans-serif",
-                                  }
-                                : undefined
-                            }
-                          >
-                            {p}
-                          </p>
-                        ))}
-                      </div>
                     </section>
                   )}
                 </>

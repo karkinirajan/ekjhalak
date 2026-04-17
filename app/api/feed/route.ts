@@ -8,6 +8,7 @@ import { queryFeed, type RangeKey, type ScopeKey } from "@/lib/feed/queries";
 import { serializeArticles, type ApiArticle } from "@/lib/feed/serializers";
 import { getCachedFeed } from "@/lib/aggregator";
 import type { NewsItem } from "@/lib/news-pipeline";
+import { clampSummaryToMax } from "@/lib/translator";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,12 @@ type FeedResponse = {
 
 function newsItemToApiArticle(item: NewsItem, idx: number): ApiArticle {
   const isNp = item.originalLang === "np";
+  const originalSummary = isNp ? item.summaryNp : item.summaryEn;
+  const originalBrief = isNp ? item.briefNp : item.briefEn;
+  const effectiveSummary = clampSummaryToMax(
+    originalBrief || originalSummary || "",
+  );
+
   return {
     id: item.id ?? String(idx),
     sourceId: item.sourceId ?? "unknown",
@@ -38,13 +45,13 @@ function newsItemToApiArticle(item: NewsItem, idx: number): ApiArticle {
     scope: item.bucket ?? "national",
     url: item.sourceUrl,
     title: item.title,
-    titleNp: item.titleNp ?? null,
-    titleEn: isNp ? null : item.title,
-    summary: item.summaryEn ?? item.summaryNp ?? null,
-    summaryNp: item.summaryNp ?? null,
-    summaryEn: item.summaryEn ?? null,
-    briefEn: item.briefEn ?? null,
-    briefNp: item.briefNp ?? null,
+    titleNp: null,
+    titleEn: null,
+    summary: effectiveSummary || null,
+    summaryNp: isNp ? effectiveSummary || null : null,
+    summaryEn: isNp ? null : effectiveSummary || null,
+    briefEn: isNp ? null : (item.briefEn ?? null),
+    briefNp: isNp ? (item.briefNp ?? null) : null,
     imageUrl: item.imageUrl ?? null,
     publishedAt:
       typeof item.publishedAt === "string"

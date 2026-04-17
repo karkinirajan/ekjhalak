@@ -30,30 +30,16 @@ export function NewsCard({ item }: NewsCardProps) {
   const { palette, language, t } = useTheme();
   const [briefOpen, setBriefOpen] = useState(false);
 
-  const isNepaliMode = language === "np";
+  const isOriginalNp = item.originalLang === "np";
   const summary = sanitizeTextForDisplay(
-    isNepaliMode
-      ? item.summaryNp || item.summaryEn
-      : item.summaryEn || item.summaryNp,
+    isOriginalNp
+      ? item.briefNp || item.summaryNp || ""
+      : item.briefEn || item.summaryEn || "",
   );
   const listSummary = truncate(summary ?? "", LIST_SUMMARY_MAX_CHARS);
-  const title = sanitizeTextForDisplay(
-    isNepaliMode ? item.titleNp || item.title : item.title || item.titleNp,
-  );
-  const summaryLang = isNepaliMode
-    ? item.summaryNp
-      ? "np"
-      : "en"
-    : item.summaryEn
-      ? "en"
-      : "np";
-  const titleLang = isNepaliMode
-    ? item.titleNp
-      ? "np"
-      : "en"
-    : item.title
-      ? "en"
-      : "np";
+  const title = sanitizeTextForDisplay(item.title || "");
+  const summaryLang = isOriginalNp ? "np" : "en";
+  const titleLang = isOriginalNp ? "np" : "en";
   const paragraphs = splitIntoParagraphs(summary ?? "", 5);
 
   return (
@@ -158,7 +144,7 @@ export function NewsCard({ item }: NewsCardProps) {
                   palette.muted,
                 )}
               >
-                {isNepaliMode
+                {language === "np"
                   ? "विस्तृत विवरण उपलब्ध छैन।"
                   : "No detailed summary available for this story."}
               </p>

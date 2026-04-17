@@ -3,7 +3,7 @@
 import { Languages, MoonStar, RefreshCw, Search, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BrandImage } from "@/components/brand-image";
+import { SystemLogo } from "@/components/system-logo";
 import { cn } from "@/lib/utils";
 import type { RangeKey } from "@/lib/news-pipeline";
 import { useTheme } from "@/components/theme-provider";
@@ -49,7 +49,7 @@ export function TopNavbar({
   const isSpinning = loadState === "loading" || loadState === "refreshing";
 
   return (
-    <div className="sticky top-0 z-50 -mx-2 lg:-mx-3">
+    <div className="sticky top-0 z-50">
       <div
         className={cn(
           "pointer-events-none absolute inset-x-0 top-0 bottom-0 border-x-0 border-t-0 rounded-none backdrop-blur-xl shadow-sm",
@@ -58,149 +58,177 @@ export function TopNavbar({
       />
       <div className="relative">
         <div className="px-4 pt-3 pb-3 sm:pt-4">
-          <div className="flex flex-col gap-3 md:grid md:grid-cols-[auto_minmax(0,1fr)] md:gap-4">
-            <BrandImage
-              priority
-              containerClassName="mt-1 min-h-20 md:row-span-3 md:min-h-full md:items-start md:justify-start md:pr-2"
-              imageClassName="max-h-14 sm:max-h-16 md:max-h-15"
-            />
-
-            <div className="grid gap-2 md:grid-cols-3 md:items-start">
-              <div className="flex flex-col gap-1.5 md:items-start">
-                <div
-                  className={cn(
-                    "text-[11px] font-bold uppercase tracking-wide",
-                    palette.muted,
-                  )}
-                >
-                  {t.statTimelineTitle}
+          <div className="flex flex-col gap-3">
+            <div className="mt-1 min-h-20 md:hidden flex items-start justify-start">
+              <div className="flex items-center gap-2">
+                <SystemLogo themeMode={themeMode} />
+                <div className="leading-tight">
+                  <p
+                    className={cn(
+                      "text-[11px] font-bold tracking-[0.18em]",
+                      palette.text,
+                    )}
+                  >
+                    EKJN
+                  </p>
+                  <p className={cn("text-sm font-semibold", palette.subtext)}>
+                    EkJhalak News
+                  </p>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(
-                    [
-                      { key: "day", label: t.rangeDay },
-                      { key: "week", label: t.rangeWeek },
-                      { key: "month", label: t.rangeMonth },
-                    ] as const
-                  ).map((item) => (
-                    <Button
-                      key={item.key}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRange(item.key)}
-                      aria-pressed={range === item.key}
-                      className={cn(
-                        "h-7 rounded-lg px-2 text-[11px]",
-                        range === item.key ? palette.accent : palette.ghost,
-                      )}
-                    >
-                      {item.label}
-                    </Button>
-                  ))}
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="hidden md:absolute md:left-0 md:top-0 md:flex md:min-h-18 md:w-52 md:items-center md:justify-start md:gap-2">
+                <SystemLogo themeMode={themeMode} compact />
+                <div className="leading-tight">
+                  <p
+                    className={cn(
+                      "text-[11px] font-bold tracking-[0.2em]",
+                      palette.text,
+                    )}
+                  >
+                    EKJN
+                  </p>
+                  <p className={cn("text-sm font-semibold", palette.subtext)}>
+                    EkJhalak News
+                  </p>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 md:items-center">
-                <div
-                  className={cn(
-                    "text-[11px] font-bold uppercase tracking-wide",
-                    palette.muted,
-                  )}
-                >
-                  {t.statFeedTitle}
+              <div className="grid gap-2 md:grid-cols-3 md:items-start md:pl-56">
+                <div className="flex flex-col gap-1.5 md:items-start">
+                  <div
+                    className={cn(
+                      "text-[11px] font-bold uppercase tracking-wide",
+                      palette.muted,
+                    )}
+                  >
+                    {t.statTimelineTitle}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(
+                      [
+                        { key: "day", label: t.rangeDay },
+                        { key: "week", label: t.rangeWeek },
+                        { key: "month", label: t.rangeMonth },
+                      ] as const
+                    ).map((item) => (
+                      <Button
+                        key={item.key}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRange(item.key)}
+                        aria-pressed={range === item.key}
+                        className={cn(
+                          "h-7 rounded-lg px-2 text-[11px]",
+                          range === item.key ? palette.accent : palette.ghost,
+                        )}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5 md:w-full">
-                  {(
-                    [
-                      { key: "all", label: t.feedAll },
-                      { key: "national", label: t.feedNational },
-                      { key: "international", label: t.feedInternational },
-                    ] as const
-                  ).map((item) => (
+
+                <div className="flex flex-col gap-1.5 md:items-center">
+                  <div
+                    className={cn(
+                      "text-[11px] font-bold uppercase tracking-wide",
+                      palette.muted,
+                    )}
+                  >
+                    {t.statFeedTitle}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 md:w-full">
+                    {(
+                      [
+                        { key: "all", label: t.feedAll },
+                        { key: "national", label: t.feedNational },
+                        { key: "international", label: t.feedInternational },
+                      ] as const
+                    ).map((item) => (
+                      <Button
+                        key={item.key}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBucket(item.key)}
+                        aria-pressed={bucket === item.key}
+                        className={cn(
+                          "h-7 rounded-lg px-2 text-[11px]",
+                          bucket === item.key ? palette.accent : palette.ghost,
+                        )}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5 md:items-end">
+                  <div
+                    className={cn(
+                      "text-[11px] font-bold uppercase tracking-wide",
+                      palette.muted,
+                    )}
+                  >
+                    {t.statLangTitle}
+                  </div>
+                  <div className="flex items-center justify-end gap-1.5 md:w-full">
                     <Button
-                      key={item.key}
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={() => fetchFeed(false)}
+                      disabled={isSpinning}
+                      className={cn("h-7 w-7 rounded-lg", palette.ghost)}
+                      aria-label={t.refreshFeed}
+                    >
+                      <RefreshCw
+                        className={cn(
+                          "h-3.5 w-3.5",
+                          isSpinning && "animate-spin",
+                        )}
+                        aria-hidden="true"
+                      />
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={() =>
+                        setThemeMode(themeMode === "dark" ? "light" : "dark")
+                      }
+                      className={cn("h-7 w-7 rounded-lg", palette.ghost)}
+                      aria-label={
+                        themeMode === "dark" ? t.themeLight : t.themeDark
+                      }
+                    >
+                      {themeMode === "dark" ? (
+                        <Sun className="h-3.5 w-3.5" aria-hidden="true" />
+                      ) : (
+                        <MoonStar className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                    </Button>
+
+                    <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setBucket(item.key)}
-                      aria-pressed={bucket === item.key}
+                      onClick={() =>
+                        setLanguage(language === "en" ? "np" : "en")
+                      }
                       className={cn(
                         "h-7 rounded-lg px-2 text-[11px]",
-                        bucket === item.key ? palette.accent : palette.ghost,
+                        palette.ghost,
                       )}
+                      aria-label={t.langToggleLabel}
                     >
-                      {item.label}
+                      <Languages
+                        className="mr-1 h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                      {t.langButton}
                     </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5 md:items-end">
-                <div
-                  className={cn(
-                    "text-[11px] font-bold uppercase tracking-wide",
-                    palette.muted,
-                  )}
-                >
-                  {t.statLangTitle}
-                </div>
-                <div className="grid grid-cols-3 gap-1.5 md:w-full">
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={() => fetchFeed(false)}
-                    disabled={isSpinning}
-                    className={cn(
-                      "h-7 w-7 justify-self-end rounded-lg",
-                      palette.ghost,
-                    )}
-                    aria-label={t.refreshFeed}
-                  >
-                    <RefreshCw
-                      className={cn(
-                        "h-3.5 w-3.5",
-                        isSpinning && "animate-spin",
-                      )}
-                      aria-hidden="true"
-                    />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={() =>
-                      setThemeMode(themeMode === "dark" ? "light" : "dark")
-                    }
-                    className={cn(
-                      "h-7 w-7 justify-self-end rounded-lg",
-                      palette.ghost,
-                    )}
-                    aria-label={
-                      themeMode === "dark" ? t.themeLight : t.themeDark
-                    }
-                  >
-                    {themeMode === "dark" ? (
-                      <Sun className="h-3.5 w-3.5" aria-hidden="true" />
-                    ) : (
-                      <MoonStar className="h-3.5 w-3.5" aria-hidden="true" />
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLanguage(language === "en" ? "np" : "en")}
-                    className={cn(
-                      "h-7 justify-self-end rounded-lg px-2 text-[11px]",
-                      palette.ghost,
-                    )}
-                    aria-label={t.langToggleLabel}
-                  >
-                    <Languages
-                      className="mr-1 h-3.5 w-3.5"
-                      aria-hidden="true"
-                    />
-                    {t.langButton}
-                  </Button>
+                  </div>
                 </div>
               </div>
             </div>

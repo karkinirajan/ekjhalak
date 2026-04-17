@@ -7,7 +7,7 @@
 //  2. Fetch all RSS feeds in parallel with per-source isolation
 //  3. Normalise → fingerprint → upsert to articles table
 //  4. Mark duplicates / assign cluster keys
-//  5. Enqueue translation jobs for English articles needing Nepali
+//  5. Enqueue summarization jobs in the article's original language
 //  6. Log ingest run + per-source errors
 
 import sql from "@/lib/db";
@@ -65,6 +65,9 @@ async function ingestSource(source: Source): Promise<SourceIngestResult> {
 
     for (const item of items) {
       try {
+        const originalSummary =
+          item.originalLang === "np" ? item.summaryNp : item.summaryEn;
+
         const result = await sql`
           insert into articles (
             source_id, canonical_url, title_original, summary_original,
@@ -73,7 +76,7 @@ async function ingestSource(source: Source): Promise<SourceIngestResult> {
             ${source.id},
             ${item.sourceUrl},
             ${item.title},
-            ${item.summaryEn || null},
+            ${originalSummary || null},
             ${item.imageUrl || null},
             ${new Date(item.publishedTimestamp)},
             ${new Date()},
@@ -88,12 +91,11 @@ async function ingestSource(source: Source): Promise<SourceIngestResult> {
 
         if (result.length > 0) {
           newCount++;
-          // Enqueue a translation into the OPPOSITE language.
-          // EN source → NP translation; NP source → EN translation.
-          const targetLang = source.language === "np" ? "en" : "np";
+          // Enqueue a summary job in the ORIGINAL language.
+          const summaryLang = source.language === "np" ? "np" : "en";
           await sql`
             insert into translations (article_id, lang, status)
-            values (${result[0].id}, ${targetLang}, 'pending')
+            values (${result[0].id}, ${summaryLang}, 'pending')
             on conflict (article_id, lang) do nothing
           `;
         }

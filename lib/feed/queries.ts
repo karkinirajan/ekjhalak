@@ -4,6 +4,7 @@
 
 import sql from "@/lib/db";
 import type { FeedArticle } from "@/lib/schema";
+import { clampSummaryToMax } from "@/lib/translator";
 
 /** Range → lookback window in milliseconds */
 export const RANGE_CUTOFFS = {
@@ -68,10 +69,6 @@ export async function queryFeed(
       a.fingerprint,
       a.cluster_id,
       a.score,
-      t_np.translated_title   as title_np,
-      t_np.translated_summary as summary_np,
-      t_en.translated_title   as title_en,
-      t_en.translated_summary as summary_en,
       r_np.summary            as brief_np,
       r_en.summary            as brief_en,
       -- Cluster member source IDs (excluding canonical)
@@ -86,14 +83,6 @@ export async function queryFeed(
       ) as alternate_source_ids
     from articles a
     join sources s on s.id = a.source_id
-    left join translations t_np
-      on t_np.article_id = a.id
-      and t_np.lang = 'np'
-      and t_np.status = 'ok'
-    left join translations t_en
-      on t_en.article_id = a.id
-      and t_en.lang = 'en'
-      and t_en.status = 'ok'
     left join rewrites r_np
       on r_np.article_id = a.id
       and r_np.lang = 'np'
@@ -151,10 +140,6 @@ export async function getArticleById(id: string): Promise<FeedArticle | null> {
       a.fingerprint,
       a.cluster_id,
       a.score,
-      t_np.translated_title   as title_np,
-      t_np.translated_summary as summary_np,
-      t_en.translated_title   as title_en,
-      t_en.translated_summary as summary_en,
       r_np.summary            as brief_np,
       r_en.summary            as brief_en,
       coalesce(
@@ -168,14 +153,6 @@ export async function getArticleById(id: string): Promise<FeedArticle | null> {
       ) as alternate_source_ids
     from articles a
     join sources s on s.id = a.source_id
-    left join translations t_np
-      on t_np.article_id = a.id
-      and t_np.lang = 'np'
-      and t_np.status = 'ok'
-    left join translations t_en
-      on t_en.article_id = a.id
-      and t_en.lang = 'en'
-      and t_en.status = 'ok'
     left join rewrites r_np
       on r_np.article_id = a.id
       and r_np.lang = 'np'
@@ -210,24 +187,19 @@ interface DbArticleRow {
   fingerprint: string;
   clusterId: string | null;
   score: number;
-  titleNp: string | null;
-  summaryNp: string | null;
-  titleEn: string | null;
-  summaryEn: string | null;
   briefNp: string | null;
   briefEn: string | null;
   alternateSourceIds: string[];
 }
 
 function toFeedArticle(row: DbArticleRow): FeedArticle {
-  // Resolve each language view:
-  //   - For the article's ORIGINAL language: use title_original/summary_original.
-  //   - For the OTHER language: use the translation row (if available).
   const isNp = row.language === "np";
-  const titleEn = isNp ? row.titleEn : row.titleOriginal;
-  const summaryEn = isNp ? row.summaryEn : row.summaryOriginal;
-  const titleNp = isNp ? row.titleOriginal : row.titleNp;
-  const summaryNp = isNp ? row.summaryOriginal : row.summaryNp;
+  const originalSummary = row.summaryOriginal ?? "";
+  const originalBrief = isNp ? row.briefNp : row.briefEn;
+  const effectiveSummary = originalBrief || originalSummary;
+  const clampedSummary = effectiveSummary
+    ? clampSummaryToMax(effectiveSummary)
+    : null;
 
   return {
     id: row.id,
@@ -236,11 +208,11 @@ function toFeedArticle(row: DbArticleRow): FeedArticle {
     sourceScope: row.sourceScope,
     canonicalUrl: row.canonicalUrl,
     title: row.titleOriginal,
-    titleNp: titleNp ?? null,
-    titleEn: titleEn ?? null,
-    summary: row.summaryOriginal ?? null,
-    summaryNp: summaryNp ?? null,
-    summaryEn: summaryEn ?? null,
+    titleNp: null,
+    titleEn: null,
+    summary: clampedSummary,
+    summaryNp: isNp ? clampedSummary : null,
+    summaryEn: isNp ? null : clampedSummary,
     briefNp: row.briefNp ?? null,
     briefEn: row.briefEn ?? null,
     imageUrl: row.imageUrl ?? null,

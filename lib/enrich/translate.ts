@@ -1,13 +1,13 @@
 // lib/enrich/translate.ts
 // DB-backed enrichment pipeline.
 //
-// Each pending `translations` row represents a request to translate the
-// article into `translations.lang` (which is the OPPOSITE of the article's
-// source language). For each one, we:
-//   1. Generate a short brief in the article's ORIGINAL language → `rewrites`
-//      (style='brief').
-//   2. Generate a full faithful translation into `translations.lang` →
-//      `translations.translated_title` + `translations.translated_summary`.
+// Each pending `translations` row is used as a lightweight queue item for
+// generating a short summary in the article's ORIGINAL language.
+//
+// For each pending row we:
+//   1. Generate a short brief in the article's original language.
+//   2. Upsert it to `rewrites` with style='brief'.
+//   3. Mark the queue row as processed (no title/description translation).
 //
 // Sized for Groq free tier on meta-llama/llama-4-scout-17b-16e-instruct:
 //   30 RPM / 1K RPD / 30K TPM / 500K TPD.
@@ -16,11 +16,7 @@
 //   ~192 RPD (19%), ~403K TPD (81%), peak TPM ~4.2K (14%).
 
 import sql from "@/lib/db";
-import {
-  groqFullTranslate,
-  groqSummarize,
-  translateToNepali,
-} from "@/lib/translator";
+import { groqSummarize } from "@/lib/translator";
 
 const MAX_ITEMS_PER_PUMP = 1;
 
@@ -81,9 +77,7 @@ export async function pumpTranslations(): Promise<TranslationPumpResult> {
   let failed = 0;
 
   for (const row of pending) {
-    const targetLang = row.lang;
-    const sourceLang: "en" | "np" =
-      row.sourceLang === "np" ? "np" : "en"; // normalize 'multi' → 'en'
+    const sourceLang: "en" | "np" = row.sourceLang === "np" ? "np" : "en"; // normalize 'multi' → 'en'
     const originalTitle = row.title ?? "";
     const originalSummary = row.summary ?? "";
 
@@ -118,46 +112,17 @@ export async function pumpTranslations(): Promise<TranslationPumpResult> {
         }
       }
 
-      // 2. Full faithful translation into the TARGET language → translations.
-      let translatedTitle: string | null = null;
-      let translatedSummary: string | null = null;
-      let provider: string = "groq";
-
-      if (originalSummary) {
-        translatedSummary = await groqFullTranslate(originalSummary, targetLang);
-      }
-
-      if (originalTitle) {
-        // Title is short — prefer the dedicated cascade (Groq first, Google
-        // fallback) for speed. Only available EN→NP today.
-        if (targetLang === "np") {
-          translatedTitle = (await translateToNepali(originalTitle)) || null;
-        } else {
-          // NP→EN title: reuse the full-translate helper.
-          translatedTitle = (await groqFullTranslate(originalTitle, "en")) || null;
-        }
-      }
-
-      if (!translatedSummary && !translatedTitle) {
-        provider = "fallback";
-      }
-
       await sql`
         update translations
         set
-          translated_title   = ${translatedTitle || null},
-          translated_summary = ${translatedSummary || null},
-          provider           = ${provider},
-          status             = ${translatedSummary || translatedTitle ? "ok" : "error"},
+          translated_title   = null,
+          translated_summary = null,
+          provider           = 'summary-only',
+          status             = 'ok',
           updated_at         = now()
         where id = ${row.id}
       `;
-
-      if (translatedSummary || translatedTitle) {
-        succeeded++;
-      } else {
-        failed++;
-      }
+      succeeded++;
     } catch (err) {
       console.warn(
         `[enrich] translation failed for ${row.articleId}:`,
@@ -181,28 +146,12 @@ export async function pumpTranslations(): Promise<TranslationPumpResult> {
 }
 
 /**
- * Get or create a Nepali translation for a single article (title + summary).
- * Returns null if no translation is available yet (pending / error).
+ * Deprecated: translation payloads are no longer generated.
+ * Always returns null.
  */
 export async function getTranslationForArticle(
   articleId: string,
 ): Promise<{ title: string | null; summary: string | null } | null> {
-  if (!isDbAvailable()) return null;
-
-  const rows = await sql<
-    Array<{ translatedTitle: string | null; translatedSummary: string | null }>
-  >`
-    select translated_title, translated_summary
-    from translations
-    where article_id = ${articleId}
-      and lang = 'np'
-      and status = 'ok'
-    limit 1
-  `;
-
-  if (rows.length === 0) return null;
-  return {
-    title: rows[0].translatedTitle,
-    summary: rows[0].translatedSummary,
-  };
+  void articleId;
+  return null;
 }

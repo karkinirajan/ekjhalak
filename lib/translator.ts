@@ -432,7 +432,7 @@ export async function batchTranslateToNepali(
 // ── Paragraph-boundary clamp (no mid-sentence cutoffs) ───────────────────────
 
 const SUMMARY_TARGET_MIN = 680;
-const SUMMARY_TARGET_MAX = 1100;
+export const SUMMARY_TARGET_MAX = 1100;
 
 /**
  * Trim a multi-paragraph text so it ends on a complete sentence / paragraph.
@@ -456,6 +456,11 @@ function clampToParagraphs(text: string, hardMax: number): string {
     total = next;
   }
   return kept.join("\n\n");
+}
+
+/** Clamp summary text to the same hard limit used by Groq summary output. */
+export function clampSummaryToMax(text: string): string {
+  return clampToParagraphs(text, SUMMARY_TARGET_MAX);
 }
 
 // ── Groq Summarization (language-aware) ──────────────────────────────────────
@@ -513,7 +518,7 @@ export async function groqSummarize(
   const summary = data?.choices?.[0]?.message?.content?.trim() ?? "";
   if (!summary) return text;
 
-  const clamped = clampToParagraphs(summary, SUMMARY_TARGET_MAX);
+  const clamped = clampSummaryToMax(summary);
   // Short summaries are acceptable; only fall back if Groq returned nothing.
   return clamped.length >= SUMMARY_TARGET_MIN || clamped.length > 0
     ? clamped

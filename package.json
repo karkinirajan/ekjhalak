@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "rm -rf .next/dev/cache/turbopack",
+    "dev:fresh": "rm -rf .next/dev/cache/turbopack .next/cache && next dev",
+    "clean:next": "rm -rf .next",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

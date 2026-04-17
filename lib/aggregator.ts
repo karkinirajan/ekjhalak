@@ -8,7 +8,7 @@ import { ACTIVE_SOURCES } from "./source-registry";
 import { fetchRssFeed } from "./rss-adapter";
 import { normalizeStory } from "./feed-normalizer";
 import { deduplicate } from "./deduplicator";
-import { groqFullTranslate, groqSummarize } from "./translator";
+import { groqSummarize } from "./translator";
 import type { NewsItem, SourceStatusMeta } from "./news-pipeline";
 import type { Source } from "./source-registry";
 
@@ -122,21 +122,18 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
 
   const deduped = deduplicate(allItems);
 
-  // ── Bidirectional enrichment (summary in original lang + full translation) ─
+  // ── Original-language enrichment (summary only) ─
   // Processing happens here (inside the 5-min cache boundary) so LLM work is
   // done once per cache window, not on every request.
-  //
-  // Per-refresh cap: 1 article gets the expensive Groq summarize +
-  // full-translate treatment. Bulk title/body translation is intentionally
-  // deferred to the cron + DB enrichment pipeline to keep RSS fetches fast.
   const ENRICH_LIMIT = 1;
   const ENRICH_BUDGET_MS = 12_000;
   const enrichDeadline = Date.now() + ENRICH_BUDGET_MS;
 
   const needsEnrich = deduped.filter((item) => {
     const body = item.originalLang === "np" ? item.summaryNp : item.summaryEn;
-    const other = item.originalLang === "np" ? item.summaryEn : item.summaryNp;
-    return Boolean(body) && !other; // has source text, missing translation
+    const hasBrief =
+      item.originalLang === "np" ? !!item.briefNp : !!item.briefEn;
+    return Boolean(body) && !hasBrief;
   });
 
   let enrichedCount = 0;
@@ -145,24 +142,14 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
     if (Date.now() > enrichDeadline) break;
 
     const sourceLang = item.originalLang;
-    const targetLang: "en" | "np" = sourceLang === "np" ? "en" : "np";
     const sourceBody = sourceLang === "np" ? item.summaryNp : item.summaryEn;
 
     try {
-      // 1. Short brief in the ORIGINAL language — goes to briefEn/briefNp
-      //    (does NOT overwrite the full body in summaryEn/summaryNp).
+      // Short brief in the ORIGINAL language only.
       const shortSummary = await groqSummarize(sourceBody, sourceLang);
       if (shortSummary && shortSummary !== sourceBody) {
         if (sourceLang === "np") item.briefNp = shortSummary;
         else item.briefEn = shortSummary;
-      }
-
-      // 2. Full faithful translation into the OTHER language — fills the
-      //    opposite summary slot so both languages have the full body.
-      const fullTranslation = await groqFullTranslate(sourceBody, targetLang);
-      if (fullTranslation) {
-        if (targetLang === "np") item.summaryNp = fullTranslation;
-        else item.summaryEn = fullTranslation;
       }
 
       enrichedCount++;
