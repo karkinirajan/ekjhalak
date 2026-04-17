@@ -4,7 +4,7 @@
 
 import sql from "@/lib/db";
 import type { FeedArticle } from "@/lib/schema";
-import { clampSummaryToMax } from "@/lib/translator";
+import { isSummaryWithinRange } from "@/lib/translator";
 
 /** Range → lookback window in milliseconds */
 export const RANGE_CUTOFFS = {
@@ -197,9 +197,10 @@ function toFeedArticle(row: DbArticleRow): FeedArticle {
   const originalSummary = row.summaryOriginal ?? "";
   const originalBrief = isNp ? row.briefNp : row.briefEn;
   const effectiveSummary = originalBrief || originalSummary;
-  const clampedSummary = effectiveSummary
-    ? clampSummaryToMax(effectiveSummary)
-    : null;
+  const summary =
+    effectiveSummary && isSummaryWithinRange(effectiveSummary)
+      ? effectiveSummary
+      : null;
 
   return {
     id: row.id,
@@ -210,9 +211,9 @@ function toFeedArticle(row: DbArticleRow): FeedArticle {
     title: row.titleOriginal,
     titleNp: null,
     titleEn: null,
-    summary: clampedSummary,
-    summaryNp: isNp ? clampedSummary : null,
-    summaryEn: isNp ? null : clampedSummary,
+    summary,
+    summaryNp: isNp ? summary : null,
+    summaryEn: isNp ? null : summary,
     briefNp: row.briefNp ?? null,
     briefEn: row.briefEn ?? null,
     imageUrl: row.imageUrl ?? null,

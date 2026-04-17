@@ -32,9 +32,7 @@ export function NewsCard({ item }: NewsCardProps) {
 
   const isOriginalNp = item.originalLang === "np";
   const summary = sanitizeTextForDisplay(
-    isOriginalNp
-      ? item.briefNp || item.summaryNp || ""
-      : item.briefEn || item.summaryEn || "",
+    isOriginalNp ? item.summaryNp || "" : item.summaryEn || "",
   );
   const listSummary = truncate(summary ?? "", LIST_SUMMARY_MAX_CHARS);
   const title = sanitizeTextForDisplay(item.title || "");

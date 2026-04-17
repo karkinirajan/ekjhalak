@@ -429,62 +429,50 @@ export async function batchTranslateToNepali(
   return results;
 }
 
-// ── Paragraph-boundary clamp (no mid-sentence cutoffs) ───────────────────────
+// ── Summary range policy (strict, no post-cutting) ──────────────────────────
 
-const SUMMARY_TARGET_MIN = 680;
-export const SUMMARY_TARGET_MAX = 1100;
+export const SUMMARY_TARGET_MIN = 250;
+export const SUMMARY_TARGET_MAX = 450;
 
-/**
- * Trim a multi-paragraph text so it ends on a complete sentence / paragraph.
- * Only removes trailing paragraphs that would push length past `hardMax`.
- * Never cuts mid-sentence.
- */
-function clampToParagraphs(text: string, hardMax: number): string {
-  const cleaned = text.trim();
-  if (cleaned.length <= hardMax) return cleaned;
-
-  const paragraphs = cleaned
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  const kept: string[] = [];
-  let total = 0;
-  for (const p of paragraphs) {
-    const next = total + (kept.length ? 2 : 0) + p.length;
-    if (next > hardMax && kept.length > 0) break;
-    kept.push(p);
-    total = next;
-  }
-  return kept.join("\n\n");
+function normalizeSummaryText(text: string): string {
+  return text
+    .trim()
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ");
 }
 
-/** Clamp summary text to the same hard limit used by Groq summary output. */
-export function clampSummaryToMax(text: string): string {
-  return clampToParagraphs(text, SUMMARY_TARGET_MAX);
+export function isSummaryWithinRange(text: string): boolean {
+  const cleaned = normalizeSummaryText(text);
+  return (
+    cleaned.length >= SUMMARY_TARGET_MIN && cleaned.length <= SUMMARY_TARGET_MAX
+  );
 }
 
 // ── Groq Summarization (language-aware) ──────────────────────────────────────
 
 const SUMMARY_SYSTEM_EN =
-  `You are a news editor. Write a 3-paragraph news brief in English (120–180 words, 680–950 chars). ` +
+  `You are a news editor. Write a short news brief in English. ` +
+  `Hard requirement: output length MUST be between ${SUMMARY_TARGET_MIN} and ${SUMMARY_TARGET_MAX} characters. ` +
   `Include who/what/when/where/why, key figures, dates, and outcomes. ` +
-  `Every sentence must be complete — never end mid-sentence. Separate paragraphs with a blank line. ` +
+  `Every sentence must be complete — never end mid-sentence. Use one short paragraph, or at most two. ` +
   `Neutral newspaper tone. No labels, headings, numbering, or markdown.`;
 
 const SUMMARY_SYSTEM_NP =
-  `तपाईं नेपाली समाचार सम्पादक हुनुहुन्छ। नेपाली भाषामा ३ अनुच्छेदको समाचार सार लेख्नुहोस् (लगभग १२०–१८० शब्द, ६८०–९५० अक्षर)। ` +
+  `तपाईं नेपाली समाचार सम्पादक हुनुहुन्छ। नेपाली भाषामा छोटो समाचार सार लेख्नुहोस्। ` +
+  `कडा नियम: आउटपुटको लम्बाइ ${SUMMARY_TARGET_MIN} देखि ${SUMMARY_TARGET_MAX} अक्षरभित्र अनिवार्य हुनुपर्छ। ` +
   `मुख्य तथ्य, मिति, आंकडा, र परिणाम समावेश गर्नुहोस्। प्रत्येक वाक्य पूर्ण हुनुपर्छ — कहिल्यै बीचमा नकाट्नुहोस्। ` +
-  `अनुच्छेद बीचमा खाली लाइन राख्नुहोस्। तटस्थ समाचार शैली। कुनै शीर्षक, क्रम, वा markdown नराख्नुहोस्।`;
+  `एक वा बढीमा दुई छोटा अनुच्छेद प्रयोग गर्नुहोस्। तटस्थ समाचार शैली। कुनै शीर्षक, क्रम, वा markdown नराख्नुहोस्।`;
 
-/**
- * Summarize text in the given language. Produces a 3-paragraph brief in
- * `lang` with complete sentences and no mid-sentence cutoffs.
- */
-export async function groqSummarize(
-  text: string,
-  lang: "en" | "np" = "en",
+async function callGroqSummary(
+  source: string,
+  lang: "en" | "np",
+  rewriteFrom?: string,
 ): Promise<string> {
-  if (!GROQ_API_KEY || isGroqCoolingDown()) return text;
+  const system = lang === "np" ? SUMMARY_SYSTEM_NP : SUMMARY_SYSTEM_EN;
+  const user = rewriteFrom
+    ? `Rewrite this summary so the final output is strictly between ${SUMMARY_TARGET_MIN} and ${SUMMARY_TARGET_MAX} characters, keeping key facts and complete sentences:\n\n${rewriteFrom}`
+    : source;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -495,34 +483,52 @@ export async function groqSummarize(
     body: JSON.stringify({
       model: GROQ_MODEL,
       messages: [
-        {
-          role: "system",
-          content: lang === "np" ? SUMMARY_SYSTEM_NP : SUMMARY_SYSTEM_EN,
-        },
-        { role: "user", content: text },
+        { role: "system", content: system },
+        { role: "user", content: user },
       ],
       temperature: 0.15,
-      // Devanagari tokenizes ~3× English. 1500 tokens fits ~180 NP words.
-      max_tokens: lang === "np" ? 1500 : 700,
+      max_tokens: lang === "np" ? 900 : 500,
     }),
     signal: AbortSignal.timeout(20_000),
   });
 
   if (res.status === 429) {
     blockGroq();
-    return text;
+    return "";
   }
-  if (!res.ok) return text;
+  if (!res.ok) return "";
 
   const data = await res.json();
-  const summary = data?.choices?.[0]?.message?.content?.trim() ?? "";
-  if (!summary) return text;
+  return normalizeSummaryText(
+    data?.choices?.[0]?.message?.content?.trim() ?? "",
+  );
+}
 
-  const clamped = clampSummaryToMax(summary);
-  // Short summaries are acceptable; only fall back if Groq returned nothing.
-  return clamped.length >= SUMMARY_TARGET_MIN || clamped.length > 0
-    ? clamped
-    : text;
+/**
+ * Summarize text in the given language. Produces a 3-paragraph brief in
+ * `lang` with complete sentences and no mid-sentence cutoffs.
+ */
+export async function groqSummarize(
+  text: string,
+  lang: "en" | "np" = "en",
+): Promise<string> {
+  const source = normalizeSummaryText(text);
+
+  if (!GROQ_API_KEY || isGroqCoolingDown()) {
+    return isSummaryWithinRange(source) ? source : "";
+  }
+
+  let candidate = await callGroqSummary(source, lang);
+  if (isSummaryWithinRange(candidate)) return candidate;
+
+  // Retry as rewrite of previous candidate (no clamping/cutting).
+  for (let i = 0; i < 2; i++) {
+    candidate = await callGroqSummary(source, lang, candidate || source);
+    if (isSummaryWithinRange(candidate)) return candidate;
+  }
+
+  // Strict policy: if we can't satisfy range naturally, do not return oversized text.
+  return "";
 }
 
 // ── Groq Full Translation (NP ↔ EN, preserves paragraph structure) ───────────
