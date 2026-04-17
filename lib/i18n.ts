@@ -3,11 +3,12 @@ export type Lang = "en" | "np";
 const en = {
   appTagline: "National & International briefings",
   appSubtitle: "Daily newsroom",
-  searchPlaceholder: "Search headlines, sources, summaries",
+  searchPlaceholder: "Search headlines and summaries",
   switchToLive: "Switch to live",
   switchToDemo: "Switch to demo",
   langButton: "EN → NP",
   langToggleLabel: "Switch to Nepali",
+  refreshFeed: "Refresh feed",
   navOverview: "Overview",
   navToday: "Today",
   navWeek: "This Week",
@@ -33,7 +34,7 @@ const en = {
   apiContractTitle: "API contract",
   apiContractDesc: "Live mode will plug into this endpoint",
   briefingDesc:
-    "All the news you need — Nepal and the world — clean, ad-free, and bilingual. One place, trusted sources.",
+    "Content-only bilingual briefings for Nepal and the world, built for fast reading.",
   tabToday: "Today",
   tabWeek: "Week",
   tabMonth: "Month",
@@ -68,8 +69,8 @@ const en = {
   langLabelNp: "नेपाली",
 
   // Source filter
-  filteredBySource: "Filtered by source",
-  clearFilter: "Clear filter",
+  filteredBySource: "Filtered",
+  clearFilter: "Clear",
   filtered: "filtered",
 
   // Sidebar legend
@@ -79,11 +80,28 @@ const en = {
   legendRefresh: "Feed refreshes every 5 minutes",
 
   // Feed states
-  noStories:
-    "No stories match this filter. Try a different range or source.",
+  noStories: "No stories match this filter. Try a different range or source.",
   loadingStories: "Loading stories…",
   errorFeed: "Could not load news feed. Check your connection or try again.",
   retryLabel: "Retry",
+  footerTagline:
+    "Precision bilingual briefings with a cleaner, content-first reading experience.",
+  subscribeButton: "Subscribe",
+
+  newsletter: "Newsletter",
+  stayInformed: "Stay informed",
+  close: "Close",
+  subscribeSuccessNote: "Watch for your first briefing from EkJhalak News.",
+  done: "Done",
+  subscribePitch:
+    "Get a daily bilingual briefing for Nepal and the world. No spam, ever.",
+  subscribeSuccess: "You are subscribed.",
+  emailAddress: "Email address",
+  preferredLanguage: "Preferred language",
+  subscribing: "Subscribing…",
+  subscribeForFree: "Subscribe for free",
+  subscribeLegal:
+    "By subscribing, you agree to receive email updates from EkJhalak. Unsubscribe anytime.",
 
   statusDemo:
     "Using demo data. Connect your backend to switch to live AI-researched summaries.",
@@ -98,11 +116,12 @@ export type I18nDict = typeof en;
 const np: I18nDict = {
   appTagline: "अहिलेको मुख्य खबर",
   appSubtitle: "दैनिक अपडेट",
-  searchPlaceholder: "के खोज्दै हुनुहुन्छ?",
+  searchPlaceholder: "शीर्षक र सारांश खोज्नुहोस्",
   switchToLive: "लाइभ समाचार",
   switchToDemo: "डेमो हेर्नुहोस्",
   langButton: "NP → EN",
   langToggleLabel: "अंग्रेजीमा स्विच गर्नुहोस्",
+  refreshFeed: "फिड रिफ्रेस गर्नुहोस्",
   navOverview: "सबै खबर",
   navToday: "आजको",
   navWeek: "यो हप्ताको",
@@ -127,8 +146,7 @@ const np: I18nDict = {
   apiContractTitle: "प्राविधिक कुरा",
   apiContractDesc: "हाम्रो सिस्टमको कनेक्सन",
   briefingDesc:
-    "के ठीक, के बेठीक, के सत्य, के हावा छुट्याउँदै कपालै दुखिसक्यो ।\
- अबदेखि सबै यहीँ पढ्ने हो। एकै ठाउँमा सबै, भरपर्दो समाचार। ढुक्कै !!!",
+    "नेपाल र विश्वका द्विभाषिक समाचार सारांश अब थप छरितो, सफा र पढ्न सजिलो।",
   tabToday: "आज",
   tabWeek: "हप्ता",
   tabMonth: "महिना",
@@ -176,8 +194,28 @@ const np: I18nDict = {
   // Feed states
   noStories: "तपाईंले खोज्नुभएको कुरा भेटिएन। अर्कै केही खोज्नुहोस् न।",
   loadingStories: "समाचार लोड गर्दैछौं…",
-  errorFeed: "समाचार लोड गर्न सकिएन। इन्टरनेट जाँच्नुहोस् वा पुनः प्रयास गर्नुहोस्।",
+  errorFeed:
+    "समाचार लोड गर्न सकिएन। इन्टरनेट जाँच्नुहोस् वा पुनः प्रयास गर्नुहोस्।",
   retryLabel: "पुनः प्रयास",
+  footerTagline:
+    "नेपाल र विश्वका द्विभाषिक समाचार सारांश अब थप छरितो, सफा र पढ्न सजिलो।",
+  subscribeButton: "सदस्यता लिनुहोस्",
+
+  newsletter: "न्युजलेटर",
+  stayInformed: "अपडेटमा रहनुहोस्",
+  close: "बन्द गर्नुहोस्",
+  subscribeSuccessNote:
+    "EkJhalak News बाट तपाईंको पहिलो ब्रिफिङ चाँडै प्राप्त हुनेछ।",
+  done: "ठीक छ",
+  subscribePitch:
+    "नेपाल र विश्वका दैनिक द्विभाषिक ब्रिफिङ इमेलमा पाउनुहोस्। कुनै स्पाम हुँदैन।",
+  subscribeSuccess: "सदस्यता सफल भयो।",
+  emailAddress: "इमेल ठेगाना",
+  preferredLanguage: "रुचिको भाषा",
+  subscribing: "सदस्यता लिँदै…",
+  subscribeForFree: "निःशुल्क सदस्यता",
+  subscribeLegal:
+    "सदस्यता लिएपछि EkJhalak बाट इमेल अपडेट प्राप्त गर्न सहमत हुनुहुन्छ। चाहेको बेला सदस्यता रद्द गर्न सकिन्छ।",
 
   statusDemo: "अहिले डेमो मात्र हो। लाइभ समाचारका लागि कनेक्सन चाहिन्छ।",
   statusLoading: "ताजा समाचार खोज्दैछौं…",

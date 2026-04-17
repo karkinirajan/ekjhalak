@@ -3,7 +3,7 @@
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ekjhalak.news";
-const SITE_NAME = "एक झलक";
+const SITE_NAME = "EJKN | EkJhalak News";
 
 export interface NewsArticleData {
   title: string;
@@ -49,8 +49,7 @@ export function websiteStructuredData(): object {
     "@type": "WebSite",
     name: SITE_NAME,
     url: SITE_URL,
-    description:
-      "Fast, bilingual news aggregator for Nepal and the world. Clean, ad-free, trusted sources.",
+    description: "Vibrant bilingual news briefings for Nepal and the world.",
     inLanguage: ["en", "ne"],
     potentialAction: {
       "@type": "SearchAction",

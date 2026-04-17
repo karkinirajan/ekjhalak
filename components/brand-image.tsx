@@ -7,23 +7,8 @@ interface BrandImageProps {
 }
 
 /**
- * Inline SVG brand identity for Ek Jhalak.
- *
- * Rendered as a React SVG element (not <img>) so that:
- *  - CSS fonts loaded by next/font (Noto Sans Devanagari, Inter) apply to text elements
- *  - currentColor inherits the parent's text color for theme-aware subtitle rendering
- *  - No network request; scales perfectly at any size
- *  - Works on both dark and light theme backgrounds
- *
- * Mark anatomy:
- *  • Gradient circle  — indigo (#6366f1) → violet (#7c3aed)
- *  • Lens / aperture  — two bezier arcs symbolising "jhalak" (glimpse)
- *  • White pupil      — focus point with gradient core
- *  • Catchlight dot   — adds depth and life to the mark
- *
- * Wordmark:
- *  • "एक झलक"   — bold Noto Sans Devanagari, gradient fill (primary)
- *  • "EK JHALAK" — Inter, tracked, muted currentColor (secondary)
+ * Inline SVG brand identity for EkJhalak News (EJKN).
+ * Uses a solid red editorial mark with defined borders for crisp rendering.
  */
 export function BrandImage({
   containerClassName,
@@ -37,76 +22,94 @@ export function BrandImage({
       )}
     >
       <svg
-        viewBox="0 0 260 68"
+        viewBox="0 0 360 120"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         role="img"
-        aria-label="एक झलक — Ek Jhalak"
+        aria-label="EJKN — EkJhalak News"
         className={cn(
           "block h-auto max-h-full w-auto max-w-full select-none",
           imageClassName,
         )}
       >
-        <defs>
-          {/* Brand gradient: indigo → violet */}
-          <linearGradient id="ej-g1" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="100%" stopColor="#7c3aed" />
-          </linearGradient>
-          {/* Horizontal wordmark gradient */}
-          <linearGradient id="ej-g2" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="100%" stopColor="#8b5cf6" />
-          </linearGradient>
-        </defs>
-
-        {/* ── Mark ───────────────────────────────────────────── */}
-        {/* Ambient glow ring */}
-        <circle cx="34" cy="34" r="33" fill="#6366f1" opacity="0.1" />
-        {/* Main gradient circle */}
-        <circle cx="34" cy="34" r="29" fill="url(#ej-g1)" />
-        {/* Lens / aperture — two bezier arcs forming an eye  */}
         <path
-          d="M8 34 C15 16 53 16 60 34 C53 52 15 52 8 34Z"
-          fill="none"
-          stroke="white"
-          strokeWidth="1.75"
-          strokeLinejoin="round"
-          opacity="0.65"
+          d="M 22 4 H 340 A 16 16 0 0 1 356 20 V 100 A 12 12 0 0 1 344 112 H 16 A 12 12 0 0 1 4 100 V 22 A 18 18 0 0 1 22 4 Z"
+          fill="#fffdf8"
+          stroke="#8f1f1f"
+          strokeWidth="2"
         />
-        {/* Iris ring */}
-        <circle cx="34" cy="34" r="10" fill="white" opacity="0.1" />
-        {/* White sclera */}
-        <circle cx="34" cy="34" r="6.5" fill="white" opacity="0.93" />
-        {/* Pupil — gradient core */}
-        <circle cx="34" cy="34" r="3.75" fill="url(#ej-g1)" />
-        {/* Catchlight highlight */}
-        <circle cx="28.5" cy="28.5" r="1.75" fill="white" opacity="0.55" />
 
-        {/* ── Wordmark ────────────────────────────────────────── */}
-        {/* Primary: Devanagari name */}
+        <g transform="translate(10 10) scale(1.625)">
+          <rect
+            x="3"
+            y="3"
+            width="58"
+            height="58"
+            rx="16"
+            fill="#c53030"
+            stroke="#8f1f1f"
+            strokeWidth="2"
+          />
+          <rect
+            x="8"
+            y="8"
+            width="48"
+            height="48"
+            rx="12"
+            fill="white"
+            fillOpacity="0.14"
+            stroke="white"
+            strokeOpacity="0.24"
+          />
+          <text
+            x="32"
+            y="40"
+            textAnchor="middle"
+            fontFamily="Sora, Segoe UI, Arial, sans-serif"
+            fontSize="21"
+            fontWeight="700"
+            letterSpacing="0.8"
+            fill="white"
+          >
+            EJKN
+          </text>
+        </g>
+
         <text
-          x="76"
-          y="40"
-          fontFamily="'Noto Sans Devanagari', 'Mangal', 'Kokila', 'Arial Unicode MS', system-ui, sans-serif"
-          fontSize="26"
+          x="60"
+          y="72"
+          textAnchor="middle"
+          fontFamily="'Sora', 'Segoe UI', system-ui, sans-serif"
+          fontSize="34"
           fontWeight="700"
-          fill="url(#ej-g2)"
+          fill="white"
+          letterSpacing="1"
+        >
+          EJKN
+        </text>
+
+        <text
+          x="128"
+          y="58"
+          fontFamily="'Noto Sans Devanagari', 'Mangal', 'Kokila', 'Arial Unicode MS', system-ui, sans-serif"
+          fontSize="34"
+          fontWeight="700"
+          fill="#1f6a4f"
         >
           एक झलक
         </text>
-        {/* Secondary: tracked Latin label — inherits parent text color */}
+
         <text
-          x="78"
-          y="57"
-          fontFamily="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
-          fontSize="8.5"
-          fontWeight="500"
-          letterSpacing="4"
-          fill="currentColor"
-          opacity="0.38"
+          x="130"
+          y="86"
+          fontFamily="'Sora', 'Segoe UI', system-ui, sans-serif"
+          fontSize="12"
+          fontWeight="600"
+          letterSpacing="2.8"
+          fill="#1f6a4f"
+          opacity="0.7"
         >
-          EK JHALAK
+          EKJHALAK NEWS
         </text>
       </svg>
     </div>

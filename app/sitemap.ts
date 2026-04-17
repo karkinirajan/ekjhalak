@@ -18,11 +18,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 0.7,
     },
-    {
-      url: `${SITE_URL}/subscribe`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
   ];
 }

@@ -8,7 +8,7 @@ import { ACTIVE_SOURCES } from "./source-registry";
 import { fetchRssFeed } from "./rss-adapter";
 import { normalizeStory } from "./feed-normalizer";
 import { deduplicate } from "./deduplicator";
-import { batchTranslateToNepali, groqSummarize } from "./translator";
+import { groqFullTranslate, groqSummarize } from "./translator";
 import type { NewsItem, SourceStatusMeta } from "./news-pipeline";
 import type { Source } from "./source-registry";
 
@@ -122,52 +122,53 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
 
   const deduped = deduplicate(allItems);
 
-  // ── Summarize long English summaries via Groq ──────────────────────────────
-  // Only items that don't already have native Nepali content need translation.
-  // Processing happens here (inside the cache boundary) so translations are
-  // computed once per 5-minute cache window, not on every request.
-  // Budget: 20s for summarization. Each groqSummarize call has its own 15s
-  // AbortSignal timeout, but the loop is sequential — cap the total.
-  const SUMMARIZE_BUDGET_MS = 20_000;
-  const summarizeDeadline = Date.now() + SUMMARIZE_BUDGET_MS;
-  for (const item of deduped) {
-    if (Date.now() > summarizeDeadline) break;
-    if (item.summaryEn && item.summaryEn.split(/\s+/).length > 160) {
-      try {
-        item.summaryEn = await groqSummarize(item.summaryEn);
-      } catch {
-        // keep original if summarization fails
+  // ── Bidirectional enrichment (summary in original lang + full translation) ─
+  // Processing happens here (inside the 5-min cache boundary) so LLM work is
+  // done once per cache window, not on every request.
+  //
+  // Per-refresh cap: 1 article gets the expensive Groq summarize +
+  // full-translate treatment. Bulk title/body translation is intentionally
+  // deferred to the cron + DB enrichment pipeline to keep RSS fetches fast.
+  const ENRICH_LIMIT = 1;
+  const ENRICH_BUDGET_MS = 12_000;
+  const enrichDeadline = Date.now() + ENRICH_BUDGET_MS;
+
+  const needsEnrich = deduped.filter((item) => {
+    const body = item.originalLang === "np" ? item.summaryNp : item.summaryEn;
+    const other = item.originalLang === "np" ? item.summaryEn : item.summaryNp;
+    return Boolean(body) && !other; // has source text, missing translation
+  });
+
+  let enrichedCount = 0;
+  for (const item of needsEnrich) {
+    if (enrichedCount >= ENRICH_LIMIT) break;
+    if (Date.now() > enrichDeadline) break;
+
+    const sourceLang = item.originalLang;
+    const targetLang: "en" | "np" = sourceLang === "np" ? "en" : "np";
+    const sourceBody = sourceLang === "np" ? item.summaryNp : item.summaryEn;
+
+    try {
+      // 1. Short brief in the ORIGINAL language — goes to briefEn/briefNp
+      //    (does NOT overwrite the full body in summaryEn/summaryNp).
+      const shortSummary = await groqSummarize(sourceBody, sourceLang);
+      if (shortSummary && shortSummary !== sourceBody) {
+        if (sourceLang === "np") item.briefNp = shortSummary;
+        else item.briefEn = shortSummary;
       }
-    }
-  }
 
-  // ── Translate titles and summaries to Nepali ───────────────────────────────
-  const toTranslate = deduped.filter(
-    (item) => item.summaryEn && !item.summaryNp,
-  );
-  if (toTranslate.length > 0) {
-    // Translate titles
-    const titlesToTranslate = toTranslate.filter(
-      (item) => item.title && !item.titleNp,
-    );
-    if (titlesToTranslate.length > 0) {
-      const titleTranslations = await batchTranslateToNepali(
-        titlesToTranslate.map((item) => item.title),
-        1,
-      );
-      titlesToTranslate.forEach((item, i) => {
-        if (titleTranslations[i]) item.titleNp = titleTranslations[i];
-      });
-    }
+      // 2. Full faithful translation into the OTHER language — fills the
+      //    opposite summary slot so both languages have the full body.
+      const fullTranslation = await groqFullTranslate(sourceBody, targetLang);
+      if (fullTranslation) {
+        if (targetLang === "np") item.summaryNp = fullTranslation;
+        else item.summaryEn = fullTranslation;
+      }
 
-    // Translate summaries
-    const translations = await batchTranslateToNepali(
-      toTranslate.map((item) => item.summaryEn),
-      1, // sequential to avoid rate-limiting on free tier
-    );
-    toTranslate.forEach((item, i) => {
-      if (translations[i]) item.summaryNp = translations[i];
-    });
+      enrichedCount++;
+    } catch {
+      // keep original content on any enrichment failure
+    }
   }
 
   return { items: deduped, sourceStatuses, fetchedAt };

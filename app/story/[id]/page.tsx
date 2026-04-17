@@ -4,12 +4,13 @@
 
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { ArrowLeft, ExternalLink, Clock, Globe } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { newsArticleStructuredData, toJsonLd } from "@/lib/seo/structured-data";
 import type { ApiArticle } from "@/lib/feed/serializers";
+import { sanitizeTextForDisplay, splitIntoParagraphs } from "@/lib/utils";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ekjhalak.news";
@@ -38,22 +39,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Story not found | एक झलक" };
   }
   return {
-    title: `${article.title} | एक झलक`,
+    title: `${article.title} | EJKN`,
     description: article.summary ?? article.title,
     openGraph: {
       title: article.title,
       description: article.summary ?? article.title,
       url: `${SITE_URL}/story/${article.id}`,
-      images: article.imageUrl ? [{ url: article.imageUrl }] : [],
       type: "article",
       publishedTime: article.publishedAt,
-      siteName: "एक झलक",
+      siteName: "EJKN",
     },
     twitter: {
-      card: "summary_large_image",
+      card: "summary",
       title: article.title,
       description: article.summary ?? article.title,
-      images: article.imageUrl ? [article.imageUrl] : undefined,
     },
   };
 }
@@ -68,9 +67,7 @@ export default async function StoryPage({ params }: Props) {
       title: article.title,
       description: article.summary,
       url: `${SITE_URL}/story/${article.id}`,
-      imageUrl: article.imageUrl,
       publishedAt: article.publishedAt,
-      sourceName: article.sourceName,
     }),
   );
 
@@ -92,9 +89,8 @@ export default async function StoryPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: jsonLd }}
       />
 
-      <main className="min-h-screen bg-background">
-        <div className="max-w-3xl mx-auto px-4 py-8">
-          {/* Back navigation */}
+      <main className="min-h-screen bg-linear-to-br from-[#ffe7d6]/55 via-[#fff8ef] to-[#fffdf8] text-[#1b2435] dark:from-[#0a1323] dark:via-[#10192f] dark:to-[#16243f] dark:text-[#f2f6ff]">
+        <div className="mx-auto w-full px-4 py-8 sm:w-[94vw] sm:max-w-[94vw] lg:max-w-3xl">
           <Link href="/">
             <Button variant="ghost" size="sm" className="mb-6 -ml-2 gap-2">
               <ArrowLeft className="h-4 w-4" />
@@ -102,121 +98,208 @@ export default async function StoryPage({ params }: Props) {
             </Button>
           </Link>
 
-          {/* Badges */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Badge
-              variant={article.scope === "national" ? "default" : "secondary"}
-            >
-              {article.scope === "national" ? "Nepal" : "International"}
-            </Badge>
-            {article.category && (
-              <Badge variant="outline">{article.category}</Badge>
-            )}
-          </div>
-
-          {/* English headline */}
-          <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-foreground mb-3">
-            {article.title}
-          </h1>
-
-          {/* Nepali headline */}
-          {article.titleNp && (
-            <h2
-              className="text-xl sm:text-2xl font-semibold leading-snug text-muted-foreground mb-6"
-              lang="ne"
-              style={{ fontFamily: "var(--font-devanagari), sans-serif" }}
-            >
-              {article.titleNp}
-            </h2>
-          )}
-
-          {/* Meta row */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b">
-            <span className="flex items-center gap-1.5">
-              <Globe className="h-3.5 w-3.5" />
-              {article.sourceName}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
-              {formattedDate}
-            </span>
-          </div>
-
-          {/* Lead image */}
-          {article.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={article.imageUrl}
-              alt={article.title}
-              className="w-full rounded-lg mb-6 object-cover max-h-96"
-              loading="lazy"
-            />
-          )}
-
-          {/* English summary */}
-          {article.summary && (
-            <div className="mb-6">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Summary
-              </h3>
-              <p className="text-base leading-relaxed text-foreground">
-                {article.summary}
-              </p>
-            </div>
-          )}
-
-          {/* Nepali summary */}
-          {article.summaryNp && (
-            <div className="mb-6 p-4 rounded-lg bg-muted/40">
-              <h3
-                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-                lang="ne"
+          <article className="rounded-2xl border border-[#ffd4b7] bg-[#fffdfb]/95 p-6 shadow-[0_12px_26px_rgba(255,120,61,0.14)] dark:border-[#2d3c59] dark:bg-[#111b31]/95 dark:shadow-[0_12px_26px_rgba(5,10,21,0.5)]">
+            <div className="mb-4 flex flex-wrap gap-2">
+              <Badge
+                variant={article.scope === "national" ? "default" : "secondary"}
+                className={
+                  article.scope === "national"
+                    ? "bg-[#c53030] text-white border border-[#8f1f1f]"
+                    : "bg-[#e9f8f1] text-[#1f6a4f] border border-[#97cdb7] dark:bg-[#0f2f2a] dark:text-[#9de5cd] dark:border-[#256557]"
+                }
               >
-                सारांश
-              </h3>
-              <p
-                className="text-base leading-relaxed text-foreground"
-                lang="ne"
-                style={{ fontFamily: "var(--font-devanagari), sans-serif" }}
-              >
-                {article.summaryNp}
-              </p>
+                {article.scope === "national" ? "Nepal" : "International"}
+              </Badge>
+              {article.category && (
+                <Badge
+                  variant="outline"
+                  className="rounded-full px-2.5 py-0.5 text-xs uppercase tracking-wide"
+                >
+                  {article.category}
+                </Badge>
+              )}
             </div>
-          )}
 
-          {/* Read original */}
-          <div className="pt-4 border-t">
-            <a
-              href={article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2"
-            >
-              <Button className="gap-2" variant="default">
-                Read original at {article.sourceName}
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            </a>
-          </div>
+            {(() => {
+              const isNp = article.language === "np";
+              // News first: original-language body + title. titleNp/summaryNp
+              // and titleEn/summaryEn are resolved per-language views from the
+              // DB, so we don't fall through to the original accidentally.
+              const primaryTitle = isNp
+                ? (article.titleNp ?? article.title)
+                : (article.titleEn ?? article.title);
+              const primaryBody = isNp
+                ? (article.summaryNp ?? article.summary ?? "")
+                : (article.summaryEn ?? article.summary ?? "");
+              // Brief in original language
+              const primaryBrief = isNp
+                ? (article.briefNp ?? "")
+                : (article.briefEn ?? "");
+              // Full translation in other language
+              const secondaryTitle = isNp
+                ? (article.titleEn ?? null)
+                : (article.titleNp ?? null);
+              const secondaryBody = isNp
+                ? (article.summaryEn ?? "")
+                : (article.summaryNp ?? "");
+              const secondaryLang = isNp ? "en" : "ne";
+              const primaryLang = isNp ? "ne" : "en";
 
-          {/* Alternate sources */}
-          {article.alternateSourceIds &&
-            article.alternateSourceIds.length > 0 && (
-              <div className="mt-6 pt-6 border-t">
-                <h3 className="text-sm font-semibold text-muted-foreground mb-2">
-                  Also reported by {article.alternateSourceIds.length} other
-                  source
-                  {article.alternateSourceIds.length > 1 ? "s" : ""}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {article.alternateSourceIds.map((sid) => (
-                    <Badge key={sid} variant="outline" className="text-xs">
-                      {sid}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+              const safePrimaryTitle = sanitizeTextForDisplay(primaryTitle);
+              const safeSecondaryTitle = secondaryTitle
+                ? sanitizeTextForDisplay(secondaryTitle)
+                : null;
+              const safePrimaryBody = sanitizeTextForDisplay(primaryBody);
+              const safeSecondaryBody = sanitizeTextForDisplay(secondaryBody);
+              const safePrimaryBrief = sanitizeTextForDisplay(primaryBrief);
+
+              const primaryParas = splitIntoParagraphs(safePrimaryBody, 5);
+              const secondaryParas = splitIntoParagraphs(safeSecondaryBody, 5);
+
+              const isPrimaryNp = primaryLang === "ne";
+              const isSecondaryNp = secondaryLang === "ne";
+
+              return (
+                <>
+                  <h1
+                    className="mb-3 text-2xl font-bold leading-tight sm:text-3xl"
+                    lang={primaryLang}
+                    style={
+                      isPrimaryNp
+                        ? { fontFamily: "var(--font-devanagari), sans-serif" }
+                        : undefined
+                    }
+                  >
+                    {safePrimaryTitle}
+                  </h1>
+
+                  <div className="mb-6 flex flex-wrap items-center gap-4 border-b border-[#ffd9bf] pb-6 text-sm text-[#4d5a74] dark:border-[#273653] dark:text-[#b8c8e9]">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      {formattedDate}
+                    </span>
+                  </div>
+
+                  {/* 1. NEWS — full body in the original language */}
+                  {primaryParas.length > 0 && (
+                    <section className="mb-8 space-y-4">
+                      {primaryParas.map((p, i) => (
+                        <p
+                          key={i}
+                          className="text-base leading-[1.9]"
+                          lang={primaryLang}
+                          style={
+                            isPrimaryNp
+                              ? {
+                                  fontFamily:
+                                    "var(--font-devanagari), sans-serif",
+                                }
+                              : undefined
+                          }
+                        >
+                          {p}
+                        </p>
+                      ))}
+                    </section>
+                  )}
+
+                  {/* 2. SUMMARY — short brief in the ORIGINAL language */}
+                  {safePrimaryBrief && (
+                    <section className="mb-8 rounded-xl bg-[#fff5ec] p-5 dark:bg-[#19253f]">
+                      <h3
+                        className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#5f6881] dark:text-[#97aacd]"
+                        lang={primaryLang}
+                      >
+                        {isPrimaryNp ? "सारांश" : "Summary"}
+                      </h3>
+                      <div className="space-y-3">
+                        {splitIntoParagraphs(safePrimaryBrief, 3).map(
+                          (p, i) => (
+                            <p
+                              key={i}
+                              className="text-base leading-relaxed"
+                              lang={primaryLang}
+                              style={
+                                isPrimaryNp
+                                  ? {
+                                      fontFamily:
+                                        "var(--font-devanagari), sans-serif",
+                                    }
+                                  : undefined
+                              }
+                            >
+                              {p}
+                            </p>
+                          ),
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* 3. TRANSLATION — full body in the OTHER language */}
+                  {secondaryParas.length > 0 && (
+                    <section className="border-t border-[#ffd9bf] pt-6 dark:border-[#273653]">
+                      <h3
+                        className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#5f6881] dark:text-[#97aacd]"
+                        lang={secondaryLang}
+                      >
+                        {isSecondaryNp ? "अनुवाद" : "English translation"}
+                      </h3>
+                      {safeSecondaryTitle && (
+                        <h2
+                          className="mb-4 text-xl font-semibold leading-snug text-[#2e3a53]/85 dark:text-[#dce6ff]/85 sm:text-2xl"
+                          lang={secondaryLang}
+                          style={
+                            isSecondaryNp
+                              ? {
+                                  fontFamily:
+                                    "var(--font-devanagari), sans-serif",
+                                }
+                              : undefined
+                          }
+                        >
+                          {safeSecondaryTitle}
+                        </h2>
+                      )}
+                      <div className="space-y-4">
+                        {secondaryParas.map((p, i) => (
+                          <p
+                            key={i}
+                            className="text-base leading-[1.9]"
+                            lang={secondaryLang}
+                            style={
+                              isSecondaryNp
+                                ? {
+                                    fontFamily:
+                                      "var(--font-devanagari), sans-serif",
+                                  }
+                                : undefined
+                            }
+                          >
+                            {p}
+                          </p>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </>
+              );
+            })()}
+          </article>
+
+          <footer className="mt-6 rounded-2xl border border-[#ffd9bf] bg-[#fff4ea]/80 px-4 py-4 text-center text-xs text-[#4d5a74] dark:border-[#2a3b5b] dark:bg-[#121d34]/90 dark:text-[#b8c8e9]">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <span suppressHydrationWarning>
+                © {new Date().getFullYear()} EkJhalak News
+              </span>
+              <Link
+                href="/"
+                className="font-semibold text-[#1d3357] hover:underline dark:text-[#dce6ff]"
+              >
+                Back to live briefings
+              </Link>
+            </div>
+          </footer>
         </div>
       </main>
     </>

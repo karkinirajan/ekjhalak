@@ -88,14 +88,14 @@ async function ingestSource(source: Source): Promise<SourceIngestResult> {
 
         if (result.length > 0) {
           newCount++;
-          // Enqueue translation job for English articles
-          if (source.language === "en") {
-            await sql`
-              insert into translations (article_id, lang, status)
-              values (${result[0].id}, 'np', 'pending')
-              on conflict (article_id, lang) do nothing
-            `;
-          }
+          // Enqueue a translation into the OPPOSITE language.
+          // EN source → NP translation; NP source → EN translation.
+          const targetLang = source.language === "np" ? "en" : "np";
+          await sql`
+            insert into translations (article_id, lang, status)
+            values (${result[0].id}, ${targetLang}, 'pending')
+            on conflict (article_id, lang) do nothing
+          `;
         }
       } catch (itemErr) {
         // Log item-level errors but don't fail the whole source

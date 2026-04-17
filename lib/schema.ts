@@ -174,8 +174,13 @@ export interface FeedArticle {
   canonicalUrl: string;
   title: string;
   titleNp: string | null;
+  titleEn: string | null;
   summary: string | null;
   summaryNp: string | null;
+  summaryEn: string | null;
+  /** Short language-matched briefs produced by the enrichment pump. */
+  briefNp: string | null;
+  briefEn: string | null;
   imageUrl: string | null;
   publishedAt: string; // ISO string
   publishedTimestamp: number; // Unix ms

@@ -12,6 +12,31 @@ export function truncate(text: string, maxLength: number) {
 }
 
 /**
+ * Decode common HTML entities and remove unresolved tokens for clean display.
+ */
+export function sanitizeTextForDisplay(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;|&ldquo;|&rdquo;/gi, '"')
+    .replace(/&apos;|&lsquo;|&rsquo;/gi, "'")
+    .replace(/&ndash;/gi, "-")
+    .replace(/&mdash;/gi, " - ")
+    .replace(/&hellip;/gi, "…")
+    .replace(/&#x2018;|&#x2019;|&#8216;|&#8217;/gi, "'")
+    .replace(/&#x201c;|&#x201d;|&#8220;|&#8221;/gi, '"')
+    .replace(/&#x2026;|&#8230;/gi, "…")
+    .replace(/&#\d+;/g, " ")
+    .replace(/&#x[0-9a-f]+;/gi, " ")
+    .replace(/&[a-z]+;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Splits a block of text into up to `max` paragraphs at sentence boundaries.
  * Handles both English (. ! ?) and Nepali (।) sentence terminators.
  * Short text (<280 chars) is returned as-is.

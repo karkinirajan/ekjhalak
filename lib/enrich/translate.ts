@@ -1,17 +1,28 @@
 // lib/enrich/translate.ts
-// DB-backed translation pipeline.
-// Picks up pending translation jobs from the `translations` table,
-// calls the best available provider (Groq → Google → MyMemory),
-// and saves results back to the DB.
+// DB-backed enrichment pipeline.
 //
-// The existing lib/translator.ts handles the actual provider calls.
-// This layer adds DB persistence, status tracking, and queue processing.
+// Each pending `translations` row represents a request to translate the
+// article into `translations.lang` (which is the OPPOSITE of the article's
+// source language). For each one, we:
+//   1. Generate a short brief in the article's ORIGINAL language → `rewrites`
+//      (style='brief').
+//   2. Generate a full faithful translation into `translations.lang` →
+//      `translations.translated_title` + `translations.translated_summary`.
+//
+// Sized for Groq free tier on meta-llama/llama-4-scout-17b-16e-instruct:
+//   30 RPM / 1K RPD / 30K TPM / 500K TPD.
+// Each article costs ~2 Groq requests and ~4.2K tokens (summarize + full
+// translate). At 1 item per run × 15-min cadence = 96 runs/day:
+//   ~192 RPD (19%), ~403K TPD (81%), peak TPM ~4.2K (14%).
 
 import sql from "@/lib/db";
-import { batchTranslateToNepali, translateToNepali } from "@/lib/translator";
+import {
+  groqFullTranslate,
+  groqSummarize,
+  translateToNepali,
+} from "@/lib/translator";
 
-const BATCH_SIZE = 20;
-const MAX_ITEMS_PER_PUMP = 50;
+const MAX_ITEMS_PER_PUMP = 1;
 
 function isDbAvailable(): boolean {
   return Boolean(process.env.DATABASE_URL);
@@ -35,12 +46,14 @@ export async function pumpTranslations(): Promise<TranslationPumpResult> {
 
   const startedAt = Date.now();
 
-  // Claim a batch of pending translations atomically
+  // Claim pending translations (any lang). Joined with the source article to
+  // get the original title, summary, and language in a single query.
   const pending = await sql<
     Array<{
       id: string;
       articleId: string;
-      lang: string;
+      lang: "en" | "np";
+      sourceLang: "en" | "np" | "multi";
       title: string | null;
       summary: string | null;
     }>
@@ -49,12 +62,13 @@ export async function pumpTranslations(): Promise<TranslationPumpResult> {
       t.id,
       t.article_id,
       t.lang,
+      a.language         as source_lang,
       a.title_original   as title,
       a.summary_original as summary
     from translations t
     join articles a on a.id = t.article_id
     where t.status = 'pending'
-      and t.lang = 'np'
+      and t.lang in ('en', 'np')
     order by t.created_at asc
     limit ${MAX_ITEMS_PER_PUMP}
   `;
@@ -63,75 +77,98 @@ export async function pumpTranslations(): Promise<TranslationPumpResult> {
     return { processed: 0, succeeded: 0, failed: 0, durationMs: 0 };
   }
 
-  // Mark them as in-progress to avoid double-processing in concurrent runs
-  const ids = pending.map((r) => r.id);
-  await sql`
-    update translations
-    set status = 'pending', updated_at = now()
-    where id = any(${ids})
-  `;
-
   let succeeded = 0;
   let failed = 0;
 
-  // Process in batches for efficiency
-  for (let i = 0; i < pending.length; i += BATCH_SIZE) {
-    const batch = pending.slice(i, i + BATCH_SIZE);
-
-    const titles = batch.map((r) => r.title ?? "");
-    const summaries = batch.map((r) => r.summary ?? "");
+  for (const row of pending) {
+    const targetLang = row.lang;
+    const sourceLang: "en" | "np" =
+      row.sourceLang === "np" ? "np" : "en"; // normalize 'multi' → 'en'
+    const originalTitle = row.title ?? "";
+    const originalSummary = row.summary ?? "";
 
     try {
-      const translatedTitles = await batchTranslateToNepali(titles);
-      const translatedSummaries = await batchTranslateToNepali(summaries);
-
-      for (let j = 0; j < batch.length; j++) {
-        const row = batch[j];
-        await sql`
-          update translations
-          set
-            translated_title   = ${translatedTitles[j] || null},
-            translated_summary = ${translatedSummaries[j] || null},
-            provider           = 'groq',
-            status             = 'ok',
-            updated_at         = now()
-          where id = ${row.id}
-        `;
-        succeeded++;
-      }
-    } catch {
-      // Fall back to per-item translation on batch failure
-      for (const row of batch) {
+      // 1. Brief in the ORIGINAL language → rewrites table.
+      if (originalSummary) {
         try {
-          const translatedTitle = row.title
-            ? await translateToNepali(row.title)
-            : null;
-          const translatedSummary = row.summary
-            ? await translateToNepali(row.summary)
-            : null;
-
-          await sql`
-            update translations
-            set
-              translated_title   = ${translatedTitle},
-              translated_summary = ${translatedSummary},
-              provider           = 'fallback',
-              status             = 'ok',
-              updated_at         = now()
-            where id = ${row.id}
-          `;
-          succeeded++;
-        } catch {
-          await sql`
-            update translations
-            set
-              status     = 'error',
-              updated_at = now()
-            where id = ${row.id}
-          `;
-          failed++;
+          const brief = await groqSummarize(originalSummary, sourceLang);
+          if (brief && brief !== originalSummary) {
+            await sql`
+              insert into rewrites (article_id, lang, style, title, summary, provider)
+              values (
+                ${row.articleId},
+                ${sourceLang},
+                'brief',
+                ${originalTitle || null},
+                ${brief},
+                'groq'
+              )
+              on conflict (article_id, lang, style)
+              do update set
+                summary    = excluded.summary,
+                provider   = excluded.provider,
+                updated_at = now()
+            `;
+          }
+        } catch (err) {
+          console.warn(
+            `[enrich] brief failed for ${row.articleId}:`,
+            (err as Error).message,
+          );
         }
       }
+
+      // 2. Full faithful translation into the TARGET language → translations.
+      let translatedTitle: string | null = null;
+      let translatedSummary: string | null = null;
+      let provider: string = "groq";
+
+      if (originalSummary) {
+        translatedSummary = await groqFullTranslate(originalSummary, targetLang);
+      }
+
+      if (originalTitle) {
+        // Title is short — prefer the dedicated cascade (Groq first, Google
+        // fallback) for speed. Only available EN→NP today.
+        if (targetLang === "np") {
+          translatedTitle = (await translateToNepali(originalTitle)) || null;
+        } else {
+          // NP→EN title: reuse the full-translate helper.
+          translatedTitle = (await groqFullTranslate(originalTitle, "en")) || null;
+        }
+      }
+
+      if (!translatedSummary && !translatedTitle) {
+        provider = "fallback";
+      }
+
+      await sql`
+        update translations
+        set
+          translated_title   = ${translatedTitle || null},
+          translated_summary = ${translatedSummary || null},
+          provider           = ${provider},
+          status             = ${translatedSummary || translatedTitle ? "ok" : "error"},
+          updated_at         = now()
+        where id = ${row.id}
+      `;
+
+      if (translatedSummary || translatedTitle) {
+        succeeded++;
+      } else {
+        failed++;
+      }
+    } catch (err) {
+      console.warn(
+        `[enrich] translation failed for ${row.articleId}:`,
+        (err as Error).message,
+      );
+      await sql`
+        update translations
+        set status = 'error', updated_at = now()
+        where id = ${row.id}
+      `.catch(() => {});
+      failed++;
     }
   }
 

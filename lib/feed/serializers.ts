@@ -16,8 +16,13 @@ export interface ApiArticle {
   url: string;
   title: string;
   titleNp: string | null;
+  titleEn: string | null;
   summary: string | null;
   summaryNp: string | null;
+  summaryEn: string | null;
+  /** Short language-matched brief (populated by enrichment). */
+  briefEn: string | null;
+  briefNp: string | null;
   imageUrl: string | null;
   publishedAt: string;
   publishedTimestamp: number;
@@ -37,8 +42,12 @@ export function serializeArticle(a: FeedArticle): ApiArticle {
     url: a.canonicalUrl,
     title: a.title,
     titleNp: a.titleNp ?? null,
+    titleEn: a.titleEn ?? null,
     summary: a.summary ?? null,
     summaryNp: a.summaryNp ?? null,
+    summaryEn: a.summaryEn ?? null,
+    briefEn: a.briefEn ?? null,
+    briefNp: a.briefNp ?? null,
     imageUrl: a.imageUrl ?? null,
     publishedAt: a.publishedAt,
     publishedTimestamp: a.publishedTimestamp,

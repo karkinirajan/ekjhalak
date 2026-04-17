@@ -30,6 +30,7 @@ type FeedResponse = {
 };
 
 function newsItemToApiArticle(item: NewsItem, idx: number): ApiArticle {
+  const isNp = item.originalLang === "np";
   return {
     id: item.id ?? String(idx),
     sourceId: item.sourceId ?? "unknown",
@@ -38,15 +39,19 @@ function newsItemToApiArticle(item: NewsItem, idx: number): ApiArticle {
     url: item.sourceUrl,
     title: item.title,
     titleNp: item.titleNp ?? null,
-    summary: item.summaryEn ?? null,
+    titleEn: isNp ? null : item.title,
+    summary: item.summaryEn ?? item.summaryNp ?? null,
     summaryNp: item.summaryNp ?? null,
+    summaryEn: item.summaryEn ?? null,
+    briefEn: item.briefEn ?? null,
+    briefNp: item.briefNp ?? null,
     imageUrl: item.imageUrl ?? null,
     publishedAt:
       typeof item.publishedAt === "string"
         ? item.publishedAt
         : new Date(item.publishedTimestamp ?? Date.now()).toISOString(),
     publishedTimestamp: item.publishedTimestamp ?? Date.now(),
-    language: "en",
+    language: isNp ? "np" : "en",
     category: item.category ?? null,
     score: 0,
     clusterId: null,

@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Devanagari } from "next/font/google";
+import { Noto_Sans_Devanagari, Sora } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const inter = Inter({
+const sora = Sora({
   variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const soraDisplay = Sora({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
   display: "swap",
 });
 
@@ -19,16 +27,16 @@ const notoDevanagari = Noto_Sans_Devanagari({
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekjhalak.news";
-const SITE_NAME = "एक झलक";
+const SITE_NAME = "EkJhalak News";
 const SITE_DESCRIPTION =
-  "Fast, bilingual news aggregator for Nepal and the world. Read the latest national and international headlines in English and Nepali — clean, ad-free, and real-time.";
+  "Vibrant bilingual news briefings for Nepal and the world with a cleaner, content-first reading experience.";
 const OG_IMAGE_URL = `${SITE_URL}/og-image.png`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "एक झलक — Nepal & World News",
-    template: "%s | एक झलक",
+    default: "EJKN | EkJhalak News",
+    template: "%s | EJKN",
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -40,8 +48,8 @@ export const metadata: Metadata = {
     "news aggregator",
     "international news",
     "national news Nepal",
-    "एक झलक",
-    "ek jhalak",
+    "EJKN",
+    "ekjhalak",
   ],
   authors: [{ name: "EkJhalak" }],
   creator: "EkJhalak",
@@ -51,7 +59,7 @@ export const metadata: Metadata = {
     alternateLocale: "ne_NP",
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: "एक झलक — Nepal & World News",
+    title: "EJKN | EkJhalak News",
     description: SITE_DESCRIPTION,
     images: [
       {
@@ -59,13 +67,13 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         type: "image/png",
-        alt: "एक झलक — Bilingual News Aggregator",
+        alt: "EJKN | EkJhalak News",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "एक झलक — Nepal & World News",
+    title: "EJKN | EkJhalak News",
     description: SITE_DESCRIPTION,
     images: [OG_IMAGE_URL],
   },
@@ -79,9 +87,8 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
     ],
     apple: [
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
@@ -106,8 +113,8 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "एक झलक",
-  alternateName: "Ek Jhalak",
+  name: "EkJhalak News",
+  alternateName: "EJKN",
   url: SITE_URL,
   description: SITE_DESCRIPTION,
   inLanguage: ["en", "ne"],
@@ -130,7 +137,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${notoDevanagari.variable}`}
+      className={`${sora.variable} ${soraDisplay.variable} ${notoDevanagari.variable}`}
     >
       <head>
         {/*
@@ -152,7 +159,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:bg-[#4f5dff] focus:text-white focus:px-4 focus:py-2 focus:top-2 focus:left-2 focus:rounded-md focus:shadow-lg focus:text-sm focus:font-medium"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:bg-[#ff5f31] focus:text-white focus:px-4 focus:py-2 focus:top-2 focus:left-2 focus:rounded-md focus:shadow-lg focus:text-sm focus:font-medium"
         >
           Skip to main content
         </a>

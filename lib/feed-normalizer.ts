@@ -142,6 +142,7 @@ export function normalizeStory(raw: RawStory, source: Source): NewsItem {
   return {
     id,
     bucket: source.bucket,
+    originalLang: isNepaliSource ? "np" : "en",
     title: raw.title,
     titleNp: isNepaliSource ? raw.title : "",
     source: source.name,
@@ -151,7 +152,6 @@ export function normalizeStory(raw: RawStory, source: Source): NewsItem {
     publishedTimestamp,
     summaryEn: isNepaliSource ? "" : buildSummary(raw.title, raw.description),
     summaryNp: isNepaliSource ? buildSummary(raw.title, raw.description) : "",
-    imageUrl: raw.imageUrl ?? undefined,
     category: source.categories[0],
   };
 }

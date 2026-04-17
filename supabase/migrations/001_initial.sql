@@ -3,61 +3,106 @@
 -- Run with: supabase db push  OR  psql $DATABASE_URL -f supabase/migrations/001_initial.sql
 -- ── Extensions ───────────────────────────────────────────────────────────────
 create extension if not exists "pgcrypto";
+
 -- gen_random_uuid()
 create extension if not exists "pg_trgm";
+
 -- trigram text search
 create extension if not exists "unaccent";
+
 -- accent-insensitive search
 -- ── Custom types ─────────────────────────────────────────────────────────────
-do $$ begin if not exists (
-  select 1
-  from pg_type
-  where typname = 'source_scope'
+do $ $ begin if not exists (
+  select
+    1
+  from
+    pg_type
+  where
+    typname = 'source_scope'
 ) then create type source_scope as enum ('national', 'international');
+
 end if;
-end $$;
-do $$ begin if not exists (
-  select 1
-  from pg_type
-  where typname = 'source_language'
+
+end $ $;
+
+do $ $ begin if not exists (
+  select
+    1
+  from
+    pg_type
+  where
+    typname = 'source_language'
 ) then create type source_language as enum ('en', 'np', 'multi');
+
 end if;
-end $$;
-do $$ begin if not exists (
-  select 1
-  from pg_type
-  where typname = 'source_type'
+
+end $ $;
+
+do $ $ begin if not exists (
+  select
+    1
+  from
+    pg_type
+  where
+    typname = 'source_type'
 ) then create type source_type as enum ('rss', 'api', 'scrape');
+
 end if;
-end $$;
-do $$ begin if not exists (
-  select 1
-  from pg_type
-  where typname = 'parse_status'
+
+end $ $;
+
+do $ $ begin if not exists (
+  select
+    1
+  from
+    pg_type
+  where
+    typname = 'parse_status'
 ) then create type parse_status as enum ('pending', 'ok', 'error');
+
 end if;
-end $$;
-do $$ begin if not exists (
-  select 1
-  from pg_type
-  where typname = 'translation_status'
+
+end $ $;
+
+do $ $ begin if not exists (
+  select
+    1
+  from
+    pg_type
+  where
+    typname = 'translation_status'
 ) then create type translation_status as enum ('pending', 'ok', 'error', 'skipped');
+
 end if;
-end $$;
-do $$ begin if not exists (
-  select 1
-  from pg_type
-  where typname = 'rewrite_style'
+
+end $ $;
+
+do $ $ begin if not exists (
+  select
+    1
+  from
+    pg_type
+  where
+    typname = 'rewrite_style'
 ) then create type rewrite_style as enum ('brief', 'readable');
+
 end if;
-end $$;
-do $$ begin if not exists (
-  select 1
-  from pg_type
-  where typname = 'subscriber_status'
+
+end $ $;
+
+do $ $ begin if not exists (
+  select
+    1
+  from
+    pg_type
+  where
+    typname = 'subscriber_status'
 ) then create type subscriber_status as enum ('active', 'unsubscribed', 'bounced');
+
 end if;
-end $$;
+
+end $ $;
+
 -- ── sources ───────────────────────────────────────────────────────────────────
 create table if not exists sources (
   id text primary key,
@@ -72,7 +117,8 @@ create table if not exists sources (
   source_type source_type not null default 'rss',
   active boolean not null default true,
   credibility_weight smallint not null default 5 check (
-    credibility_weight between 1 and 10
+    credibility_weight between 1
+    and 10
   ),
   poll_interval_minutes smallint not null default 15,
   last_fetched_at timestamptz,
@@ -84,8 +130,11 @@ create table if not exists sources (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
 create index if not exists idx_sources_active on sources (active);
+
 create index if not exists idx_sources_scope on sources (scope);
+
 -- ── articles_raw ─────────────────────────────────────────────────────────────
 -- Raw ingest records — one row per fetched item. Never modified after insert.
 create table if not exists articles_raw (
@@ -102,9 +151,13 @@ create table if not exists articles_raw (
   created_at timestamptz not null default now(),
   unique (source_id, checksum)
 );
+
 create index if not exists idx_articles_raw_source_id on articles_raw (source_id);
+
 create index if not exists idx_articles_raw_fetched_at on articles_raw (fetched_at desc);
+
 create index if not exists idx_articles_raw_checksum on articles_raw (checksum);
+
 -- ── articles ─────────────────────────────────────────────────────────────────
 -- Normalised, deduplicated article records. One row per canonical story.
 create table if not exists articles (
@@ -122,19 +175,26 @@ create table if not exists articles (
   region text,
   fingerprint char(64) not null unique,
   -- SHA-256 of normalised URL
-  cluster_id uuid references article_clusters (id) on delete
-  set null,
-    score real not null default 0,
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
+  cluster_id uuid,
+  score real not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
 create index if not exists idx_articles_published_at on articles (published_at desc);
+
 create index if not exists idx_articles_source_id on articles (source_id, published_at desc);
+
 create index if not exists idx_articles_fingerprint on articles (fingerprint);
+
 create index if not exists idx_articles_cluster_id on articles (cluster_id);
+
 create index if not exists idx_articles_language on articles (language);
+
 create index if not exists idx_articles_score on articles (score desc);
+
 create index if not exists idx_articles_category on articles (category);
+
 -- Full-text search on title + summary
 create index if not exists idx_articles_fts on articles using gin (
   to_tsvector(
@@ -142,6 +202,7 @@ create index if not exists idx_articles_fts on articles using gin (
     coalesce(title_original, '') || ' ' || coalesce(summary_original, '')
   )
 );
+
 -- ── article_clusters ─────────────────────────────────────────────────────────
 -- Deduplicated story groups. Created forward-decl above; define body here.
 create table if not exists article_clusters (
@@ -154,19 +215,51 @@ create table if not exists article_clusters (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
 -- Add FK now that articles exists
-do $$ begin if not exists (
-  select 1
-  from information_schema.table_constraints
-  where constraint_name = 'article_clusters_canonical_article_id_fkey'
+do $ $ begin if not exists (
+  select
+    1
+  from
+    information_schema.table_constraints
+  where
+    constraint_name = 'article_clusters_canonical_article_id_fkey'
 ) then
-alter table article_clusters
-add constraint article_clusters_canonical_article_id_fkey foreign key (canonical_article_id) references articles (id) on delete cascade;
+alter table
+  article_clusters
+add
+  constraint article_clusters_canonical_article_id_fkey foreign key (canonical_article_id) references articles (id) on delete cascade;
+
 end if;
-end $$;
+
+end $ $;
+
+-- Add articles.cluster_id FK now that article_clusters exists
+do $ $ begin if not exists (
+  select
+    1
+  from
+    information_schema.table_constraints
+  where
+    constraint_name = 'articles_cluster_id_fkey'
+) then
+alter table
+  articles
+add
+  constraint articles_cluster_id_fkey foreign key (cluster_id) references article_clusters (id) on delete
+set
+  null;
+
+end if;
+
+end $ $;
+
 create index if not exists idx_article_clusters_canonical on article_clusters (canonical_article_id);
+
 create index if not exists idx_article_clusters_key on article_clusters (cluster_key);
+
 create index if not exists idx_article_clusters_updated on article_clusters (updated_at desc);
+
 -- ── article_cluster_members ───────────────────────────────────────────────────
 create table if not exists article_cluster_members (
   cluster_id uuid not null references article_clusters (id) on delete cascade,
@@ -174,8 +267,11 @@ create table if not exists article_cluster_members (
   source_id text not null references sources (id) on delete cascade,
   primary key (cluster_id, article_id)
 );
+
 create index if not exists idx_acm_cluster_id on article_cluster_members (cluster_id);
+
 create index if not exists idx_acm_article_id on article_cluster_members (article_id);
+
 -- ── translations ─────────────────────────────────────────────────────────────
 create table if not exists translations (
   id uuid primary key default gen_random_uuid(),
@@ -189,9 +285,13 @@ create table if not exists translations (
   updated_at timestamptz not null default now(),
   unique (article_id, lang)
 );
+
 create index if not exists idx_translations_article_id on translations (article_id);
+
 create index if not exists idx_translations_status on translations (status);
+
 create index if not exists idx_translations_lang on translations (lang);
+
 -- ── rewrites ─────────────────────────────────────────────────────────────────
 create table if not exists rewrites (
   id uuid primary key default gen_random_uuid(),
@@ -205,7 +305,9 @@ create table if not exists rewrites (
   updated_at timestamptz not null default now(),
   unique (article_id, lang, style)
 );
+
 create index if not exists idx_rewrites_article_id on rewrites (article_id);
+
 -- ── ingest_runs ───────────────────────────────────────────────────────────────
 create table if not exists ingest_runs (
   id uuid primary key default gen_random_uuid(),
@@ -221,22 +323,30 @@ create table if not exists ingest_runs (
   notes text,
   created_at timestamptz not null default now()
 );
+
 create index if not exists idx_ingest_runs_started_at on ingest_runs (started_at desc);
+
 -- ── ingest_errors ─────────────────────────────────────────────────────────────
 create table if not exists ingest_errors (
   id uuid primary key default gen_random_uuid(),
   source_id text references sources (id) on delete
-  set null,
+  set
+    null,
     run_id uuid references ingest_runs (id) on delete
-  set null,
+  set
+    null,
     stage text not null,
     error_message text not null,
     error_meta_json jsonb not null default '{}',
     created_at timestamptz not null default now()
 );
+
 create index if not exists idx_ingest_errors_source_id on ingest_errors (source_id);
+
 create index if not exists idx_ingest_errors_run_id on ingest_errors (run_id);
+
 create index if not exists idx_ingest_errors_created on ingest_errors (created_at desc);
+
 -- ── subscribers ───────────────────────────────────────────────────────────────
 create table if not exists subscribers (
   id uuid primary key default gen_random_uuid(),
@@ -247,26 +357,41 @@ create table if not exists subscribers (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
 create index if not exists idx_subscribers_email on subscribers (email);
+
 create index if not exists idx_subscribers_status on subscribers (status);
+
 -- ── updated_at auto-update trigger ───────────────────────────────────────────
-create or replace function set_updated_at() returns trigger language plpgsql as $$ begin new.updated_at = now();
+create
+or replace function set_updated_at() returns trigger language plpgsql as $ $ begin new.updated_at = now();
+
 return new;
+
 end;
-$$;
-do $$
-declare t text;
+
+$ $;
+
+do $ $ declare t text;
+
 begin foreach t in array array ['sources','articles','article_clusters','translations','rewrites','subscribers'] loop if not exists (
-  select 1
-  from information_schema.triggers
-  where trigger_name = 'trg_' || t || '_updated_at'
+  select
+    1
+  from
+    information_schema.triggers
+  where
+    trigger_name = 'trg_' || t || '_updated_at'
 ) then execute format(
   'create trigger trg_%1$s_updated_at before update on %1$s for each row execute function set_updated_at()',
   t
 );
+
 end if;
+
 end loop;
-end $$;
+
+end $ $;
+
 -- ── Supabase Cron setup (pg_cron) ────────────────────────────────────────────
 -- These cron jobs call the ingestion endpoint via pg_net.
 -- Uncomment and configure AFTER deployment; replace the URL with your Vercel domain.

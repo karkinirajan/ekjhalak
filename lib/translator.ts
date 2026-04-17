@@ -7,7 +7,10 @@
 
 const GOOGLE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
+// Llama 4 Scout — 30K TPM / 500K TPD on Groq free tier (2.5× / 5× the headroom
+// of llama-3.3-70b-versatile) and stronger multilingual fidelity for Nepali.
+const GROQ_MODEL =
+  process.env.GROQ_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct";
 const MYMEMORY_EMAIL = process.env.MYMEMORY_EMAIL ?? "";
 
 const MYMEMORY_REQUEST_GAP_MS = 1_500;
@@ -95,8 +98,49 @@ async function groqTranslate(text: string): Promise<string> {
   return translated;
 }
 
+function parseNumberedBatchOutput(content: string, expected: number): string[] {
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  // Fast path: exactly one non-empty line per input.
+  if (lines.length === expected) {
+    return lines.map((line) => line.replace(/^\d+\s*[).:-]?\s*/, "").trim());
+  }
+
+  const translations: string[] = new Array(expected).fill("");
+  let currentIndex = -1;
+
+  for (const rawLine of lines) {
+    const match = rawLine.match(/^(\d+)\s*[).:-]?\s*(.*)$/);
+    if (match) {
+      const idx = Number(match[1]) - 1;
+      if (idx >= 0 && idx < expected) {
+        currentIndex = idx;
+        translations[idx] = match[2].trim();
+      }
+      continue;
+    }
+
+    if (currentIndex >= 0 && currentIndex < expected) {
+      translations[currentIndex] =
+        `${translations[currentIndex]} ${rawLine}`.trim();
+    }
+  }
+
+  const filled = translations.filter(Boolean).length;
+  if (filled !== expected) {
+    throw new Error(
+      `Groq batch: expected ${expected} translations, got ${filled}`,
+    );
+  }
+
+  return translations;
+}
+
 /**
- * Translate up to ~15 texts in a single Groq API call using JSON output.
+ * Translate up to ~15 texts in a single Groq API call using numbered-line output.
  * Returns an array of Nepali strings in the same order as input.
  */
 async function groqBatchTranslate(texts: string[]): Promise<string[]> {
@@ -113,13 +157,13 @@ async function groqBatchTranslate(texts: string[]): Promise<string[]> {
       messages: [
         {
           role: "system",
-          content: `Translate each numbered English line to Nepali. Return a JSON object with a "translations" key containing an array of Nepali strings, one per input line in order. Example:\nInput:\n1. Hello\n2. World\nOutput:\n{"translations": ["नमस्ते", "संसार"]}`,
+          content:
+            "Translate each numbered English line to Nepali. Return ONLY numbered Nepali lines in the exact same order as input (one line per item). No JSON, no markdown, no extra commentary.",
         },
         { role: "user", content: numbered },
       ],
       temperature: 0.1,
       max_tokens: 4096,
-      response_format: { type: "json_object" },
     }),
     signal: AbortSignal.timeout(30_000),
   });
@@ -132,19 +176,9 @@ async function groqBatchTranslate(texts: string[]): Promise<string[]> {
 
   const data = await res.json();
   const content = data?.choices?.[0]?.message?.content?.trim() ?? "";
+  if (!content) throw new Error("Groq batch: empty response");
 
-  const parsed = JSON.parse(content);
-  const arr: unknown[] = Array.isArray(parsed)
-    ? parsed
-    : (parsed.translations ?? parsed.results ?? Object.values(parsed)[0]);
-
-  if (!Array.isArray(arr) || arr.length !== texts.length) {
-    throw new Error(
-      `Groq batch: expected ${texts.length} translations, got ${Array.isArray(arr) ? arr.length : "non-array"}`,
-    );
-  }
-
-  return arr.map(String);
+  return parseNumberedBatchOutput(content, texts.length);
 }
 
 // ── Sentence splitting (for MyMemory 500-char limit) ─────────────────────────
@@ -395,14 +429,56 @@ export async function batchTranslateToNepali(
   return results;
 }
 
-// ── Groq Summarization ────────────────────────────────────────────────────────
+// ── Paragraph-boundary clamp (no mid-sentence cutoffs) ───────────────────────
+
+const SUMMARY_TARGET_MIN = 680;
+const SUMMARY_TARGET_MAX = 1100;
 
 /**
- * Summarize text into a tight, detail-rich news brief using Groq.
- * Target: 1–2 short paragraphs, ~40–80 words total.
- * Falls back to original text if Groq is unavailable.
+ * Trim a multi-paragraph text so it ends on a complete sentence / paragraph.
+ * Only removes trailing paragraphs that would push length past `hardMax`.
+ * Never cuts mid-sentence.
  */
-export async function groqSummarize(text: string): Promise<string> {
+function clampToParagraphs(text: string, hardMax: number): string {
+  const cleaned = text.trim();
+  if (cleaned.length <= hardMax) return cleaned;
+
+  const paragraphs = cleaned
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const kept: string[] = [];
+  let total = 0;
+  for (const p of paragraphs) {
+    const next = total + (kept.length ? 2 : 0) + p.length;
+    if (next > hardMax && kept.length > 0) break;
+    kept.push(p);
+    total = next;
+  }
+  return kept.join("\n\n");
+}
+
+// ── Groq Summarization (language-aware) ──────────────────────────────────────
+
+const SUMMARY_SYSTEM_EN =
+  `You are a news editor. Write a 3-paragraph news brief in English (120–180 words, 680–950 chars). ` +
+  `Include who/what/when/where/why, key figures, dates, and outcomes. ` +
+  `Every sentence must be complete — never end mid-sentence. Separate paragraphs with a blank line. ` +
+  `Neutral newspaper tone. No labels, headings, numbering, or markdown.`;
+
+const SUMMARY_SYSTEM_NP =
+  `तपाईं नेपाली समाचार सम्पादक हुनुहुन्छ। नेपाली भाषामा ३ अनुच्छेदको समाचार सार लेख्नुहोस् (लगभग १२०–१८० शब्द, ६८०–९५० अक्षर)। ` +
+  `मुख्य तथ्य, मिति, आंकडा, र परिणाम समावेश गर्नुहोस्। प्रत्येक वाक्य पूर्ण हुनुपर्छ — कहिल्यै बीचमा नकाट्नुहोस्। ` +
+  `अनुच्छेद बीचमा खाली लाइन राख्नुहोस्। तटस्थ समाचार शैली। कुनै शीर्षक, क्रम, वा markdown नराख्नुहोस्।`;
+
+/**
+ * Summarize text in the given language. Produces a 3-paragraph brief in
+ * `lang` with complete sentences and no mid-sentence cutoffs.
+ */
+export async function groqSummarize(
+  text: string,
+  lang: "en" | "np" = "en",
+): Promise<string> {
   if (!GROQ_API_KEY || isGroqCoolingDown()) return text;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -416,15 +492,15 @@ export async function groqSummarize(text: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content:
-            "You are a news editor. Condense the article into 1 or 2 short paragraphs (40–80 words total). Include only the most important facts: who, what, when, where, and why. Use a neutral, newspaper tone. Pack maximum information into minimum words. Separate paragraphs with a blank line. No labels, numbering, or markdown.",
+          content: lang === "np" ? SUMMARY_SYSTEM_NP : SUMMARY_SYSTEM_EN,
         },
         { role: "user", content: text },
       ],
       temperature: 0.15,
-      max_tokens: 300,
+      // Devanagari tokenizes ~3× English. 1500 tokens fits ~180 NP words.
+      max_tokens: lang === "np" ? 1500 : 700,
     }),
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(20_000),
   });
 
   if (res.status === 429) {
@@ -435,5 +511,64 @@ export async function groqSummarize(text: string): Promise<string> {
 
   const data = await res.json();
   const summary = data?.choices?.[0]?.message?.content?.trim() ?? "";
-  return summary || text;
+  if (!summary) return text;
+
+  const clamped = clampToParagraphs(summary, SUMMARY_TARGET_MAX);
+  // Short summaries are acceptable; only fall back if Groq returned nothing.
+  return clamped.length >= SUMMARY_TARGET_MIN || clamped.length > 0
+    ? clamped
+    : text;
+}
+
+// ── Groq Full Translation (NP ↔ EN, preserves paragraph structure) ───────────
+
+/**
+ * Translate a full article to the target language while preserving paragraph
+ * breaks. Unlike `translateToNepali` (short lines), this is tuned for longer
+ * news bodies — does not compress, does not split sentences across paragraphs.
+ */
+export async function groqFullTranslate(
+  text: string,
+  target: "en" | "np",
+): Promise<string> {
+  if (!GROQ_API_KEY || isGroqCoolingDown()) return "";
+
+  const direction =
+    target === "np"
+      ? "Translate the following English news article to Nepali."
+      : "Translate the following Nepali news article to English.";
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            `${direction} Preserve paragraph breaks (blank line between paragraphs). ` +
+            `Translate faithfully — do not summarize, shorten, or add commentary. ` +
+            `Every sentence must be complete. Output ONLY the translation.`,
+        },
+        { role: "user", content: text },
+      ],
+      temperature: 0.1,
+      max_tokens: target === "np" ? 2200 : 1100,
+    }),
+    signal: AbortSignal.timeout(25_000),
+  });
+
+  if (res.status === 429) {
+    blockGroq();
+    return "";
+  }
+  if (!res.ok) return "";
+
+  const data = await res.json();
+  const translated = data?.choices?.[0]?.message?.content?.trim() ?? "";
+  return translated;
 }

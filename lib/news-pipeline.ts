@@ -4,12 +4,15 @@
 
 export type RangeKey = "day" | "week" | "month";
 export type BucketKey = "national" | "international";
+export type OriginalLang = "np" | "en";
 
 export interface NewsItem {
   /** SHA-256 fingerprint of the normalized article URL (first 12 hex chars) */
   id: string;
   /** National (Nepal) or International */
   bucket: BucketKey;
+  /** Language of the source article — drives summary/translation direction */
+  originalLang: OriginalLang;
   /** Headline, HTML-stripped */
   title: string;
   /** Nepali headline (translated or native) */
@@ -24,14 +27,14 @@ export interface NewsItem {
   publishedAt: string;
   /** Unix milliseconds — used for range filtering and sort order */
   publishedTimestamp: number;
-  /** English summary (from RSS description, HTML-stripped) */
+  /** English news body — source text if EN-origin, else full EN translation. */
   summaryEn: string;
-  /**
-   * Nepali summary.
-   * Populated for Nepali-language sources; empty for EN sources until a
-   * translation pipeline is connected. UI falls back to summaryEn when empty.
-   */
+  /** Nepali news body — source text if NP-origin, else full NP translation. */
   summaryNp: string;
+  /** Short Groq-generated brief in English (only if originalLang === "en"). */
+  briefEn?: string;
+  /** Short Groq-generated brief in Nepali (only if originalLang === "np"). */
+  briefNp?: string;
   /** Lead image URL from the RSS feed (optional) */
   imageUrl?: string;
   /** Primary category derived from the source registry */

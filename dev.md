@@ -217,12 +217,9 @@ When quota is hit, MyMemory enters a 30-minute cooldown. The UI gracefully falls
 
 ## 10. Dark Mode Logo
 
-The logo (`/public/logo.png`) uses CSS blend modes to work on both themes:
+The logo now ships as SVG assets in `/public/logo.svg` and `/public/favicon.svg`, so it stays crisp in both themes without blend-mode handling.
 
-- **Light mode**: `mix-blend-multiply` dissolves the white background into the warm shell.
-- **Dark mode**: `mix-blend-screen` inverts the image so the letterforms remain visible.
-
-If you want a custom transparent PNG for dark mode (higher fidelity), export it as `/public/ekjhalak-dark-transparent.png` (PNG-24 with transparency) and update `components/brand-image.tsx` to use it conditionally by re-adding the `isDark` branch.
+If you want a transparent raster logo for a future special use, export it as `/public/ekjhalak-dark-transparent.png` (PNG-24 with transparency) and update `components/brand-image.tsx` to use it conditionally by re-adding the `isDark` branch.
 
 ---
 
