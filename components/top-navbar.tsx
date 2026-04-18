@@ -99,28 +99,33 @@ export function TopNavbar({
           palette.shell,
         )}
       />
-      <div className="relative px-3 pt-3 pb-3 sm:px-4">
+      <div className="relative px-2.5 pt-3 pb-3 sm:px-4">
         <div className="flex flex-col gap-3">
           {/* Brand row */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <SystemLogo themeMode={themeMode} />
-              <div className="flex flex-col items-start justify-center leading-tight">
-                <div className="flex items-baseline gap-2.5">
+          <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <SystemLogo themeMode={themeMode} className="shrink-0" />
+              <div className="flex min-w-0 flex-col items-start justify-center leading-tight">
+                <div className="flex min-w-0 items-baseline gap-1.5 sm:gap-2.5">
                   <p
                     className={cn(
-                      "font-sans text-[14px] font-extrabold uppercase tracking-[0.16em]",
+                      "hidden font-sans text-[14px] font-extrabold uppercase tracking-[0.16em] sm:block",
                       palette.text,
                     )}
                   >
                     EKJN
                   </p>
-                  <span className={cn("text-sm font-semibold", palette.muted)}>
+                  <span
+                    className={cn(
+                      "hidden text-sm font-semibold sm:inline",
+                      palette.muted,
+                    )}
+                  >
                     |
                   </span>
                   <p
                     className={cn(
-                      "font-display text-base font-semibold tracking-tight",
+                      "truncate font-display text-base font-semibold tracking-tight",
                       palette.text,
                     )}
                   >
@@ -138,7 +143,7 @@ export function TopNavbar({
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               <Button
                 variant="outline"
                 size="sm"
@@ -147,7 +152,7 @@ export function TopNavbar({
                   setSubscribeError("");
                 }}
                 className={cn(
-                  "h-8 rounded-lg px-2.5 text-[11px]",
+                  "hidden h-8 rounded-lg px-2.5 text-[11px] sm:inline-flex",
                   palette.ghost,
                 )}
                 aria-label={ui.subscribe}
@@ -190,13 +195,16 @@ export function TopNavbar({
                 size="sm"
                 onClick={() => setLanguage(language === "en" ? "np" : "en")}
                 className={cn(
-                  "h-8 rounded-lg px-2.5 text-[11px]",
+                  "h-8 rounded-lg px-2 text-[11px] sm:px-2.5",
                   palette.ghost,
                 )}
                 aria-label={t.langToggleLabel}
               >
-                <Languages className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                {t.langButton}
+                <Languages
+                  className="h-3.5 w-3.5 sm:mr-1"
+                  aria-hidden="true"
+                />
+                <span className="hidden sm:inline">{t.langButton}</span>
               </Button>
             </div>
           </div>

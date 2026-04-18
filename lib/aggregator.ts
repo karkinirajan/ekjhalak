@@ -8,7 +8,12 @@ import { ACTIVE_SOURCES } from "./source-registry";
 import { fetchRssFeed } from "./rss-adapter";
 import { normalizeStory } from "./feed-normalizer";
 import { deduplicate } from "./deduplicator";
-import { summarize, isSummaryAcceptable } from "./summarizer";
+import {
+  summarize,
+  isSummaryAcceptable,
+  hardTruncateSummary,
+  SUMMARY_MAX_CHARS,
+} from "./summarizer";
 import type { NewsItem, SourceStatusMeta } from "./news-pipeline";
 import type { Source } from "./source-registry";
 
@@ -105,14 +110,23 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
   const deadline = Date.now() + ENRICH_BUDGET_MS;
 
   for (const item of deduped) {
-    if (Date.now() > deadline) break;
-    if (!item.summary || isSummaryAcceptable(item.summary)) continue;
-    try {
-      const brief = await summarize(item.summary, item.originalLang);
-      if (brief) item.summary = brief;
-    } catch {
-      // keep the raw summary on failure — never leave an article with a broken brief
+    if (!item.summary) continue;
+    if (isSummaryAcceptable(item.summary)) continue;
+
+    if (Date.now() <= deadline) {
+      try {
+        const brief = await summarize(item.summary, item.originalLang);
+        if (brief && isSummaryAcceptable(brief)) {
+          item.summary = brief;
+          continue;
+        }
+      } catch {
+        // fall through to the deterministic hard cap below
+      }
     }
+
+    // Last-line-of-defense: never let the UI render a raw RSS body.
+    item.summary = hardTruncateSummary(item.summary, SUMMARY_MAX_CHARS);
   }
 
   return { items: deduped, sourceStatuses, fetchedAt };

@@ -18,8 +18,8 @@ function blockGroq() {
   groqBlockedUntil = Date.now() + GROQ_COOLDOWN_MS;
 }
 
-export const SUMMARY_MAX_CHARS = 600;
-export const SUMMARY_MIN_CHARS = 180;
+export const SUMMARY_MAX_CHARS = 480;
+export const SUMMARY_MIN_CHARS = 160;
 
 function normalizeText(text: string): string {
   return text
@@ -34,6 +34,30 @@ export function isSummaryAcceptable(text: string): boolean {
   return (
     cleaned.length >= SUMMARY_MIN_CHARS && cleaned.length <= SUMMARY_MAX_CHARS
   );
+}
+
+/**
+ * Hard cap a summary to `max` chars, snapping to the nearest sentence
+ * terminator (. ! ? or Devanagari ।) when one is reasonably close to the
+ * cut, otherwise breaking on a word boundary and appending an ellipsis.
+ * Used as the last-line-of-defense when the LLM cannot satisfy the bound.
+ */
+export function hardTruncateSummary(
+  text: string,
+  max: number = SUMMARY_MAX_CHARS,
+): string {
+  const cleaned = normalizeText(text);
+  if (cleaned.length <= max) return cleaned;
+
+  const slice = cleaned.slice(0, max);
+  const sentenceMatch = slice.match(/^[\s\S]*[.।!?](?=\s|$)/);
+  if (sentenceMatch && sentenceMatch[0].length >= Math.floor(max * 0.5)) {
+    return sentenceMatch[0].trim();
+  }
+
+  const lastSpace = slice.lastIndexOf(" ");
+  const safeSlice = lastSpace > Math.floor(max * 0.5) ? slice.slice(0, lastSpace) : slice;
+  return `${safeSlice.trim().replace(/[,;:\-–—]+$/, "")}…`;
 }
 
 const SYSTEM_EN =
@@ -72,7 +96,7 @@ async function callGroq(
         { role: "user", content: user },
       ],
       temperature: 0.15,
-      max_tokens: lang === "np" ? 900 : 500,
+      max_tokens: lang === "np" ? 700 : 380,
     }),
     signal: AbortSignal.timeout(20_000),
   });

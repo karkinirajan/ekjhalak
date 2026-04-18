@@ -34,7 +34,11 @@ export function SystemLogo({
       aria-label="EJKN"
       role="img"
     >
-      <svg viewBox="0 0 64 64" className="h-14 w-14" aria-hidden="true">
+      <svg
+        viewBox="0 0 64 64"
+        className="h-10 w-10 sm:h-14 sm:w-14"
+        aria-hidden="true"
+      >
         <rect
           x="2"
           y="2"
