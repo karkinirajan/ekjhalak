@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import { Noto_Sans_Devanagari, Sora } from "next/font/google";
+import { Inter, Noto_Sans_Devanagari, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const sora = Sora({
+const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const soraDisplay = Sora({
+const sourceSerif = Source_Serif_4({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: ["600", "700"],
   display: "swap",
 });
 
@@ -29,14 +29,14 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekjhalak.news";
 const SITE_NAME = "EkJhalak News";
 const SITE_DESCRIPTION =
-  "Vibrant bilingual news briefings for Nepal and the world with a cleaner, content-first reading experience.";
+  "Calm bilingual news briefings for Nepal and the world. Clean, original-language summaries — no clutter, no noise.";
 const OG_IMAGE_URL = `${SITE_URL}/og-image.png`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "EJKN | EkJhalak News",
-    template: "%s | EJKN",
+    default: "EkJhalak News — Nepal & World briefings",
+    template: "%s · EkJhalak News",
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -48,18 +48,17 @@ export const metadata: Metadata = {
     "news aggregator",
     "international news",
     "national news Nepal",
-    "EJKN",
     "ekjhalak",
   ],
-  authors: [{ name: "EkJhalak" }],
-  creator: "EkJhalak",
+  authors: [{ name: "kneeraazon", url: "https://kneeraazon.com" }],
+  creator: "kneeraazon",
   openGraph: {
     type: "website",
     locale: "en_US",
     alternateLocale: "ne_NP",
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: "EJKN | EkJhalak News",
+    title: "EkJhalak News — Nepal & World briefings",
     description: SITE_DESCRIPTION,
     images: [
       {
@@ -67,23 +66,20 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         type: "image/png",
-        alt: "EJKN | EkJhalak News",
+        alt: "EkJhalak News",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "EJKN | EkJhalak News",
+    title: "EkJhalak News — Nepal & World briefings",
     description: SITE_DESCRIPTION,
     images: [OG_IMAGE_URL],
   },
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-    },
+    googleBot: { index: true, follow: true },
   },
   icons: {
     icon: [
@@ -109,12 +105,10 @@ export const metadata: Metadata = {
   },
 };
 
-// JSON-LD structured data for the news aggregator
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "EkJhalak News",
-  alternateName: "EJKN",
   url: SITE_URL,
   description: SITE_DESCRIPTION,
   inLanguage: ["en", "ne"],
@@ -137,15 +131,9 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sora.variable} ${soraDisplay.variable} ${notoDevanagari.variable}`}
+      className={`${inter.variable} ${sourceSerif.variable} ${notoDevanagari.variable}`}
     >
       <head>
-        {/*
-         * Blocking theme script — runs synchronously before any paint.
-         * Reads the saved preference from localStorage and sets a data attribute
-         * on the root element so ThemeProvider can initialize without a flash.
-         * Must use dangerouslySetInnerHTML (not an external script) to be truly blocking.
-         */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('cfn-theme');document.documentElement.setAttribute('data-cfn-theme',t==='light'?'light':'dark')}catch(e){}})()`,
@@ -159,7 +147,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:bg-[#ff5f31] focus:text-white focus:px-4 focus:py-2 focus:top-2 focus:left-2 focus:rounded-md focus:shadow-lg focus:text-sm focus:font-medium"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:top-2 focus:left-2 focus:rounded-md focus:bg-[#2f81f7] focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:shadow-lg"
         >
           Skip to main content
         </a>

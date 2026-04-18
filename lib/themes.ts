@@ -2,35 +2,32 @@ export type ThemeName = "dark" | "light";
 
 // ── Design philosophy ─────────────────────────────────────────────────────────
 //
-// Both themes aim for premium editorial readability:
-//   • A restrained 3-tier text hierarchy (primary / secondary / meta)
-//   • Generous contrast between surface layers
-//   • Accent colors that feel deliberate, not garish
-//   • Identical semantic structure so component code never needs to branch
+// Dark: GitHub Dark Default — canvas #0d1117, overlay #161b22, border #30363d,
+// foreground #e6edf3, accent #2f81f7. Calm, editorial, WCAG AA.
+// Light: unchanged — warm parchment, preserved across this refresh.
 //
-// All color values are hand-picked for WCAG AA contrast on their background.
+// Both themes share semantic keys so component code never branches on name.
 
 export const themes = {
   dark: {
-    name: "Signal Night",
-    app: "bg-[#0c1220] text-[#f2f6ff]",
-    shell:
-      "bg-[#121a2d]/95 border-[#25304a] shadow-[0_14px_40px_rgba(3,7,18,0.45)]",
-    panel: "bg-[#121a2d] border-[#26334f]",
-    soft: "bg-[#1a2440] border-[#2c3b59]",
-    card: "bg-[#101a2f] border-[#24324f] hover:border-[#d63434]/60 hover:shadow-[0_10px_24px_rgba(6,13,28,0.55)] transition-all duration-200",
-    text: "text-[#f2f6ff]",
-    subtext: "text-[#dce6ff]/85",
-    muted: "text-[#b9caef]/75",
+    name: "GitHub Dark",
+    app: "bg-[#0d1117] text-[#e6edf3]",
+    shell: "bg-[#161b22] border-[#30363d] shadow-[0_1px_0_rgba(255,255,255,0.02)]",
+    panel: "bg-[#161b22] border-[#30363d]",
+    soft: "bg-[#21262d] border-[#30363d]",
+    card: "bg-[#161b22] border-[#30363d] hover:border-[#6e7681] hover:bg-[#1c2128] transition-colors duration-200",
+    text: "text-[#e6edf3]",
+    subtext: "text-[#c9d1d9]",
+    muted: "text-[#8b949e]",
     input:
-      "bg-[#0f182b] border-[#2a3752] text-[#f2f6ff] placeholder:text-[#a8bbdf]/55 focus:border-[#d63434] focus:ring-1 focus:ring-[#d63434]/25",
+      "bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#6e7681] focus:border-[#2f81f7] focus:ring-1 focus:ring-[#2f81f7]/40",
     accent:
-      "bg-[#c53030] text-white hover:bg-[#aa2a2a] border border-[#e26f6f] shadow-sm shadow-black/45",
+      "bg-[#2f81f7] text-white hover:bg-[#1f6feb] border border-transparent shadow-none",
     ghost:
-      "bg-[#16223a] text-[#dce6ff] hover:bg-[#223252] border border-[#33476e]",
-    badge: "bg-[#0f2f2a] text-[#9de5cd] border-[#256557]",
-    page: "from-[#080f1d] via-[#0d1528] to-[#131e36]",
-    image: "bg-[#17223b]",
+      "bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d] border border-[#30363d]",
+    badge: "bg-[#121d2f] text-[#79c0ff] border-[#1f4776]",
+    page: "",
+    image: "bg-[#21262d]",
   },
 
   light: {

@@ -12,11 +12,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "hourly",
       priority: 1,
     },
-    {
-      url: `${SITE_URL}/sources`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
   ];
 }

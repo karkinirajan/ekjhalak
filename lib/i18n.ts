@@ -1,226 +1,83 @@
 export type Lang = "en" | "np";
 
 const en = {
-  appTagline: "National & International briefings",
-  appSubtitle: "Daily newsroom",
+  // Top navbar controls
   searchPlaceholder: "Search headlines and summaries",
-  switchToLive: "Switch to live",
-  switchToDemo: "Switch to demo",
+  refreshFeed: "Refresh feed",
   langButton: "EN → NP",
   langToggleLabel: "Switch to Nepali",
-  refreshFeed: "Refresh feed",
-  navOverview: "Overview",
-  navToday: "Today",
-  navWeek: "This Week",
-  navMonth: "This Month",
-  feedLensLabel: "Feed lens",
-  feedAll: "All",
-  feedNational: "National",
-  feedInternational: "International",
-  themeLabel: "Theme",
-  themeDark: "Night Ink",
-  themeLight: "Warm Parchment",
-  dailyRefreshTitle: "Daily refresh",
-  dailyRefreshTime: "9:00 PM",
-  dailyRefreshNote:
-    "Same trusted sources, refreshed summaries, bilingual output.",
-  sourcesLabel: "Sources",
-  trustedSourcesTitle: "Sources",
-  trustedSourcesDesc: "Curated Nepali and international publishers",
-  sectionNepal: "National",
-  sectionInternational: "International",
-  researchStackTitle: "Research stack",
-  researchStackDesc: "Free-first pipeline for daily updates",
-  apiContractTitle: "API contract",
-  apiContractDesc: "Live mode will plug into this endpoint",
-  briefingDesc:
-    "Content-only bilingual briefings for Nepal and the world, built for fast reading.",
-  tabToday: "Today",
-  tabWeek: "Week",
-  tabMonth: "Month",
-  tabEnFirst: "English first",
-  tabNpFirst: "नेपाली पहिलो",
+  themeDark: "Switch to dark theme",
+  themeLight: "Switch to light theme",
 
+  // Range & bucket filters
+  statTimelineTitle: "Range",
+  statFeedTitle: "Region",
+  statLangTitle: "Display",
   rangeDay: "Today",
   rangeWeek: "This Week",
   rangeMonth: "This Month",
   rangeSuffix: "briefing",
-  statItemsTitle: "Visible items",
-  statItemsNote: "Filtered and paginated",
-  statTimelineTitle: "Timeline",
-  statTimelineNote: "Today, week, or month ranking.",
-  statFeedTitle: "Feed lens",
-  statFeedNote: "National and International news.",
-  feedValueAll: "All",
-  feedValueNational: "Nepal",
-  feedValueInternational: "International",
-  langValue: "EN → NP",
-  statLangTitle: "Language",
-  statLangNote: "Primary summary plus translation.",
+  feedAll: "All",
+  feedNational: "National",
+  feedInternational: "International",
+
+  // Feed chrome
+  briefingDesc:
+    "Calm, original-language briefings — no translation, no clutter.",
+  filtered: "stories",
+
+  // Pagination
   pagePre: "Page",
   pageOf: "of",
   prev: "Prev",
   next: "Next",
-  badgeNepal: "Nepal",
-  badgeWorld: "International",
+
+  // Card & detail
   readBrief: "Read brief",
-  sourceLink: "Source",
-  langLabelEn: "English",
-  langLabelNp: "नेपाली",
 
-  // Source filter
-  filteredBySource: "Filtered",
-  clearFilter: "Clear",
-  filtered: "filtered",
-
-  // Sidebar legend
-  legendLive: "Live — click to filter",
-  legendError: "Fetch error — using last cache",
-  legendNoRss: "No RSS — not available",
-  legendRefresh: "Feed refreshes every 5 minutes",
-
-  // Feed states
-  noStories: "No stories match this filter. Try a different range or source.",
+  // States
+  noStories: "No stories match this filter. Try a different range.",
   loadingStories: "Loading stories…",
   errorFeed: "Could not load news feed. Check your connection or try again.",
   retryLabel: "Retry",
-  footerTagline:
-    "Precision bilingual briefings with a cleaner, content-first reading experience.",
-  subscribeButton: "Subscribe",
-
-  newsletter: "Newsletter",
-  stayInformed: "Stay informed",
-  close: "Close",
-  subscribeSuccessNote: "Watch for your first briefing from EkJhalak News.",
-  done: "Done",
-  subscribePitch:
-    "Get a daily bilingual briefing for Nepal and the world. No spam, ever.",
-  subscribeSuccess: "You are subscribed.",
-  emailAddress: "Email address",
-  preferredLanguage: "Preferred language",
-  subscribing: "Subscribing…",
-  subscribeForFree: "Subscribe for free",
-  subscribeLegal:
-    "By subscribing, you agree to receive email updates from EkJhalak. Unsubscribe anytime.",
-
-  statusDemo:
-    "Using demo data. Connect your backend to switch to live AI-researched summaries.",
-  statusLoading: "Fetching live AI-prepared stories from your backend…",
-  statusConnected: "Live endpoint connected. Content is ready.",
-  statusUnavailable:
-    "Live endpoint not available. Falling back to demo content.",
 };
 
 export type I18nDict = typeof en;
 
 const np: I18nDict = {
-  appTagline: "अहिलेको मुख्य खबर",
-  appSubtitle: "दैनिक अपडेट",
   searchPlaceholder: "शीर्षक र सारांश खोज्नुहोस्",
-  switchToLive: "लाइभ समाचार",
-  switchToDemo: "डेमो हेर्नुहोस्",
+  refreshFeed: "फिड रिफ्रेस गर्नुहोस्",
   langButton: "NP → EN",
   langToggleLabel: "अंग्रेजीमा स्विच गर्नुहोस्",
-  refreshFeed: "फिड रिफ्रेस गर्नुहोस्",
-  navOverview: "सबै खबर",
-  navToday: "आजको",
-  navWeek: "यो हप्ताको",
-  navMonth: "यो महिनाको",
-  feedLensLabel: "खबरको प्रकार",
-  feedAll: "सबै",
-  feedNational: "स्वदेश",
-  feedInternational: "विदेश",
-  themeLabel: "थिम",
-  themeDark: "डार्क मोड",
-  themeLight: "उज्यालो मोड",
-  dailyRefreshTitle: "दैनिक अपडेट",
-  dailyRefreshTime: "बेलुका ९:०० बजे",
-  dailyRefreshNote: "भरपर्दो स्रोतबाट छानिएका खबरहरू।",
-  sourcesLabel: "स्रोतहरू",
-  trustedSourcesTitle: "स्रोतहरू",
-  trustedSourcesDesc: "हामीले विश्वास गरेका पत्रिकाहरू",
-  sectionNepal: "नेपाल",
-  sectionInternational: "विदेश",
-  researchStackTitle: "कसरी चल्छ?",
-  researchStackDesc: "समाचार संकलन गर्ने तरिका",
-  apiContractTitle: "प्राविधिक कुरा",
-  apiContractDesc: "हाम्रो सिस्टमको कनेक्सन",
-  briefingDesc:
-    "नेपाल र विश्वका द्विभाषिक समाचार सारांश अब थप छरितो, सफा र पढ्न सजिलो।",
-  tabToday: "आज",
-  tabWeek: "हप्ता",
-  tabMonth: "महिना",
-  tabEnFirst: "अंग्रेजीमा",
-  tabNpFirst: "नेपालीमा",
+  themeDark: "डार्क मोडमा जानुहोस्",
+  themeLight: "उज्यालो मोडमा जानुहोस्",
 
+  statTimelineTitle: "समय",
+  statFeedTitle: "क्षेत्र",
+  statLangTitle: "प्रदर्शन",
   rangeDay: "आजको",
   rangeWeek: "यो हप्ताको",
   rangeMonth: "यो महिनाको",
   rangeSuffix: "ब्रिफिङ",
-  statItemsTitle: "खबर संख्या",
-  statItemsNote: "अहिले देखिएका खबरहरू।",
-  statTimelineTitle: "समय",
-  statTimelineNote: "आज वा यो हप्ताको।",
-  statFeedTitle: "खबरको क्षेत्र",
-  statFeedNote: "कुन ठाउँको खबर हेर्ने।",
-  statLangTitle: "भाषा",
-  statLangNote: "पढ्न चाहेको भाषा।",
-  feedValueAll: "सबै",
-  feedValueNational: "स्वदेश",
-  feedValueInternational: "विदेश",
-  langValue: "नेपाली",
+  feedAll: "सबै",
+  feedNational: "स्वदेश",
+  feedInternational: "विदेश",
+
+  briefingDesc: "मौलिक भाषामा शान्त सारांश — अनुवाद छैन, भीड छैन।",
+  filtered: "खबर",
+
   pagePre: "पृष्ठ",
   pageOf: "/",
   prev: "अघिल्लो",
   next: "अर्को",
-  badgeNepal: "स्वदेश",
-  badgeWorld: "विदेश",
+
   readBrief: "पूरा पढ्नुहोस्",
-  sourceLink: "स्रोत",
-  langLabelEn: "English",
-  langLabelNp: "नेपाली",
 
-  // Source filter
-  filteredBySource: "स्रोत अनुसार",
-  clearFilter: "हटाउनुहोस्",
-  filtered: "छानिएको",
-
-  // Sidebar legend
-  legendLive: "लाइभ — क्लिक गरेर छान्नुहोस्",
-  legendError: "त्रुटि — पुरानो क्यास देखाइएको",
-  legendNoRss: "RSS छैन — उपलब्ध छैन",
-  legendRefresh: "फिड हरेक ५ मिनेटमा अपडेट",
-
-  // Feed states
-  noStories: "तपाईंले खोज्नुभएको कुरा भेटिएन। अर्कै केही खोज्नुहोस् न।",
+  noStories: "तपाईंले खोज्नुभएको कुरा भेटिएन। अर्कै दायरा प्रयास गर्नुहोस्।",
   loadingStories: "समाचार लोड गर्दैछौं…",
   errorFeed:
     "समाचार लोड गर्न सकिएन। इन्टरनेट जाँच्नुहोस् वा पुनः प्रयास गर्नुहोस्।",
   retryLabel: "पुनः प्रयास",
-  footerTagline:
-    "नेपाल र विश्वका द्विभाषिक समाचार सारांश अब थप छरितो, सफा र पढ्न सजिलो।",
-  subscribeButton: "सदस्यता लिनुहोस्",
-
-  newsletter: "न्युजलेटर",
-  stayInformed: "अपडेटमा रहनुहोस्",
-  close: "बन्द गर्नुहोस्",
-  subscribeSuccessNote:
-    "EkJhalak News बाट तपाईंको पहिलो ब्रिफिङ चाँडै प्राप्त हुनेछ।",
-  done: "ठीक छ",
-  subscribePitch:
-    "नेपाल र विश्वका दैनिक द्विभाषिक ब्रिफिङ इमेलमा पाउनुहोस्। कुनै स्पाम हुँदैन।",
-  subscribeSuccess: "सदस्यता सफल भयो।",
-  emailAddress: "इमेल ठेगाना",
-  preferredLanguage: "रुचिको भाषा",
-  subscribing: "सदस्यता लिँदै…",
-  subscribeForFree: "निःशुल्क सदस्यता",
-  subscribeLegal:
-    "सदस्यता लिएपछि EkJhalak बाट इमेल अपडेट प्राप्त गर्न सहमत हुनुहुन्छ। चाहेको बेला सदस्यता रद्द गर्न सकिन्छ।",
-
-  statusDemo: "अहिले डेमो मात्र हो। लाइभ समाचारका लागि कनेक्सन चाहिन्छ।",
-  statusLoading: "ताजा समाचार खोज्दैछौं…",
-  statusConnected: "सिस्टम जोडिएको छ। समाचार तयार छ।",
-  statusUnavailable: "अहिले लाइभ समाचार चल्न सकेन। डेमो हेर्दै गर्नुहोस्।",
 };
 
 export const i18n = { en, np };

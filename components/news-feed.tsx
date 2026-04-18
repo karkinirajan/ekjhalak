@@ -8,7 +8,6 @@ import { useTheme } from "@/components/theme-provider";
 import { NewsCard } from "@/components/news-card";
 import { PaginationBar } from "@/components/pagination-bar";
 import { TopNavbar } from "@/components/top-navbar";
-import { SubscribeModal } from "@/components/subscribe-modal";
 
 import type { NewsItem, NewsFeedResponse, RangeKey } from "@/lib/news-pipeline";
 
@@ -36,17 +35,11 @@ function SkeletonCard({ palette }: SkeletonCardProps) {
       )}
       aria-hidden="true"
     >
-      <div className="p-4 space-y-2.5">
-        <div className="flex gap-2">
-          <div className={cn("h-4 w-16 rounded", palette.soft)} />
-          <div className={cn("h-4 w-24 rounded", palette.soft)} />
-        </div>
+      <div className="p-5 space-y-2.5">
         <div className={cn("h-4 w-4/5 rounded", palette.soft)} />
         <div className={cn("h-3 w-full rounded", palette.soft)} />
         <div className={cn("h-3 w-5/6 rounded", palette.soft)} />
-        <div className="flex gap-2 pt-1">
-          <div className={cn("h-8 w-20 rounded-md", palette.soft)} />
-        </div>
+        <div className={cn("h-8 w-20 rounded-md mt-1", palette.soft)} />
       </div>
     </div>
   );
@@ -124,19 +117,14 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
     const since = (meta?.fetchedAt ?? Date.now()) - cutoffMs;
     result = result.filter((item) => item.publishedTimestamp >= since);
 
-    if (bucket === "national") {
-      result = result.filter((item) => item.bucket === "national");
-    } else if (bucket === "international") {
-      result = result.filter((item) => item.bucket === "international");
+    if (bucket !== "all") {
+      result = result.filter((item) => item.bucket === bucket);
     }
 
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter((item) =>
-        [item.title, item.summaryEn, item.summaryNp]
-          .join(" ")
-          .toLowerCase()
-          .includes(q),
+        `${item.title} ${item.summary}`.toLowerCase().includes(q),
       );
     }
 
@@ -166,10 +154,8 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
   const showSkeleton = !hasData && loadState === "refreshing";
 
   return (
-    <div
-      className={cn("min-h-screen bg-linear-to-br", palette.app, palette.page)}
-    >
-      <div className="mx-auto flex min-h-screen w-full min-w-0 flex-1 flex-col px-2 sm:w-[94vw] sm:max-w-[94vw] lg:px-3">
+    <div className={cn("min-h-screen", palette.app)}>
+      <div className="mx-auto flex min-h-screen w-full min-w-0 flex-1 flex-col px-3 sm:w-[94vw] sm:max-w-[1280px] lg:px-4">
         <TopNavbar
           searchDraft={searchDraft}
           setSearchDraft={setSearchDraft}
@@ -197,7 +183,7 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
               palette.shell,
             )}
           >
-            <CardContent className="space-y-2 px-4 pt-4 pb-4 sm:px-6">
+            <CardContent className="space-y-2 px-3 pt-4 pb-4 sm:px-5">
               {showSkeleton && (
                 <div
                   className="space-y-2"
@@ -271,25 +257,40 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
 
           <footer
             className={cn(
-              "mt-auto rounded-2xl border px-4 py-5",
+              "mt-auto rounded-2xl border px-5 py-4",
               palette.panel,
             )}
           >
-            <div className="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
-              <p className={cn("text-sm", palette.subtext)}>
-                {t.footerTagline}
+            <div className="flex flex-col items-center gap-1.5 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+              <p className={cn("text-xs", palette.muted)} suppressHydrationWarning>
+                © {new Date().getFullYear()} EkJhalak News
               </p>
-              <div
-                className={cn(
-                  "flex items-center justify-center gap-4 text-xs sm:justify-end",
-                  palette.muted,
-                )}
-              >
-                <span suppressHydrationWarning>
-                  © {new Date().getFullYear()} EkJhalak News
-                </span>
-                <SubscribeModal triggerLabel={t.subscribeButton} />
-              </div>
+              <p className={cn("text-xs", palette.muted)}>
+                Developed by{" "}
+                <a
+                  href="https://kneeraazon.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "font-medium underline-offset-4 hover:underline",
+                    palette.subtext,
+                  )}
+                >
+                  kneeraazon
+                </a>
+                {" · "}
+                <a
+                  href="https://kneeraazon.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "underline-offset-4 hover:underline",
+                    palette.subtext,
+                  )}
+                >
+                  kneeraazon.com
+                </a>
+              </p>
             </div>
           </footer>
         </div>

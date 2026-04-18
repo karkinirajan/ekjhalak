@@ -23,22 +23,19 @@ interface NewsCardProps {
   item: NewsItem;
 }
 
-// Keep list summaries concise while allowing enough room for Nepali script.
-const LIST_SUMMARY_MAX_CHARS = 430;
+const LIST_SUMMARY_MAX_CHARS = 360;
 
 export function NewsCard({ item }: NewsCardProps) {
-  const { palette, language, t } = useTheme();
+  const { palette, t } = useTheme();
   const [briefOpen, setBriefOpen] = useState(false);
 
-  const isOriginalNp = item.originalLang === "np";
-  const summary = sanitizeTextForDisplay(
-    isOriginalNp ? item.summaryNp || "" : item.summaryEn || "",
-  );
-  const listSummary = truncate(summary ?? "", LIST_SUMMARY_MAX_CHARS);
-  const title = sanitizeTextForDisplay(item.title || "");
-  const summaryLang = isOriginalNp ? "np" : "en";
-  const titleLang = isOriginalNp ? "np" : "en";
-  const paragraphs = splitIntoParagraphs(summary ?? "", 5);
+  const isNp = item.originalLang === "np";
+  const title = sanitizeTextForDisplay(item.title);
+  const summary = sanitizeTextForDisplay(item.summary);
+  const listSummary = truncate(summary, LIST_SUMMARY_MAX_CHARS);
+  const paragraphs = splitIntoParagraphs(summary, 5);
+  const langAttr = isNp ? "ne" : "en";
+  const fontClass = isNp ? "font-np" : "font-display";
 
   return (
     <>
@@ -49,43 +46,42 @@ export function NewsCard({ item }: NewsCardProps) {
             palette.card,
           )}
         >
-          <div className="flex min-h-0 flex-col">
-            <CardHeader className="pb-1.5 pt-4 px-5">
-              <CardTitle
+          <CardHeader className="px-5 pt-4 pb-1.5">
+            <CardTitle
+              lang={langAttr}
+              className={cn(
+                "text-[17px] font-semibold leading-snug tracking-tight",
+                isNp && "text-lg",
+                fontClass,
+                palette.text,
+              )}
+            >
+              {title}
+            </CardTitle>
+
+            {listSummary && (
+              <CardDescription
+                lang={langAttr}
                 className={cn(
-                  "text-[17px] font-semibold leading-snug tracking-tight",
-                  titleLang === "np" ? "font-np text-lg" : "font-display",
-                  palette.text,
+                  "mt-2 text-sm leading-relaxed",
+                  isNp && "font-np",
+                  palette.subtext,
                 )}
               >
-                {title}
-              </CardTitle>
+                {listSummary}
+              </CardDescription>
+            )}
+          </CardHeader>
 
-              {listSummary && (
-                <CardDescription
-                  className={cn(
-                    "text-sm leading-relaxed mt-2",
-                    summaryLang === "np" ? "font-np" : "",
-                    palette.subtext,
-                  )}
-                >
-                  {listSummary}
-                </CardDescription>
-              )}
-            </CardHeader>
-
-            <CardContent className="px-5 pb-4 pt-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  size="sm"
-                  className={cn("rounded-xl h-8 px-3 text-xs", palette.accent)}
-                  onClick={() => setBriefOpen(true)}
-                >
-                  {t.readBrief}
-                </Button>
-              </div>
-            </CardContent>
-          </div>
+          <CardContent className="px-5 pt-0 pb-4">
+            <Button
+              size="sm"
+              className={cn("rounded-xl h-8 px-3 text-xs", palette.accent)}
+              onClick={() => setBriefOpen(true)}
+            >
+              {t.readBrief}
+            </Button>
+          </CardContent>
         </Card>
       </article>
 
@@ -98,21 +94,16 @@ export function NewsCard({ item }: NewsCardProps) {
           )}
         >
           <div className="p-6 space-y-5">
-            <div
-              className={cn(
-                "flex flex-wrap items-center gap-1.5",
-                palette.muted,
-              )}
-            >
-              <span className={cn("text-xs", palette.muted)}>
-                {item.publishedAt}
-              </span>
-            </div>
+            <span className={cn("text-xs", palette.muted)}>
+              {item.publishedAt}
+            </span>
 
             <SheetTitle
+              lang={langAttr}
               className={cn(
                 "text-xl font-semibold leading-snug",
-                titleLang === "np" ? "font-np text-2xl" : "font-display",
+                isNp && "text-2xl font-np",
+                !isNp && "font-display",
                 palette.text,
               )}
             >
@@ -124,10 +115,10 @@ export function NewsCard({ item }: NewsCardProps) {
                 {paragraphs.map((para, i) => (
                   <p
                     key={i}
-                    lang={summaryLang === "np" ? "ne" : "en"}
+                    lang={langAttr}
                     className={cn(
-                      "text-sm leading-[1.9]",
-                      summaryLang === "np" ? "font-np text-base" : "",
+                      "text-[15px] leading-[1.85]",
+                      isNp && "text-base font-np",
                       palette.subtext,
                     )}
                   >
@@ -136,15 +127,8 @@ export function NewsCard({ item }: NewsCardProps) {
                 ))}
               </div>
             ) : (
-              <p
-                className={cn(
-                  "text-sm leading-[1.75] italic opacity-60",
-                  palette.muted,
-                )}
-              >
-                {language === "np"
-                  ? "विस्तृत विवरण उपलब्ध छैन।"
-                  : "No detailed summary available for this story."}
+              <p className={cn("text-sm italic opacity-60", palette.muted)}>
+                {t.noStories}
               </p>
             )}
           </div>
