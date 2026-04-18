@@ -143,8 +143,8 @@ export function TopNavbar({
               palette.panel,
             )}
           >
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5">
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+              <div className="flex items-center gap-1.5 sm:justify-self-start">
                 <span
                   className={cn(
                     "text-[10px] font-semibold uppercase tracking-wider",
@@ -172,7 +172,7 @@ export function TopNavbar({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 sm:justify-self-center">
                 <span
                   className={cn(
                     "text-[10px] font-semibold uppercase tracking-wider",
@@ -201,7 +201,10 @@ export function TopNavbar({
               </div>
 
               <span
-                className={cn("ml-auto text-xs tabular-nums", palette.muted)}
+                className={cn(
+                  "text-xs tabular-nums sm:justify-self-end",
+                  palette.muted,
+                )}
               >
                 {filteredCount} {t.filtered} · {rangeLabel}
               </span>

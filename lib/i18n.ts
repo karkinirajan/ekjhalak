@@ -63,7 +63,8 @@ const np: I18nDict = {
   feedNational: "स्वदेश",
   feedInternational: "विदेश",
 
-  briefingDesc: "मौलिक भाषामा शान्त सारांश — अनुवाद छैन, भीड छैन।",
+  briefingDesc:
+    "मौलिक भाषामै स्मार्ट सारांश — क्लिकबेट छुट्टी, दिमागलाई सिधै मिठो चिया!",
   filtered: "खबर",
 
   pagePre: "पृष्ठ",
