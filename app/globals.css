@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
+  --font-script: var(--font-script);
   --font-mono:
     ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
   --font-devanagari: var(--font-devanagari);
@@ -59,24 +60,24 @@
 }
 
 .dark {
-  --background: #0d1117;
-  --foreground: #e6edf3;
-  --card: #161b22;
-  --card-foreground: #e6edf3;
-  --popover: #161b22;
-  --popover-foreground: #e6edf3;
-  --primary: #2f81f7;
+  --background: #252527;
+  --foreground: #f2f2f4;
+  --card: #252527;
+  --card-foreground: #f2f2f4;
+  --popover: #252527;
+  --popover-foreground: #f2f2f4;
+  --primary: #4f9dff;
   --primary-foreground: #ffffff;
-  --secondary: #21262d;
-  --secondary-foreground: #e6edf3;
-  --muted: #21262d;
-  --muted-foreground: #8b949e;
-  --accent: #21262d;
-  --accent-foreground: #e6edf3;
+  --secondary: #252527;
+  --secondary-foreground: #f2f2f4;
+  --muted: #252527;
+  --muted-foreground: #b7b7be;
+  --accent: #252527;
+  --accent-foreground: #f2f2f4;
   --destructive: #f85149;
-  --border: #30363d;
-  --input: #30363d;
-  --ring: #2f81f7;
+  --border: #3a3a3e;
+  --input: #4a4a51;
+  --ring: #4f9dff;
 }
 
 @layer base {
@@ -118,5 +119,8 @@
   }
   .font-display {
     font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  }
+  .font-script {
+    font-family: var(--font-script), "Brush Script MT", cursive;
   }
 }

@@ -72,9 +72,17 @@ export function TopNavbar({
         <div className="flex flex-col gap-3">
           {/* Brand row */}
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               <SystemLogo themeMode={themeMode} />
-              <div className="leading-tight">
+              <div className="flex flex-col items-center justify-center text-center leading-tight">
+                <p
+                  className={cn(
+                    "font-script text-[15px] font-semibold uppercase tracking-[0.2em]",
+                    palette.text,
+                  )}
+                >
+                  EKJN
+                </p>
                 <p
                   className={cn(
                     "font-display text-base font-semibold tracking-tight",
@@ -83,7 +91,12 @@ export function TopNavbar({
                 >
                   EkJhalak
                 </p>
-                <p className={cn("text-[11px] font-medium", palette.muted)}>
+                <p
+                  className={cn(
+                    "hidden text-[11px] font-medium md:block",
+                    palette.muted,
+                  )}
+                >
                   {t.briefingDesc}
                 </p>
               </div>

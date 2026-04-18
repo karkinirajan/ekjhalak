@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Devanagari, Source_Serif_4 } from "next/font/google";
+import {
+  Great_Vibes,
+  Inter,
+  Noto_Sans_Devanagari,
+  Source_Serif_4,
+} from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -22,6 +27,13 @@ const notoDevanagari = Noto_Sans_Devanagari({
   variable: "--font-devanagari",
   subsets: ["devanagari"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const greatVibes = Great_Vibes({
+  variable: "--font-script",
+  subsets: ["latin"],
+  weight: ["400"],
   display: "swap",
 });
 
@@ -131,7 +143,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${sourceSerif.variable} ${notoDevanagari.variable}`}
+      className={`${inter.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${greatVibes.variable}`}
     >
       <head>
         <script

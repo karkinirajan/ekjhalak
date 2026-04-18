@@ -10,24 +10,25 @@ export type ThemeName = "dark" | "light";
 
 export const themes = {
   dark: {
-    name: "GitHub Dark",
-    app: "bg-[#0d1117] text-[#e6edf3]",
-    shell: "bg-[#161b22] border-[#30363d] shadow-[0_1px_0_rgba(255,255,255,0.02)]",
-    panel: "bg-[#161b22] border-[#30363d]",
-    soft: "bg-[#21262d] border-[#30363d]",
-    card: "bg-[#161b22] border-[#30363d] hover:border-[#6e7681] hover:bg-[#1c2128] transition-colors duration-200",
-    text: "text-[#e6edf3]",
-    subtext: "text-[#c9d1d9]",
-    muted: "text-[#8b949e]",
+    name: "Graphite Night",
+    app: "bg-[#252527] text-[#f2f2f4]",
+    shell:
+      "bg-[#252527] border-[#3a3a3e] shadow-[0_1px_0_rgba(255,255,255,0.03)]",
+    panel: "bg-[#252527] border-[#3a3a3e]",
+    soft: "bg-[#252527] border-[#444449]",
+    card: "bg-[#252527] border-[#3a3a3e] hover:border-[#5a5a61] hover:bg-[#2b2b2e] transition-colors duration-200",
+    text: "text-[#f2f2f4]",
+    subtext: "text-[#dddddf]",
+    muted: "text-[#b7b7be]",
     input:
-      "bg-[#0d1117] border-[#30363d] text-[#e6edf3] placeholder:text-[#6e7681] focus:border-[#2f81f7] focus:ring-1 focus:ring-[#2f81f7]/40",
+      "bg-[#252527] border-[#4a4a51] text-[#f2f2f4] placeholder:text-[#a0a0a8] focus:border-[#4f9dff] focus:ring-1 focus:ring-[#4f9dff]/40",
     accent:
-      "bg-[#2f81f7] text-white hover:bg-[#1f6feb] border border-transparent shadow-none",
+      "bg-[#4f9dff] text-[#081322] hover:bg-[#72b0ff] border border-transparent shadow-none",
     ghost:
-      "bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d] border border-[#30363d]",
-    badge: "bg-[#121d2f] text-[#79c0ff] border-[#1f4776]",
+      "bg-[#252527] text-[#dddddf] hover:bg-[#2f2f33] border border-[#444449]",
+    badge: "bg-[#1d2b3f] text-[#9bc8ff] border-[#365a86]",
     page: "",
-    image: "bg-[#21262d]",
+    image: "bg-[#252527]",
   },
 
   light: {
