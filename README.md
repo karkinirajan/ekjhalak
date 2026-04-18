@@ -57,7 +57,7 @@ Two independent cache layers run in series:
 
 A cache miss at the aggregation layer fetches all sources in parallel. A hit returns the stored `AggregatedFeed` immediately with no upstream I/O.
 
-On-demand invalidation: `POST /api/revalidate` calls `revalidateTag("news-feed", "max")` to bust the tag across all cache layers. A Vercel Cron running every 5 minutes keeps the cache warm.
+On-demand invalidation: `POST /api/revalidate` calls `revalidateTag("news-feed", "max")` to bust the tag across all cache layers. A Vercel Cron running once per day keeps the cache warm within hobby-plan limits.
 
 ---
 
@@ -145,6 +145,7 @@ Filtering is applied against `item.publishedTimestamp` relative to `feed.fetched
 
 1. Open `lib/source-registry.ts`.
 2. Add an entry to `SOURCES`:
+
    ```ts
    {
      id: "your-source",        // lowercase, hyphenated, unique
@@ -160,6 +161,7 @@ Filtering is applied against `item.publishedTimestamp` relative to `feed.fetched
      note: "Short description",
    },
    ```
+
 3. Test the feed URL with `curl -s https://example.com/feed | head -c 500` — confirm it returns XML.
 4. Set `active: false` initially; run the dev server and check `/api/news` source statuses before enabling.
 5. If the source injects sponsored/ad items into the RSS feed, add `urlPrefix: "https://example.com/"` to filter them out.
@@ -220,7 +222,7 @@ Returns all registered sources with live fetch status merged in.
 
 ### `POST /api/revalidate?secret=SECRET`
 
-On-demand cache invalidation. Busts the `"news-feed"` tag immediately — next request triggers a fresh aggregation. Use from a Vercel Cron job (every 5 minutes) for near-real-time freshness.
+On-demand cache invalidation. Busts the `"news-feed"` tag immediately — next request triggers a fresh aggregation. Use from a Vercel Cron job (once per day on hobby accounts) for periodic freshness.
 
 Set `REVALIDATE_SECRET` in Vercel environment variables. Without it, the endpoint is open (fine for dev/staging).
 
@@ -288,13 +290,17 @@ By default the app runs entirely in-memory (no database needed). To enable persi
 
 1. Create a [Supabase](https://supabase.com) project.
 2. Run the migration in the SQL editor:
+
    ```sql
    -- paste contents of supabase/migrations/001_initial.sql
    ```
+
 3. Seed sources:
+
    ```sql
    -- paste contents of supabase/seed/sources.sql
    ```
+
 4. Set `DATABASE_URL` to the **Transaction Pooler** URL (port `6543`) in your environment.
 
 ---

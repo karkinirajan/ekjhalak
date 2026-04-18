@@ -148,13 +148,13 @@ To keep the feed fresh even when traffic is low, add a cron job in `vercel.json`
   "crons": [
     {
       "path": "/api/revalidate?secret=YOUR_REVALIDATE_SECRET",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
 ```
 
-> The Vercel free plan includes up to 2 cron jobs.
+> Hobby accounts only allow cron jobs that run once per day.
 
 ---
 
