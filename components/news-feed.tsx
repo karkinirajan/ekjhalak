@@ -155,7 +155,7 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
 
   return (
     <div className={cn("min-h-screen", palette.app)}>
-      <div className="mx-auto flex min-h-screen w-full min-w-0 flex-1 flex-col px-3 sm:w-[94vw] sm:max-w-[1280px] lg:px-4">
+      <div className="mx-auto flex min-h-screen w-full min-w-0 flex-1 flex-col px-0 sm:w-[98%] sm:max-w-none sm:px-3 lg:px-4">
         <TopNavbar
           searchDraft={searchDraft}
           setSearchDraft={setSearchDraft}
@@ -262,7 +262,10 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
             )}
           >
             <div className="flex flex-col items-center gap-1.5 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
-              <p className={cn("text-xs", palette.muted)} suppressHydrationWarning>
+              <p
+                className={cn("text-xs", palette.muted)}
+                suppressHydrationWarning
+              >
                 © {new Date().getFullYear()} EkJhalak News
               </p>
               <p className={cn("text-xs", palette.muted)}>

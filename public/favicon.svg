@@ -1,5 +1,10 @@
 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="EJKN favicon">
-  <rect x="3" y="3" width="58" height="58" rx="16" fill="#c53030" stroke="#8f1f1f" stroke-width="2"/>
-  <rect x="8" y="8" width="48" height="48" rx="12" fill="white" fill-opacity="0.14" stroke="white" stroke-opacity="0.24"/>
-  <text x="32" y="40" text-anchor="middle" fill="white" font-family="Sora, Segoe UI, Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="0.8">EJKN</text>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#16223a" stroke="#33476e" stroke-width="2"/>
+  <rect x="8" y="8" width="48" height="48" rx="12" fill="#0f182b" fill-opacity="0.7"/>
+  <path d="M16 34c3-8 10-12 16-12s13 4 16 12c-3 8-10 12-16 12s-13-4-16-12Z" fill="none" stroke="#c53030" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="32" cy="34" r="7" fill="#dce6ff"/>
+  <circle cx="32" cy="34" r="4" fill="#c53030"/>
+  <circle cx="28.5" cy="30.5" r="1.4" fill="#ffffff" fill-opacity="0.75"/>
+  <path d="M12 51h22" stroke="#e26f6f" stroke-width="3" stroke-linecap="round"/>
+  <path d="M37 51h15" stroke="#9de5cd" stroke-width="3" stroke-linecap="round"/>
 </svg>
