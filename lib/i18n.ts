@@ -23,7 +23,7 @@ const en = {
 
   // Feed chrome
   briefingDesc:
-    "Calm, original-language briefings — no translation, no clutter.",
+    "No clutter. No chaos. No ads. Just short, accurate news in one place.",
   filtered: "stories",
 
   // Pagination
@@ -64,7 +64,7 @@ const np: I18nDict = {
   feedInternational: "विदेश",
 
   briefingDesc:
-    "मौलिक भाषामै स्मार्ट सारांश — क्लिकबेट छुट्टी, दिमागलाई सिधै मिठो चिया!",
+    "अनावश्यक कुरा छैन, विज्ञापनको झन्झट छैन — छोटो र सही समाचार, सबै एकै ठाउँमा।",
   filtered: "खबर",
 
   pagePre: "पृष्ठ",

@@ -83,7 +83,7 @@ export function TopNavbar({
                 >
                   EkJhalak
                 </p>
-                <p className={cn("text-[11px]", palette.muted)}>
+                <p className={cn("text-[11px] font-medium", palette.muted)}>
                   {t.briefingDesc}
                 </p>
               </div>
