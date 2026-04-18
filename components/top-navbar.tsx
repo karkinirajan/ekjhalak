@@ -78,12 +78,15 @@ export function TopNavbar({
                 <div className="flex items-baseline gap-2.5">
                   <p
                     className={cn(
-                      "font-script text-[15px] font-semibold uppercase tracking-[0.2em]",
+                      "font-sans text-[14px] font-extrabold uppercase tracking-[0.16em]",
                       palette.text,
                     )}
                   >
                     EKJN
                   </p>
+                  <span className={cn("text-sm font-semibold", palette.muted)}>
+                    |
+                  </span>
                   <p
                     className={cn(
                       "font-display text-base font-semibold tracking-tight",
