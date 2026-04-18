@@ -16,7 +16,7 @@ export function SystemLogo({
 }: SystemLogoProps) {
   const isDark = themeMode === "dark";
 
-  const bg = isDark ? "#16223a" : "#fffaf4";
+  const bg = isDark ? "#1e1f1d" : "#fffdfb";
   const border = isDark ? "#33476e" : "#f2b48a";
   const glow = isDark ? "#0f182b" : "#fff1e5";
   const red = "#c53030";
