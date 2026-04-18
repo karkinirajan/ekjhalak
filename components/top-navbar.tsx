@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { Languages, MoonStar, RefreshCw, Search, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,36 @@ export function TopNavbar({
 }: TopNavbarProps) {
   const { palette, t } = useTheme();
   const isSpinning = loadState === "refreshing";
+  const [isSubscribeOpen, setIsSubscribeOpen] = useState(false);
+  const [subscribeEmail, setSubscribeEmail] = useState("");
+  const [subscribeError, setSubscribeError] = useState("");
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const ui = useMemo(
+    () =>
+      language === "np"
+        ? {
+            subscribe: "सदस्यता",
+            title: "डेली ब्रिफिङ सदस्यता",
+            desc: "तपाईंको इमेलमा छोटो र सही ब्रिफिङ पठाइनेछ।",
+            placeholder: "example@email.com",
+            cta: "सदस्यता लिनुहोस्",
+            close: "बन्द गर्नुहोस्",
+            invalid: "कृपया मान्य इमेल ठेगाना राख्नुहोस्।",
+            success: "धन्यवाद! तपाईं सदस्य हुनु भयो।",
+          }
+        : {
+            subscribe: "Subscribe",
+            title: "Subscribe to Daily Briefings",
+            desc: "Get short, accurate updates delivered to your inbox.",
+            placeholder: "example@email.com",
+            cta: "Subscribe",
+            close: "Close",
+            invalid: "Please enter a valid email address.",
+            success: "Thanks! You are now subscribed.",
+          },
+    [language],
+  );
 
   const rangeOptions = [
     { key: "day" as const, label: t.rangeDay },
@@ -108,6 +139,22 @@ export function TopNavbar({
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsSubscribeOpen(true);
+                  setSubscribeError("");
+                }}
+                className={cn(
+                  "h-8 rounded-lg px-2.5 text-[11px]",
+                  palette.ghost,
+                )}
+                aria-label={ui.subscribe}
+              >
+                {ui.subscribe}
+              </Button>
+
               <Button
                 variant="outline"
                 size="icon-sm"
@@ -268,6 +315,99 @@ export function TopNavbar({
           </div>
         </div>
       </div>
+
+      {isSubscribeOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={ui.title}
+        >
+          <button
+            type="button"
+            onClick={() => setIsSubscribeOpen(false)}
+            className="absolute inset-0 bg-black/45"
+            aria-label={ui.close}
+          />
+          <div
+            className={cn(
+              "relative w-full max-w-md rounded-2xl border p-5 shadow-2xl",
+              palette.panel,
+            )}
+          >
+            <div className="space-y-1">
+              <h3 className={cn("text-sm font-semibold", palette.text)}>
+                {ui.title}
+              </h3>
+              <p className={cn("text-xs", palette.muted)}>{ui.desc}</p>
+            </div>
+
+            {isSubscribed ? (
+              <div className="mt-4 space-y-4">
+                <p className={cn("text-sm", palette.subtext)}>{ui.success}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn("h-9 rounded-lg", palette.ghost)}
+                  onClick={() => setIsSubscribeOpen(false)}
+                >
+                  {ui.close}
+                </Button>
+              </div>
+            ) : (
+              <form
+                className="mt-4 space-y-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const email = subscribeEmail.trim().toLowerCase();
+                  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+                  if (!isValidEmail) {
+                    setSubscribeError(ui.invalid);
+                    return;
+                  }
+
+                  setSubscribeError("");
+                  setSubscribeEmail(email);
+                  setIsSubscribed(true);
+                }}
+              >
+                <Input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={subscribeEmail}
+                  onChange={(e) => setSubscribeEmail(e.target.value)}
+                  placeholder={ui.placeholder}
+                  className={cn("h-10 rounded-lg", palette.input)}
+                  aria-label={ui.placeholder}
+                />
+                {subscribeError && (
+                  <p className="text-xs text-red-400" role="alert">
+                    {subscribeError}
+                  </p>
+                )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="submit"
+                    className={cn("h-9 rounded-lg", palette.accent)}
+                  >
+                    {ui.cta}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("h-9 rounded-lg", palette.ghost)}
+                    onClick={() => setIsSubscribeOpen(false)}
+                  >
+                    {ui.close}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

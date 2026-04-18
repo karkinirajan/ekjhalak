@@ -268,32 +268,17 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
               >
                 © {new Date().getFullYear()} EkJhalak News
               </p>
-              <p className={cn("text-xs", palette.muted)}>
-                Developed by{" "}
-                <a
-                  href="https://kneeraazon.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "font-medium underline-offset-4 hover:underline",
-                    palette.subtext,
-                  )}
-                >
-                  kneeraazon
-                </a>
-                {" · "}
-                <a
-                  href="https://kneeraazon.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "underline-offset-4 hover:underline",
-                    palette.subtext,
-                  )}
-                >
-                  kneeraazon.com
-                </a>
-              </p>
+              <a
+                href="https://kneeraazon.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "text-xs font-medium underline-offset-4 hover:underline",
+                  palette.subtext,
+                )}
+              >
+                kneeraazon
+              </a>
             </div>
           </footer>
         </div>
