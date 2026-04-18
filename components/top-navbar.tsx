@@ -74,23 +74,25 @@ export function TopNavbar({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <SystemLogo themeMode={themeMode} />
-              <div className="flex flex-col items-center justify-center text-center leading-tight">
-                <p
-                  className={cn(
-                    "font-script text-[15px] font-semibold uppercase tracking-[0.2em]",
-                    palette.text,
-                  )}
-                >
-                  EKJN
-                </p>
-                <p
-                  className={cn(
-                    "font-display text-base font-semibold tracking-tight",
-                    palette.text,
-                  )}
-                >
-                  EkJhalak
-                </p>
+              <div className="flex flex-col items-start justify-center leading-tight">
+                <div className="flex items-baseline gap-2.5">
+                  <p
+                    className={cn(
+                      "font-script text-[15px] font-semibold uppercase tracking-[0.2em]",
+                      palette.text,
+                    )}
+                  >
+                    EKJN
+                  </p>
+                  <p
+                    className={cn(
+                      "font-display text-base font-semibold tracking-tight",
+                      palette.text,
+                    )}
+                  >
+                    EkJhalak
+                  </p>
+                </div>
                 <p
                   className={cn(
                     "hidden text-[11px] font-medium md:block",

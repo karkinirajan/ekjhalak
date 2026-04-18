@@ -11,7 +11,7 @@ export type ThemeName = "dark" | "light";
 export const themes = {
   dark: {
     name: "Graphite Night",
-    app: "bg-[#252527] text-[#f2f2f4]",
+    app: "bg-[#1e1f1d] text-[#f2f2f4]",
     shell:
       "bg-[#252527] border-[#3a3a3e] shadow-[0_1px_0_rgba(255,255,255,0.03)]",
     panel: "bg-[#252527] border-[#3a3a3e]",
