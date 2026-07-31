@@ -1,111 +1,145 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The nameplate banner — a 1:3 plate that sits beside the wordmark.
+ * The nameplate banner — a 1:2 plate that sits beside the wordmark.
  *
- * One idea, drawn rather than written: the Himalaya and the world stand on the
- * same horizon, with the day's dispatches stacked between them. That is the
- * whole masthead promise — Nepal and the world, read together, at a glance.
+ * Two bands sharing one rule. Above it, the mark: the Himalaya and the world
+ * standing on the same horizon with the day's dispatches stacked between them,
+ * which is the masthead promise drawn rather than written. Below it, the brand
+ * lockup in both scripts.
  *
- * Inline SVG rather than a file in /public so it draws from the design tokens:
- * the flag and the summit are `--red`, the globe is `--green`, the range is
- * neutral. If the palette moves, the banner moves with it.
+ * Inline SVG rather than a file in /public so it draws from the design tokens
+ * and the loaded typefaces: the flag and the lit summit are `--red`, the globe
+ * is `--green`, the name is set in the same Fraunces and Mukta as the page. If
+ * the palette or the type stack moves, the banner moves with it.
  *
- * Hidden from assistive tech: the wordmark and the tagline immediately beside
- * it already say "EkJhalak — Nepal & World, at a glance" in text, and a second
- * reading of the same sentence is noise rather than information.
+ * Both scripts appear regardless of the reader's language, because a bilingual
+ * paper's nameplate is the one place that should always show it is bilingual.
+ *
+ * Hidden from assistive tech: the <h1> wordmark immediately beside it already
+ * carries the same two names as text, and a second reading is noise.
  */
 export function BrandBanner({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 360 120"
+      viewBox="0 0 480 240"
       aria-hidden="true"
       focusable="false"
-      className={cn("h-16 w-48 xl:h-20 xl:w-60", className)}
+      className={cn("h-24 w-48 xl:h-28 xl:w-56", className)}
     >
       {/* Plate. One step lighter than the canvas so it reads as mounted stock. */}
       <rect
-        x="0.75"
-        y="0.75"
-        width="358.5"
-        height="118.5"
-        rx="12"
+        x="1"
+        y="1"
+        width="478"
+        height="238"
+        rx="18"
         fill="var(--surface)"
         stroke="var(--rule)"
-        strokeWidth="1.5"
+        strokeWidth="2"
       />
 
-      {/* Masthead flag — the coloured bar a paper puts beside its nameplate. */}
-      <rect x="18" y="28" width="3.5" height="64" rx="1.75" fill="var(--red)" />
+      {/* ── Mark ─────────────────────────────────────────────────────────── */}
 
-      {/* The shared horizon everything else stands on. */}
+      {/* Masthead flag — the coloured bar a paper puts beside its nameplate. */}
+      <rect x="34" y="36" width="5" height="68" rx="2.5" fill="var(--red)" />
+
+      {/* The shared horizon. Doubles as the rule between mark and lockup. */}
       <line
-        x1="32"
-        y1="92"
-        x2="340"
-        y2="92"
+        x1="34"
+        y1="104"
+        x2="446"
+        y2="104"
         stroke="var(--rule-strong)"
-        strokeWidth="1.5"
+        strokeWidth="2"
       />
 
       {/* The range. */}
       <path
-        d="M34 92 L58 66 L70 76 L94 46 L106 58 L124 30 L142 60 L154 50 L168 92 Z"
+        d="M54 104 L78 74 L90 84 L112 50 L124 64 L146 34 L166 68 L180 56 L198 104 Z"
         fill="var(--rule-strong)"
       />
       {/* Summit, lit — the lead story of the day. */}
-      <path d="M124 30 L136 44 L112 44 Z" fill="var(--red)" />
+      <path d="M146 34 L160 52 L132 52 Z" fill="var(--red)" />
 
       {/* Dispatches, stacked newest-first. */}
-      <rect x="184" y="52" width="56" height="3" rx="1.5" fill="var(--red)" />
+      <rect x="216" y="56" width="64" height="4" rx="2" fill="var(--red)" />
       <rect
-        x="184"
-        y="64"
-        width="40"
-        height="3"
-        rx="1.5"
+        x="216"
+        y="72"
+        width="46"
+        height="4"
+        rx="2"
         fill="var(--ink-muted)"
       />
       <rect
-        x="184"
-        y="76"
-        width="50"
-        height="3"
-        rx="1.5"
+        x="216"
+        y="88"
+        width="57"
+        height="4"
+        rx="2"
         fill="var(--ink-muted)"
         opacity="0.6"
       />
 
       {/* The world, rising on the same line as the mountains. */}
       <g fill="none" stroke="var(--green)" strokeLinecap="round">
-        <path d="M256 92 A36 36 0 0 1 328 92" strokeWidth="2" />
+        <path d="M332 104 A44 44 0 0 1 420 104" strokeWidth="2.5" />
         <path
-          d="M268 92 A24 36 0 0 1 316 92"
-          strokeWidth="1.25"
+          d="M347 104 A29 44 0 0 1 405 104"
+          strokeWidth="1.5"
           opacity="0.65"
         />
         <path
-          d="M280 92 A12 36 0 0 1 304 92"
-          strokeWidth="1.25"
+          d="M361 104 A15 44 0 0 1 391 104"
+          strokeWidth="1.5"
           opacity="0.65"
         />
         <line
-          x1="260.8"
-          y1="74"
-          x2="323.2"
-          y2="74"
-          strokeWidth="1.25"
+          x1="338"
+          y1="82"
+          x2="414"
+          y2="82"
+          strokeWidth="1.5"
           opacity="0.65"
         />
         <line
-          x1="275.5"
-          y1="60"
-          x2="308.5"
-          y2="60"
-          strokeWidth="1.25"
+          x1="356"
+          y1="65"
+          x2="396"
+          y2="65"
+          strokeWidth="1.5"
           opacity="0.65"
         />
       </g>
+
+      {/* ── Lockup ───────────────────────────────────────────────────────── */}
+
+      <text
+        x="240"
+        y="176"
+        textAnchor="middle"
+        fill="var(--ink)"
+        fontFamily='var(--font-display), Georgia, "Times New Roman", serif'
+        fontSize="52"
+        fontWeight="900"
+        letterSpacing="-1.8"
+        style={{ fontVariationSettings: '"SOFT" 80, "WONK" 0, "opsz" 90' }}
+      >
+        EkJhalak
+      </text>
+
+      <text
+        x="240"
+        y="208"
+        textAnchor="middle"
+        fill="var(--red)"
+        fontFamily='var(--font-devanagari), "Noto Sans Devanagari", sans-serif'
+        fontSize="24"
+        fontWeight="600"
+      >
+        एक झलक
+      </text>
     </svg>
   );
 }
