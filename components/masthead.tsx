@@ -2,6 +2,7 @@
 
 import { startTransition, useEffect, useState } from "react";
 import { Languages, RefreshCw, Search } from "lucide-react";
+import { BrandBanner } from "@/components/brand-banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/theme-provider";
@@ -113,7 +114,9 @@ export function Masthead({
 
         {/* ── Nameplate ──────────────────────────────────────────────────── */}
         <div className="grid items-center gap-4 py-6 sm:py-8 lg:grid-cols-[1fr_auto_1fr]">
-          <div aria-hidden="true" className="hidden lg:block" />
+          {/* Balances the search field in the third column, so the wordmark
+              stays optically centred rather than merely centred in its cell. */}
+          <BrandBanner className="hidden lg:block" />
 
           <div className="text-center">
             <h1 className="leading-[0.9]">
