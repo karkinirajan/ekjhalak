@@ -19,16 +19,82 @@ function extractPublishedDateFromUrl(url: string): Date | null {
   return Number.isNaN(derived.getTime()) ? null : derived;
 }
 
+/**
+ * Publisher chrome that arrives inside the description field.
+ *
+ * `extractBestDescription()` picks the longest candidate field, and for several
+ * paywalled outlets the longest thing in the item is their subscription pitch.
+ * In a live 475-story feed, 26 cards led with this instead of news — The Hindu
+ * ×20, The Guardian ×4, BBC ×2:
+ *
+ *   "Account subscription benefits alongside Premium Stories, Editorials,
+ *    Opinions and more. Unlock these with Subscription Markets regulator SEBI…"
+ *
+ * The real story is appended after the pitch, so this strips rather than
+ * rejects — what survives is usually a perfectly good standfirst.
+ */
+const BOILERPLATE_PATTERNS: RegExp[] = [
+  // Paywall and signup pitches, wherever they appear in the field.
+  /(?:account\s+)?subscription benefits[\s\S]*?unlock these with subscription/gi,
+  /\bunlock these with subscription\b/gi,
+  /\b(?:to continue reading|continue reading|read more at|sign up (?:to|for)|subscribe (?:to|now)|already a subscriber)\b[^.]*\.?/gi,
+  /\bthis (?:article|story) (?:first )?appeared (?:first )?on\b[^.]*\.?/gi,
+  // Trailing wire metadata some feeds staple to the description.
+  /\bpublished\s*[-–—]\s*\w+\s+\d{1,2},\s*\d{4}\s*[\d:]*\s*(?:am|pm|ist|utc|npt)?\b/gi,
+  /\b(?:©|copyright)\s*\d{4}[^.]*\.?/gi,
+  /\ball rights reserved\.?/gi,
+  // Section labels some CMSes prepend to the body ("Shorts News:…" — The Hindu).
+  /^\s*(?:shorts news|video|watch|live|premium|exclusive)\s*:\s*/i,
+];
+
+function stripBoilerplate(text: string): string {
+  let out = text;
+  for (const pattern of BOILERPLATE_PATTERNS) out = out.replace(pattern, " ");
+  return out.replace(/\s+/g, " ").trim();
+}
+
+/** Same words, ignoring punctuation and case — used to catch echoed headlines. */
+function looksLikeTitle(title: string, candidate: string): boolean {
+  const strip = (s: string) =>
+    s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  const t = strip(title);
+  const c = strip(candidate);
+  if (!t || !c) return false;
+  // The description is the headline, or the headline plus a few stray glyphs.
+  return c === t || (c.startsWith(t) && c.length - t.length < 12);
+}
+
+/**
+ * The standfirst shown under a headline — or nothing.
+ *
+ * Returning "" is a real answer here. This used to fall back to the headline
+ * whenever a feed shipped no description, which put 52 of 475 live cards in the
+ * state of printing their own headline twice, once large and once small. A card
+ * with a headline and no standfirst is clean; a card that repeats itself reads
+ * as a bug. `StoryCard` and `StoryReader` both render the summary conditionally,
+ * so an empty string simply omits the paragraph.
+ */
 function buildSummary(title: string, description: string): string {
   const cleanTitle = title.trim();
-  const cleanDescription = description.trim();
-  if (!cleanDescription) return cleanTitle;
-  if (cleanDescription.length >= 180) return cleanDescription;
-  if (!cleanTitle) return cleanDescription;
-  if (cleanDescription.toLowerCase().startsWith(cleanTitle.toLowerCase())) {
-    return cleanDescription;
+  let body = stripBoilerplate(description.trim());
+
+  // Feeds that repeat the headline at the head of the body (NDTV, The Hindu,
+  // NYT and Al Jazeera all do it) get it removed. This used to be *added* — a
+  // short description was returned as `${title}. ${description}` — which put
+  // the headline on the card twice, once as the h3 and again as the first
+  // clause of the standfirst directly beneath it. The headline is always
+  // rendered adjacent to the summary, so it is never context the summary needs
+  // to supply.
+  if (cleanTitle && body.toLowerCase().startsWith(cleanTitle.toLowerCase())) {
+    body = body.slice(cleanTitle.length).replace(/^[\s.:;,–—-]+/, "");
   }
-  return `${cleanTitle}. ${cleanDescription}`;
+
+  if (!body) return "";
+  if (looksLikeTitle(cleanTitle, body)) return "";
+  // Too short to say anything the headline did not already say.
+  if (body.length < 40) return "";
+
+  return body;
 }
 
 const TRACKING_PARAMS = new Set([

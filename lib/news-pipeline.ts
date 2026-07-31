@@ -25,7 +25,7 @@ export interface NewsItem {
   publishedTimestamp: number;
   /** Concise summary in the original language (≤ 600 chars). */
   summary: string;
-  /** Primary category from the source registry */
+  /** Primary category from the source registry. Server-side only — see lib/feed-payload.ts */
   category?: string;
   /** Editorial topic derived from the article's own words — drives colour coding */
   topic: TopicId;
@@ -34,7 +34,8 @@ export interface NewsItem {
   /** Publisher attribution */
   sourceId: string;
   sourceName: string;
-  sourceHomepage: string;
+  /** Server-side only — stripped from the client payload. See lib/feed-payload.ts */
+  sourceHomepage?: string;
   /** Editorial credibility score 1–10 from the source registry */
   credibility: number;
   /**

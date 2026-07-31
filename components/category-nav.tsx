@@ -104,7 +104,7 @@ export function CategoryNav({
                 className={cn(
                   "eyebrow shrink-0 rounded-full px-3 py-1.5 transition-colors",
                   isActive
-                    ? "bg-[var(--topic)] text-white"
+                    ? "bg-[var(--topic)] text-topic-ink"
                     : "text-ink-muted hover:bg-[color-mix(in_oklab,var(--topic)_12%,transparent)] hover:text-[var(--topic)]",
                   isNp && "font-np tracking-normal",
                 )}

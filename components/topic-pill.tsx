@@ -28,8 +28,13 @@ export function TopicPill({
       data-topic={topic}
       className={cn(
         "eyebrow inline-flex shrink-0 items-center gap-1.5 rounded-sm px-2 py-1 leading-none",
+        // `text-topic-ink`, not `text-white`: on the dark stock every topic is a
+        // bright tint, and white on it ran between 1.73:1 (culture) and 4.09:1
+        // (world) — all eleven below the 4.5:1 this 11px type needs. The token
+        // is near-black on dark and white on light, so one class reads correctly
+        // in both themes.
         tone === "solid"
-          ? "bg-[var(--topic)] text-white"
+          ? "bg-[var(--topic)] text-topic-ink"
           : "bg-[color-mix(in_oklab,var(--topic)_13%,transparent)] text-[var(--topic)]",
         className,
       )}
@@ -67,7 +72,7 @@ export function SourceMark({
     <span className={cn("inline-flex min-w-0 items-center gap-2", className)}>
       <span
         aria-hidden="true"
-        className="eyebrow flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--topic,var(--red))] text-[9px] tracking-normal text-white"
+        className="eyebrow flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--topic,var(--red))] text-[9px] tracking-normal text-topic-ink"
       >
         {sourceMonogram(name)}
       </span>

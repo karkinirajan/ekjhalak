@@ -45,7 +45,13 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
       <SheetContent
         side="right"
         data-topic={item.topic}
-        className="w-full overflow-y-auto border-l-rule bg-canvas p-0 sm:max-w-2xl"
+        // The width has to carry the same `data-[side=right]:sm:` prefix that
+        // SheetContent's own default uses. A bare `sm:max-w-2xl` compiles to
+        // specificity (0,1,0) and loses to the primitive's
+        // `.data-[side=right]:sm:max-w-sm[data-side=right]` at (0,2,0), so the
+        // panel silently rendered at 384px instead of 672px. Matching the prefix
+        // also lets twMerge see the two as one utility and drop the default.
+        className="w-full overflow-y-auto border-l-rule bg-canvas p-0 data-[side=right]:sm:max-w-2xl"
       >
         {/* Lead image doubles as the panel header */}
         <div className="relative h-52 w-full shrink-0 overflow-hidden sm:h-64">

@@ -99,7 +99,7 @@ export function StoryCard({
             <button
               type="button"
               onClick={() => onOpen(item)}
-              className="text-left after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+              className="card-focus text-left after:absolute after:inset-0 after:content-['']"
             >
               {title}
             </button>
@@ -146,7 +146,7 @@ export function StoryCard({
             <button
               type="button"
               onClick={() => onOpen(item)}
-              className="text-left after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+              className="card-focus text-left after:absolute after:inset-0 after:content-['']"
             >
               {title}
             </button>
@@ -178,7 +178,9 @@ export function StoryCard({
       >
         <span
           aria-hidden="true"
-          className="font-display text-2xl leading-none font-black text-rule-strong transition-colors group-hover:text-[var(--topic)]"
+          // Was text-rule-strong, which is 1.63:1 on the rail's surface — a rank
+          // nobody can read is not a rank.
+          className="font-display text-2xl leading-none font-black text-ink-muted transition-colors group-hover:text-[var(--topic)]"
         >
           {String(rank ?? 0).padStart(2, "0")}
         </span>
@@ -194,7 +196,7 @@ export function StoryCard({
             <button
               type="button"
               onClick={() => onOpen(item)}
-              className="text-left after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+              className="card-focus text-left after:absolute after:inset-0 after:content-['']"
             >
               {title}
             </button>
@@ -250,7 +252,7 @@ export function StoryCard({
           <button
             type="button"
             onClick={() => onOpen(item)}
-            className="text-left after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+            className="card-focus text-left after:absolute after:inset-0 after:content-['']"
           >
             {title}
           </button>

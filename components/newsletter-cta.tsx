@@ -143,7 +143,7 @@ export function NewsletterCta() {
                 type="submit"
                 disabled={state === "sending"}
                 className={cn(
-                  "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-red px-6 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-100 disabled:opacity-60",
+                  "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-red-solid px-6 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-100 disabled:opacity-60",
                   isNp && "font-np",
                 )}
               >
