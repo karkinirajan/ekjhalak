@@ -36,7 +36,7 @@ export function TrendingRail({ items, onOpen }: TrendingRailProps) {
               isNp ? "font-np" : "font-display",
             )}
           >
-            <TrendingUp className="h-4 w-4 text-coral" aria-hidden="true" />
+            <TrendingUp className="h-4 w-4 text-red" aria-hidden="true" />
             {t.trendingSection}
           </h2>
           <p className={cn("mt-1.5 text-xs text-ink-muted", isNp && "font-np")}>

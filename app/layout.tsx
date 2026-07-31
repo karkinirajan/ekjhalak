@@ -1,39 +1,42 @@
 import type { Metadata } from "next";
 import {
-  Inter,
+  Fraunces,
   JetBrains_Mono,
-  Noto_Sans_Devanagari,
-  Playfair_Display,
+  Mukta,
+  Plus_Jakarta_Sans,
 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-// Body and interface — Inter's tall x-height keeps dense summary copy readable
-// at small sizes next to Devanagari.
-const inter = Inter({
+// Body and interface. Plus Jakarta Sans has softly rounded terminals and a very
+// tall x-height, so summary copy stays legible at 15px where Inter's tighter,
+// squarer shapes start to grey out. Loaded variable: one file, every weight.
+const jakarta = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-// English headlines. Playfair's high stroke contrast is what makes a page read
-// as a publication rather than a product dashboard.
-const playfair = Playfair_Display({
+// English headlines. Fraunces is an editorial serif with a SOFT axis that
+// literally rounds its terminals and an optical-size axis that thickens the
+// hairlines as type gets smaller — so headlines keep publication authority
+// without Playfair's near-invisible thin strokes on a bright canvas.
+const fraunces = Fraunces({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800", "900"],
   style: ["normal", "italic"],
+  axes: ["SOFT", "WONK", "opsz"],
   display: "swap",
 });
 
-// Nepali headlines and body. Carries the same weight range as Playfair so
-// bilingual headlines sit at matching visual weight.
-const notoDevanagari = Noto_Sans_Devanagari({
+// Nepali headlines and body. Mukta is drawn for Devanagari first: open counters,
+// low stroke contrast, rounded terminals. It holds up far better than Noto at
+// headline sizes and matches Jakarta's weight on screen.
+const mukta = Mukta({
   variable: "--font-devanagari",
-  subsets: ["devanagari"],
-  weight: ["400", "500", "600", "700"],
+  subsets: ["devanagari", "latin"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -148,15 +151,18 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      data-theme="light"
-      className={`${inter.variable} ${playfair.variable} ${notoDevanagari.variable} ${jetbrainsMono.variable}`}
+      data-theme="dark"
+      className={`${jakarta.variable} ${fraunces.variable} ${mukta.variable} ${jetbrainsMono.variable}`}
     >
       <head>
-        {/* Runs before first paint so the correct theme is painted once.
-            Falls back to the OS preference when the reader has no saved choice. */}
+        {/* Tells the browser to paint form controls, scrollbars and the address
+            bar dark too, so chrome doesn't flash white around a black page. */}
+        <meta name="color-scheme" content="dark" />
+        {/* Restores the saved language before first paint. Colour is not a
+            preference — the paper is printed dark, full stop. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('cfn-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t);var l=localStorage.getItem('cfn-lang');if(l==='np'){document.documentElement.lang='ne'}}catch(e){}})()`,
+            __html: `(function(){try{if(localStorage.getItem('cfn-lang')==='np'){document.documentElement.lang='ne'}}catch(e){}})()`,
           }}
         />
         <script
@@ -167,7 +173,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-100 focus:rounded-md focus:bg-coral focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lift"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-100 focus:rounded-md focus:bg-red focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lift"
         >
           Skip to main content
         </a>

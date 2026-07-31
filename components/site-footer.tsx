@@ -11,7 +11,7 @@ interface SiteFooterProps {
 }
 
 /**
- * Deep navy footer — the visual anchor that closes the page and carries the
+ * Deep pitch footer — the visual anchor that closes the page and carries the
  * attribution obligations an aggregator has toward the newsrooms it reprints.
  */
 export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
@@ -20,7 +20,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-20 bg-navy text-white/70">
+    <footer className="mt-20 bg-pitch text-ink-soft">
       <div className="mx-auto w-full max-w-[1400px] px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr]">
           {/* Brand + about */}
@@ -36,7 +36,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
               </span>
               <span
                 className={cn(
-                  "ml-2.5 text-base font-semibold text-coral",
+                  "ml-2.5 text-base font-semibold text-red",
                   isNp ? "font-display" : "font-np",
                 )}
               >
@@ -46,16 +46,16 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
 
             <p
               className={cn(
-                "copy mt-4 text-sm leading-relaxed text-white/55",
+                "copy mt-4 text-sm leading-relaxed text-ink-soft",
                 isNp && "font-np",
               )}
             >
               {t.footerAboutText}
             </p>
 
-            <p className="eyebrow mt-5 text-white/40">
+            <p className="eyebrow mt-5 text-ink-muted">
               {t.footerSourcesText}{" "}
-              <span className="tabular-nums text-coral">{sourceCount}</span>{" "}
+              <span className="tabular-nums text-red">{sourceCount}</span>{" "}
               {t.footerNewsrooms}
             </p>
           </div>
@@ -64,7 +64,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
           <nav aria-label={t.footerSections}>
             <h2
               className={cn(
-                "eyebrow text-white/85",
+                "eyebrow text-ink",
                 isNp && "font-np tracking-normal",
               )}
             >
@@ -77,7 +77,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
                     type="button"
                     onClick={() => onTopicSelect(id)}
                     className={cn(
-                      "text-sm text-white/55 transition-colors hover:text-white",
+                      "text-sm text-ink-soft transition-colors hover:text-ink",
                       isNp && "font-np",
                     )}
                   >
@@ -92,7 +92,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
           <div>
             <h2
               className={cn(
-                "eyebrow text-white/85",
+                "eyebrow text-ink",
                 isNp && "font-np tracking-normal",
               )}
             >
@@ -104,7 +104,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
                   href="https://kneeraazon.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/55 transition-colors hover:text-white"
+                  className="text-ink-soft transition-colors hover:text-ink"
                 >
                   kneeraazon
                 </a>
@@ -112,7 +112,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
               <li>
                 <a
                   href="/sitemap.xml"
-                  className="text-white/55 transition-colors hover:text-white"
+                  className="text-ink-soft transition-colors hover:text-ink"
                 >
                   Sitemap
                 </a>
@@ -125,14 +125,14 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
         <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-7 sm:flex-row sm:items-center sm:justify-between">
           <p
             className={cn(
-              "max-w-xl text-xs leading-relaxed text-white/40",
+              "max-w-xl text-xs leading-relaxed text-ink-muted",
               isNp && "font-np",
             )}
           >
             {t.footerDisclaimer}
           </p>
           <p
-            className="eyebrow shrink-0 text-white/40"
+            className="eyebrow shrink-0 text-ink-muted"
             suppressHydrationWarning
           >
             © {year} {t.wordmark} · {t.footerRights}

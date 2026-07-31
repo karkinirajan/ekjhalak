@@ -10,8 +10,6 @@ const en = {
   refreshFeed: "Refresh feed",
   langButton: "नेपाली",
   langToggleLabel: "Switch to Nepali",
-  themeDark: "Switch to dark theme",
-  themeLight: "Switch to light theme",
   openMenu: "Open menu",
   closeMenu: "Close menu",
 
@@ -102,8 +100,6 @@ const np: I18nDict = {
   refreshFeed: "फिड रिफ्रेस गर्नुहोस्",
   langButton: "English",
   langToggleLabel: "अंग्रेजीमा स्विच गर्नुहोस्",
-  themeDark: "डार्क मोडमा जानुहोस्",
-  themeLight: "उज्यालो मोडमा जानुहोस्",
   openMenu: "मेनु खोल्नुहोस्",
   closeMenu: "मेनु बन्द गर्नुहोस्",
 

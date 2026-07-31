@@ -47,9 +47,9 @@ export function BreakingTicker({ items, fetchedAt }: BreakingTickerProps) {
   const headlines = items.slice(0, 8);
 
   return (
-    <div className="relative z-40 flex w-full items-stretch overflow-hidden bg-coral text-white">
+    <div className="relative z-40 flex w-full items-stretch overflow-hidden bg-red text-white">
       {/* Label block — stays pinned while headlines scroll past it */}
-      <div className="relative z-10 flex shrink-0 items-center gap-2 bg-coral py-2 pr-4 pl-4 shadow-[8px_0_12px_-4px_var(--coral)] sm:pl-6">
+      <div className="relative z-10 flex shrink-0 items-center gap-2 bg-red py-2 pr-4 pl-4 shadow-[8px_0_12px_-4px_var(--red)] sm:pl-6">
         <span className="relative flex h-2 w-2 text-white">
           <span className="pulse-dot absolute inline-flex h-full w-full" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
@@ -87,7 +87,7 @@ export function BreakingTicker({ items, fetchedAt }: BreakingTickerProps) {
                   )}
                   lang={item.originalLang === "np" ? "ne" : "en"}
                 >
-                  <span aria-hidden="true" className="text-white/45">
+                  <span aria-hidden="true" className="text-white/60">
                     ◆
                   </span>
                   <span className="font-medium">{item.title}</span>
@@ -99,7 +99,7 @@ export function BreakingTicker({ items, fetchedAt }: BreakingTickerProps) {
       </div>
 
       {/* Fetch time — the one number on this bar that is measured, not styled */}
-      <div className="hidden shrink-0 items-center bg-coral pr-6 pl-4 shadow-[-8px_0_12px_-4px_var(--coral)] lg:flex">
+      <div className="hidden shrink-0 items-center bg-red pr-6 pl-4 shadow-[-8px_0_12px_-4px_var(--red)] lg:flex">
         <span className="eyebrow tabular-nums opacity-80" suppressHydrationWarning>
           {t.updatedAt}{" "}
           {new Date(fetchedAt).toLocaleTimeString(
