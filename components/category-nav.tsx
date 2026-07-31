@@ -130,7 +130,7 @@ export function CategoryNav({
                 className={cn(
                   "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                   bucket === option.key
-                    ? "bg-coral-soft text-coral"
+                    ? "bg-red-soft text-red"
                     : "text-ink-muted hover:text-ink",
                   isNp && "font-np",
                 )}
@@ -151,7 +151,7 @@ export function CategoryNav({
                   className={cn(
                     "eyebrow rounded-full px-2.5 py-1 transition-colors",
                     range === option.key
-                      ? "text-ink underline decoration-coral decoration-2 underline-offset-4"
+                      ? "text-ink underline decoration-red decoration-2 underline-offset-4"
                       : "text-ink-muted hover:text-ink",
                     isNp && "font-np tracking-normal",
                   )}

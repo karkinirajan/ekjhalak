@@ -5,14 +5,16 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    EkJhalak News — editorial design system
 
-   Two themes, one set of semantic tokens. Components never branch on theme
-   name; they read tokens, and the theme swaps the values underneath.
+   One theme, four colours: black, grey, red, green — all dark.
 
-   Light  "Newsprint"   — warm off-white paper, ink black, coral rules
-   Dark   "Press Night" — deep navy stock, warm paper-white type
+     black   the stock the whole paper is printed on
+     grey    every neutral: type, rules, surfaces, soft categories
+     red     urgency — breaking, politics, world, and the brand accent
+     green   growth and measurement — business, sports, health, environment
 
-   The theme is set by `data-theme` on <html>, written by an inline script in
-   the document head before paint so there is never a flash of the wrong theme.
+   That is the entire palette. No blues, no purples, no ambers. Components read
+   semantic tokens and never name a colour directly, so the constraint is
+   enforced in one place rather than in forty class strings.
    ───────────────────────────────────────────────────────────────────────── */
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
@@ -29,9 +31,11 @@
   --color-ink-muted: var(--ink-muted);
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);
-  --color-coral: var(--coral);
-  --color-coral-soft: var(--coral-soft);
-  --color-navy: var(--navy);
+  --color-red: var(--red);
+  --color-red-soft: var(--red-soft);
+  --color-green: var(--green);
+  --color-green-soft: var(--green-soft);
+  --color-pitch: var(--pitch);
 
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
@@ -63,21 +67,35 @@
   --radius-3xl: calc(var(--radius) * 2.75);
 }
 
-/* ── Light: Newsprint ──────────────────────────────────────────────────────── */
+/* ── The palette ───────────────────────────────────────────────────────────
+   Applied to :root unconditionally and repeated for both data-theme values,
+   so the pre-paint theme script and any stored preference resolve to the same
+   dark stock. There is no light mode to flash to.                          */
 
 :root,
-[data-theme="light"] {
-  --canvas: #faf9f6;
-  --surface: #ffffff;
-  --raised: #f4f2ec;
-  --ink: #14141c;
-  --ink-soft: #3d3d4d;
-  --ink-muted: #6f6f81;
-  --rule: #e4e1d8;
-  --rule-strong: #cfcbbe;
-  --coral: #e94560;
-  --coral-soft: #fdecef;
-  --navy: #1a1a2e;
+[data-theme="light"],
+[data-theme="dark"] {
+  /* Neutrals. Four steps of near-black, far enough apart that a card edge is
+     visible without a border but close enough that nothing glows. */
+  --pitch: #000000;
+  --canvas: #0a0a0b;
+  --surface: #141416;
+  --raised: #1e1e21;
+
+  /* Type. Never pure white — #f4f4f5 at these sizes stops the halation that
+     makes long reading on black tiring. */
+  --ink: #f4f4f5;
+  --ink-soft: #b6b6bd;
+  --ink-muted: #8b8b93;
+
+  --rule: #26262a;
+  --rule-strong: #3a3a40;
+
+  /* The two chromatic colours. Both cleared 4.5:1 on --surface before use. */
+  --red: #e5484d;
+  --red-soft: #2a1214;
+  --green: #3fb950;
+  --green-soft: #102514;
 
   --background: var(--canvas);
   --foreground: var(--ink);
@@ -85,7 +103,7 @@
   --card-foreground: var(--ink);
   --popover: var(--surface);
   --popover-foreground: var(--ink);
-  --primary: var(--coral);
+  --primary: var(--red);
   --primary-foreground: #ffffff;
   --secondary: var(--raised);
   --secondary-foreground: var(--ink);
@@ -93,78 +111,33 @@
   --muted-foreground: var(--ink-muted);
   --accent: var(--raised);
   --accent-foreground: var(--ink);
-  --destructive: #c0392b;
+  --destructive: var(--red);
   --border: var(--rule);
   --input: var(--rule-strong);
-  --ring: var(--coral);
-  --radius: 0.5rem;
+  --ring: var(--red);
+  /* Softened to sit with the rounded terminals of the new type — square
+     corners against a soft serif reads as two unrelated design decisions. */
+  --radius: 0.75rem;
 
-  --shadow-card: 0 1px 2px rgb(20 20 28 / 0.04), 0 8px 24px rgb(20 20 28 / 0.05);
-  --shadow-lift: 0 4px 8px rgb(20 20 28 / 0.06), 0 20px 40px rgb(20 20 28 / 0.11);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-lift: 0 4px 10px rgb(0 0 0 / 0.55), 0 24px 48px rgb(0 0 0 / 0.6);
 
-  /* Topic colours — tuned for AA contrast on the light canvas */
-  --topic-breaking: #d62246;
-  --topic-politics: #c0392b;
-  --topic-world: #1d4ed8;
-  --topic-business: #a25a02;
-  --topic-sports: #15803d;
-  --topic-culture: #7c3aed;
-  --topic-technology: #0e7490;
-  --topic-health: #be185d;
-  --topic-environment: #047857;
-  --topic-society: #4338ca;
-  --topic-opinion: #52525b;
-}
-
-/* ── Dark: Press Night ─────────────────────────────────────────────────────── */
-
-[data-theme="dark"] {
-  --canvas: #101018;
-  --surface: #181822;
-  --raised: #21212e;
-  --ink: #f5f3ee;
-  --ink-soft: #c9c7d2;
-  --ink-muted: #8e8ca0;
-  --rule: #2a2a38;
-  --rule-strong: #3b3b4d;
-  --coral: #ff5c7a;
-  --coral-soft: #2a1620;
-  --navy: #0b0b14;
-
-  --background: var(--canvas);
-  --foreground: var(--ink);
-  --card: var(--surface);
-  --card-foreground: var(--ink);
-  --popover: var(--surface);
-  --popover-foreground: var(--ink);
-  --primary: var(--coral);
-  --primary-foreground: #1a0710;
-  --secondary: var(--raised);
-  --secondary-foreground: var(--ink);
-  --muted: var(--raised);
-  --muted-foreground: var(--ink-muted);
-  --accent: var(--raised);
-  --accent-foreground: var(--ink);
-  --destructive: #ff6b5e;
-  --border: var(--rule);
-  --input: var(--rule-strong);
-  --ring: var(--coral);
-
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
-  --shadow-lift: 0 4px 10px rgb(0 0 0 / 0.45), 0 24px 48px rgb(0 0 0 / 0.5);
-
-  /* Lifted and desaturated so colour reads on a dark stock without glaring */
-  --topic-breaking: #ff6b85;
-  --topic-politics: #ff8a75;
-  --topic-world: #7ba6ff;
-  --topic-business: #f0b429;
-  --topic-sports: #4ade80;
-  --topic-culture: #b892ff;
-  --topic-technology: #4dd0e1;
-  --topic-health: #f472b6;
-  --topic-environment: #34d399;
-  --topic-society: #a5b4fc;
-  --topic-opinion: #a1a1b5;
+  /* Topic colours, drawn only from the three available hues.
+       red   — urgent or contested
+       green — measured, material, played or grown
+       grey  — reflective
+     Each group has a brighter member so the lead beat still separates. */
+  --topic-breaking: #ff5a5f;
+  --topic-politics: #e5484d;
+  --topic-world: #d0555a;
+  --topic-business: #3fb950;
+  --topic-sports: #56d364;
+  --topic-health: #4ac35b;
+  --topic-environment: #35a848;
+  --topic-culture: #c4c4cd;
+  --topic-technology: #a8a8b2;
+  --topic-society: #b6b6bf;
+  --topic-opinion: #92929c;
 }
 
 /* ── Topic binding ─────────────────────────────────────────────────────────
@@ -190,38 +163,42 @@
 
   html {
     @apply antialiased;
-    font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    font-family: var(--font-sans), ui-rounded, system-ui, -apple-system, sans-serif;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    /* Fraunces and Jakarta both carry an optical-size axis — let the browser
+       drive it so small text gets thicker strokes and large text gets finer. */
+    font-optical-sizing: auto;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scroll-behavior: smooth;
+    /* Slightly looser than the browser default: at Jakarta's x-height, 1.5 is
+       what keeps a three-line summary from packing into a grey block. */
+    line-height: 1.55;
   }
 
   body {
     @apply bg-canvas text-ink;
-    /* Faint paper tooth — visible on the light theme, near-invisible on dark */
-    background-image: radial-gradient(
-      circle at 1px 1px,
-      color-mix(in oklab, var(--ink) 4%, transparent) 1px,
-      transparent 0
-    );
-    background-size: 28px 28px;
+    /* Flat, solid stock. The old dot-grid tooth read as noise behind text at
+       small sizes and fought the type for attention. */
   }
 
   h1, h2, h3, h4 {
     font-family: var(--font-display), Georgia, "Times New Roman", serif;
-    letter-spacing: -0.02em;
+    /* SOFT rounds the terminals; WONK 0 keeps the quirky alternates off so
+       headlines stay newsroom-serious rather than boutique-bakery. */
+    font-variation-settings: "SOFT" 45, "WONK" 0;
+    letter-spacing: -0.015em;
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--coral) 26%, transparent);
+    background: color-mix(in oklab, var(--red) 26%, transparent);
     color: var(--ink);
   }
 
   /* Consistent focus ring across custom interactive elements */
   :focus-visible {
-    outline: 2px solid var(--coral);
+    outline: 2px solid var(--red);
     outline-offset: 2px;
   }
 
@@ -243,12 +220,23 @@
   .font-np {
     font-family: var(--font-devanagari), "Noto Sans Devanagari", sans-serif;
     font-feature-settings: "kern" 1;
-    /* Devanagari carries more vertical detail than Latin — it needs air */
-    line-height: 1.5;
+    /* Devanagari hangs matras above and below the shirorekha — it needs more
+       air than Latin at the same size, and slightly less tracking. */
+    line-height: 1.62;
+    letter-spacing: 0;
   }
 
   .font-display {
     font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-variation-settings: "SOFT" 45, "WONK" 0;
+  }
+
+  /* Large display type can afford — and wants — rounder, softer terminals;
+     apply on the wordmark and hero headline where the shapes are big enough
+     to read as a deliberate voice rather than a rendering artefact. */
+  .font-display-soft {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-variation-settings: "SOFT" 80, "WONK" 0, "opsz" 90;
   }
 
   /* ── Editorial primitives ──────────────────────────────────────────────── */
@@ -282,35 +270,39 @@
   /* Generated cover art for stories whose feed shipped no photograph.
      Built from the story's own topic colour so a photo-less grid still
      reads as a coloured, categorised page rather than a row of grey boxes. */
+  /* Mixed up from --raised, not from black. Four of the eleven topics are grey,
+     and a grey tint over black is just black — those cards were rendering as
+     holes in the grid. Starting from the raised step guarantees every card has
+     a floor of visible tone whatever hue it carries. */
   .cover-art {
     background-color: color-mix(
       in oklab,
-      var(--topic, var(--coral)) 26%,
+      var(--topic, var(--red)) 30%,
       var(--raised)
     );
     background-image:
       radial-gradient(
         circle at 20% 16%,
-        color-mix(in oklab, var(--topic, var(--coral)) 88%, transparent),
+        color-mix(in oklab, var(--topic, var(--red)) 55%, transparent),
         transparent 62%
       ),
       radial-gradient(
         circle at 84% 82%,
-        color-mix(in oklab, var(--topic, var(--coral)) 62%, transparent),
-        transparent 64%
+        color-mix(in oklab, var(--topic, var(--red)) 32%, transparent),
+        transparent 66%
       ),
       linear-gradient(
         142deg,
-        color-mix(in oklab, var(--topic, var(--coral)) 46%, var(--raised)),
-        color-mix(in oklab, var(--topic, var(--coral)) 8%, var(--raised))
+        color-mix(in oklab, var(--topic, var(--red)) 34%, var(--raised)),
+        color-mix(in oklab, var(--topic, var(--red)) 10%, var(--raised))
       );
   }
 
-  /* The glyph sits on saturated colour, so it needs to be knocked out in the
-     surface colour rather than tinted — luminosity blending turned it to mush. */
+  /* Knocked out in black rather than tinted — a lighter glyph on a dark card
+     competes with the headline sitting directly beneath it. */
   .cover-glyph {
-    color: var(--surface);
-    opacity: 0.62;
+    color: var(--pitch);
+    opacity: 0.42;
   }
 
   /* Diagonal hatch over hero photography so white headlines stay legible
@@ -325,18 +317,13 @@
     );
   }
 
-  /* Near-opaque by default so scrolled content never shows through the sticky
-     nav; only browsers that can actually blur get the translucent version. */
+  /* Fully opaque. A translucent sticky nav let headlines scroll through it and
+     collide with the nav's own labels — on a dark stock that reads as a
+     rendering fault, not as depth. The bar is separated by a rule and a shadow
+     instead, which does the same job without costing legibility. */
   .glass {
-    background: color-mix(in oklab, var(--canvas) 97%, transparent);
-  }
-
-  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-    .glass {
-      background: color-mix(in oklab, var(--canvas) 86%, transparent);
-      backdrop-filter: blur(18px) saturate(150%);
-      -webkit-backdrop-filter: blur(18px) saturate(150%);
-    }
+    background: var(--canvas);
+    box-shadow: 0 1px 0 var(--rule), 0 8px 20px -12px rgb(0 0 0 / 0.9);
   }
 
   /* ── Motion ────────────────────────────────────────────────────────────── */

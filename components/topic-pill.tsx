@@ -67,7 +67,7 @@ export function SourceMark({
     <span className={cn("inline-flex min-w-0 items-center gap-2", className)}>
       <span
         aria-hidden="true"
-        className="eyebrow flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--topic,var(--coral))] text-[9px] tracking-normal text-white"
+        className="eyebrow flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--topic,var(--red))] text-[9px] tracking-normal text-white"
       >
         {sourceMonogram(name)}
       </span>

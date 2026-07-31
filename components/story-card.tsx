@@ -64,7 +64,7 @@ export function StoryCard({
     return (
       <article
         data-topic={item.topic}
-        className="group relative isolate overflow-hidden rounded-lg bg-navy shadow-card transition-shadow duration-300 hover:shadow-lift"
+        className="group relative isolate overflow-hidden rounded-lg bg-pitch shadow-card transition-shadow duration-300 hover:shadow-lift"
       >
         <div className="absolute inset-0">
           <StoryImage
@@ -82,7 +82,7 @@ export function StoryCard({
           <div className="flex flex-wrap items-center gap-2">
             <TopicPill topic={item.topic} lang={language} tone="solid" />
             {item.coverageCount > 1 && (
-              <span className="eyebrow inline-flex items-center gap-1.5 rounded-sm bg-white/15 px-2 py-1 text-white backdrop-blur-sm">
+              <span className="eyebrow inline-flex items-center gap-1.5 rounded-sm bg-black/55 px-2 py-1 text-white">
                 <Newspaper className="h-3 w-3" aria-hidden="true" />
                 {item.coverageCount} {t.outletsMany}
               </span>
@@ -93,7 +93,7 @@ export function StoryCard({
             lang={langAttr}
             className={cn(
               "headline max-w-4xl text-[clamp(1.6rem,4.6vw,3.1rem)] font-bold tracking-[-0.025em] text-white",
-              isNp ? "font-np leading-[1.3]" : "font-display leading-[1.05]",
+              isNp ? "font-np leading-[1.3]" : "font-display-soft leading-[1.05]",
             )}
           >
             <button
@@ -109,7 +109,7 @@ export function StoryCard({
             <p
               lang={langAttr}
               className={cn(
-                "copy clamp-2 max-w-2xl text-[0.975rem] leading-relaxed text-white/70",
+                "copy clamp-2 max-w-2xl text-[0.975rem] leading-relaxed text-white/85",
                 isNp && "font-np",
               )}
             >
@@ -117,9 +117,9 @@ export function StoryCard({
             </p>
           )}
 
-          <div className="eyebrow flex flex-wrap items-center gap-x-3 gap-y-2 text-white/60">
+          <div className="eyebrow flex flex-wrap items-center gap-x-3 gap-y-2 text-white/75">
             <SourceMark name={item.sourceName} />
-            <span aria-hidden="true" className="h-3 w-px bg-white/25" />
+            <span aria-hidden="true" className="h-3 w-px bg-white/40" />
             <span>{relative}</span>
           </div>
         </div>
@@ -260,7 +260,7 @@ export function StoryCard({
           <p
             lang={langAttr}
             className={cn(
-              "copy clamp-3 text-sm leading-relaxed text-ink-muted",
+              "copy clamp-3 text-sm leading-relaxed text-ink-soft",
               isNp && "font-np",
             )}
           >

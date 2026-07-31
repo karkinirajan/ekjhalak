@@ -11,8 +11,9 @@ type SubmitState = "idle" | "sending" | "done" | "invalid" | "closed" | "failed"
 /**
  * Newsletter conversion band.
  *
- * Glassmorphic form on a deep navy field — the one place on the page that
- * breaks from newsprint, so it reads as an offer rather than an article.
+ * A solid black field bordered off from the canvas, carrying the only place on
+ * the page where both accent colours appear at once — so it reads as an offer
+ * rather than as another article.
  *
  * The success state only appears when the API confirms the address reached a
  * real provider. Without one configured the reader is told signups aren't open,
@@ -68,20 +69,21 @@ export function NewsletterCta() {
   return (
     <section
       aria-label={t.newsletterTitle}
-      className="relative isolate overflow-hidden rounded-lg bg-navy px-6 py-12 sm:px-12 sm:py-16"
+      className="relative isolate overflow-hidden rounded-lg border border-rule-strong bg-pitch px-6 py-12 sm:px-12 sm:py-16"
     >
-      {/* Ambient colour wash — coral bleeding in from the corners */}
+      {/* Ambient wash — red in one corner, green in the other. The only place
+          the two accents meet, which is what marks this band as the offer. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-70"
+        className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage:
-            "radial-gradient(ellipse 70% 90% at 8% 0%, rgb(233 69 96 / 0.42), transparent 62%), radial-gradient(ellipse 60% 80% at 96% 100%, rgb(124 58 237 / 0.32), transparent 60%)",
+            "radial-gradient(ellipse 70% 90% at 8% 0%, rgb(229 72 77 / 0.30), transparent 62%), radial-gradient(ellipse 60% 80% at 96% 100%, rgb(63 185 80 / 0.18), transparent 60%)",
         }}
       />
 
       <div className="relative mx-auto max-w-2xl text-center">
-        <span className="eyebrow inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-white/85 backdrop-blur-sm">
+        <span className="eyebrow inline-flex items-center gap-2 rounded-full border border-rule-strong bg-raised px-3 py-1.5 text-ink">
           <Mail className="h-3 w-3" aria-hidden="true" />
           {t.newsletterKicker}
         </span>
@@ -97,7 +99,7 @@ export function NewsletterCta() {
 
         <p
           className={cn(
-            "copy mx-auto mt-4 max-w-lg text-[0.975rem] leading-relaxed text-white/65",
+            "copy mx-auto mt-4 max-w-lg text-[0.975rem] leading-relaxed text-ink-soft",
             isNp && "font-np",
           )}
         >
@@ -108,11 +110,11 @@ export function NewsletterCta() {
           <p
             role="status"
             className={cn(
-              "mt-8 inline-flex items-center gap-2.5 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-medium text-white backdrop-blur-md",
+              "mt-8 inline-flex items-center gap-2.5 rounded-full border border-green/40 bg-green-soft px-5 py-3 text-sm font-medium text-ink",
               isNp && "font-np",
             )}
           >
-            <Check className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <Check className="h-4 w-4 text-green" aria-hidden="true" />
             {t.newsletterSuccess}
           </p>
         ) : (
@@ -134,13 +136,13 @@ export function NewsletterCta() {
                 placeholder={t.newsletterPlaceholder}
                 aria-invalid={state === "invalid"}
                 aria-describedby={message ? "newsletter-message" : undefined}
-                className="h-12 flex-1 rounded-full border-white/20 bg-white/10 px-5 text-base text-white backdrop-blur-md placeholder:text-white/45 focus-visible:border-white/40 focus-visible:ring-white/25"
+                className="h-12 flex-1 rounded-full border-rule-strong bg-surface px-5 text-base text-ink placeholder:text-ink-muted focus-visible:border-red focus-visible:ring-red/30"
               />
               <button
                 type="submit"
                 disabled={state === "sending"}
                 className={cn(
-                  "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-navy transition-transform hover:scale-[1.02] active:scale-100 disabled:opacity-60",
+                  "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-red px-6 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-100 disabled:opacity-60",
                   isNp && "font-np",
                 )}
               >
@@ -154,7 +156,7 @@ export function NewsletterCta() {
                 id="newsletter-message"
                 role="alert"
                 className={cn(
-                  "mt-3 text-sm text-rose-200",
+                  "mt-3 text-sm text-red",
                   isNp && "font-np",
                 )}
               >
@@ -164,7 +166,7 @@ export function NewsletterCta() {
 
             <p
               className={cn(
-                "eyebrow mt-4 text-white/40",
+                "eyebrow mt-4 text-ink-muted",
                 isNp && "font-np tracking-normal",
               )}
             >

@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
-import { Languages, MoonStar, RefreshCw, Search, Sun } from "lucide-react";
+import { Languages, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/theme-provider";
@@ -33,7 +33,7 @@ export function Masthead({
   isRefreshing,
   onSubscribe,
 }: MastheadProps) {
-  const { t, language, toggleLanguage, themeMode, toggleTheme } = useTheme();
+  const { t, language, toggleLanguage } = useTheme();
   const [dateline, setDateline] = useState<string | null>(null);
 
   // Rendered client-side only: the date depends on the reader's calendar
@@ -84,20 +84,6 @@ export function Masthead({
 
             <Button
               variant="ghost"
-              size="icon-sm"
-              onClick={toggleTheme}
-              aria-label={themeMode === "dark" ? t.themeLight : t.themeDark}
-              className="rounded-full text-ink-muted hover:text-ink"
-            >
-              {themeMode === "dark" ? (
-                <Sun className="h-3.5 w-3.5" aria-hidden="true" />
-              ) : (
-                <MoonStar className="h-3.5 w-3.5" aria-hidden="true" />
-              )}
-            </Button>
-
-            <Button
-              variant="ghost"
               size="sm"
               onClick={toggleLanguage}
               aria-label={t.langToggleLabel}
@@ -116,7 +102,7 @@ export function Masthead({
               size="sm"
               onClick={onSubscribe}
               className={cn(
-                "h-8 rounded-full bg-coral px-3.5 text-xs font-semibold text-white hover:bg-coral/90",
+                "h-8 rounded-full bg-red px-3.5 text-xs font-semibold text-white hover:bg-red/90",
                 isNp && "font-np",
               )}
             >
@@ -134,14 +120,14 @@ export function Masthead({
               <span
                 className={cn(
                   "block text-[clamp(2.5rem,9vw,5rem)] font-black tracking-[-0.035em] text-ink",
-                  isNp ? "font-np" : "font-display",
+                  isNp ? "font-np" : "font-display-soft",
                 )}
               >
                 {t.wordmark}
               </span>
               <span
                 className={cn(
-                  "mt-1.5 block text-[clamp(0.95rem,3vw,1.35rem)] font-semibold tracking-tight text-coral",
+                  "mt-1.5 block text-[clamp(0.95rem,3vw,1.35rem)] font-semibold tracking-tight text-red",
                   isNp ? "font-display" : "font-np",
                 )}
               >
