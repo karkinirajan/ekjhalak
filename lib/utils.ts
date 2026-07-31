@@ -69,16 +69,57 @@ export function splitIntoParagraphs(text: string, max = 3): string[] {
 }
 
 /**
- * Returns a human-readable label for how long ago a unix-ms timestamp was.
- * Used in the "last updated" indicator.
+ * Returns a human-readable label for how long ago a unix-ms timestamp was,
+ * in the reader's chosen language.
  */
-export function formatRelativeTime(timestampMs: number): string {
-  const diffMs = Date.now() - timestampMs;
-  const diffMin = Math.floor(diffMs / 60_000);
+export function formatRelativeTime(
+  timestampMs: number,
+  lang: "en" | "np",
+  now: number,
+): string {
+  const diffMin = Math.max(0, Math.floor((now - timestampMs) / 60_000));
+
+  if (lang === "np") {
+    if (diffMin < 1) return "भर्खरै";
+    if (diffMin < 60) return `${diffMin} मिनेट अघि`;
+    const hours = Math.floor(diffMin / 60);
+    if (hours < 24) return `${hours} घण्टा अघि`;
+    return `${Math.floor(hours / 24)} दिन अघि`;
+  }
+
   if (diffMin < 1) return "Just now";
   if (diffMin === 1) return "1 min ago";
   if (diffMin < 60) return `${diffMin} min ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr === 1) return "1 hour ago";
-  return `${diffHr} hours ago`;
+  const hours = Math.floor(diffMin / 60);
+  if (hours === 1) return "1 hour ago";
+  if (hours < 24) return `${hours} hours ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "Yesterday" : `${days} days ago`;
+}
+
+/**
+ * Rough reading time in whole minutes, floored at 1.
+ * 200 wpm is the usual prose estimate; Devanagari splits on spaces the same way.
+ */
+export function readingTime(text: string): number {
+  if (!text) return 1;
+  const words = text.trim().split(/\s+/).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
+/**
+ * Publication initials for the source monogram — "The Kathmandu Post" → "KP".
+ * Leading articles are dropped so "The Hindu" and "The Himalayan Times" don't
+ * both collapse to "TH".
+ */
+export function sourceMonogram(name: string): string {
+  const words = name
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((word, index) => !(index === 0 && /^(the|la|le|el)$/i.test(word)));
+
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
 }

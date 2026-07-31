@@ -43,19 +43,42 @@ export function deduplicate(items: NewsItem[]): NewsItem[] {
   }
 
   const accepted: NewsItem[] = [];
+  // Which outlets we have already counted toward each survivor's coverage, so
+  // a paper republishing its own story twice doesn't inflate the number.
+  const outletsPerStory = new Map<string, Set<string>>();
+
   for (const candidate of afterPass1) {
-    let isDuplicate = false;
+    let duplicateOf: NewsItem | null = null;
     for (const existing of accepted) {
       const timeDiff = Math.abs(
         candidate.publishedTimestamp - existing.publishedTimestamp,
       );
       if (timeDiff > TWO_HOURS_MS) continue;
       if (jaccardSimilarity(candidate.title, existing.title) >= JACCARD_THRESHOLD) {
-        isDuplicate = true;
+        duplicateOf = existing;
         break;
       }
     }
-    if (!isDuplicate) accepted.push(candidate);
+
+    if (!duplicateOf) {
+      accepted.push(candidate);
+      outletsPerStory.set(candidate.id, new Set([candidate.sourceId]));
+      continue;
+    }
+
+    // The duplicate is discarded, but the fact that another outlet ran the same
+    // story is real signal — it is how many newsrooms judged it worth covering.
+    const outlets = outletsPerStory.get(duplicateOf.id);
+    if (outlets && !outlets.has(candidate.sourceId)) {
+      outlets.add(candidate.sourceId);
+      duplicateOf.coverageCount = outlets.size;
+    }
+
+    // A higher-priority outlet won the dedup tie but may have shipped no photo.
+    // Borrow one from the duplicate rather than render blank cover art.
+    if (!duplicateOf.imageUrl && candidate.imageUrl) {
+      duplicateOf.imageUrl = candidate.imageUrl;
+    }
   }
 
   return accepted;

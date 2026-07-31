@@ -2,6 +2,8 @@
 // Canonical shape for a news item — used from RSS ingestion through to UI.
 // The summary is always in the article's original language; no translation.
 
+import type { TopicId } from "./taxonomy";
+
 export type RangeKey = "day" | "week" | "month";
 export type BucketKey = "national" | "international";
 export type OriginalLang = "np" | "en";
@@ -15,7 +17,7 @@ export interface NewsItem {
   originalLang: OriginalLang;
   /** Headline in the original language, HTML-stripped */
   title: string;
-  /** Canonical article URL (used internally for dedup/fingerprinting only) */
+  /** Canonical article URL — links out to the publisher */
   sourceUrl: string;
   /** Formatted display string, e.g. "Apr 18 • 09:00" */
   publishedAt: string;
@@ -25,6 +27,22 @@ export interface NewsItem {
   summary: string;
   /** Primary category from the source registry */
   category?: string;
+  /** Editorial topic derived from the article's own words — drives colour coding */
+  topic: TopicId;
+  /** Lead image from feed metadata. null when the feed supplied none. */
+  imageUrl: string | null;
+  /** Publisher attribution */
+  sourceId: string;
+  sourceName: string;
+  sourceHomepage: string;
+  /** Editorial credibility score 1–10 from the source registry */
+  credibility: number;
+  /**
+   * How many distinct outlets we saw running this story, counted while
+   * deduplicating. 1 = a single outlet carried it. This is the real signal
+   * behind the trending rail — no synthetic engagement metrics.
+   */
+  coverageCount: number;
 }
 
 export interface SourceStatusMeta {

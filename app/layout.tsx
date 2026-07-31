@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import {
-  Great_Vibes,
   Inter,
+  JetBrains_Mono,
   Noto_Sans_Devanagari,
-  Source_Serif_4,
+  Playfair_Display,
 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+// Body and interface — Inter's tall x-height keeps dense summary copy readable
+// at small sizes next to Devanagari.
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -16,13 +18,18 @@ const inter = Inter({
   display: "swap",
 });
 
-const sourceSerif = Source_Serif_4({
+// English headlines. Playfair's high stroke contrast is what makes a page read
+// as a publication rather than a product dashboard.
+const playfair = Playfair_Display({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 
+// Nepali headlines and body. Carries the same weight range as Playfair so
+// bilingual headlines sit at matching visual weight.
 const notoDevanagari = Noto_Sans_Devanagari({
   variable: "--font-devanagari",
   subsets: ["devanagari"],
@@ -30,10 +37,11 @@ const notoDevanagari = Noto_Sans_Devanagari({
   display: "swap",
 });
 
-const greatVibes = Great_Vibes({
-  variable: "--font-script",
+// Metadata voice — kickers, timestamps, source names, counters.
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono-custom",
   subsets: ["latin"],
-  weight: ["400"],
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
@@ -140,12 +148,15 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${greatVibes.variable}`}
+      data-theme="light"
+      className={`${inter.variable} ${playfair.variable} ${notoDevanagari.variable} ${jetbrainsMono.variable}`}
     >
       <head>
+        {/* Runs before first paint so the correct theme is painted once.
+            Falls back to the OS preference when the reader has no saved choice. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('cfn-theme');document.documentElement.setAttribute('data-cfn-theme',t==='light'?'light':'dark')}catch(e){}})()`,
+            __html: `(function(){try{var t=localStorage.getItem('cfn-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t);var l=localStorage.getItem('cfn-lang');if(l==='np'){document.documentElement.lang='ne'}}catch(e){}})()`,
           }}
         />
         <script
@@ -156,7 +167,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:top-2 focus:left-2 focus:rounded-md focus:bg-[#2f81f7] focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:shadow-lg"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-100 focus:rounded-md focus:bg-coral focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lift"
         >
           Skip to main content
         </a>

@@ -1,20 +1,31 @@
 import Link from "next/link";
 
+export const metadata = {
+  title: "Page not found",
+};
+
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 text-center">
-      <div className="space-y-2">
-        <h1 className="text-6xl font-bold opacity-20">404</h1>
-        <h2 className="text-xl font-semibold">Page not found</h2>
-        <p className="text-sm opacity-60">
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-canvas px-6 text-center">
+      <div className="space-y-4">
+        <p className="font-display text-[7rem] leading-none font-black text-coral/25 sm:text-[10rem]">
+          404
+        </p>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+          This page went to press without us
+        </h1>
+        <p className="mx-auto max-w-md text-sm leading-relaxed text-ink-muted">
+          The story you&apos;re looking for doesn&apos;t exist, or it has moved
+          to a different edition.
         </p>
       </div>
+
       <Link
         href="/"
-        className="rounded-md border px-4 py-2 text-sm font-medium transition-opacity hover:opacity-70"
+        className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-semibold text-canvas transition-opacity hover:opacity-85"
       >
-        ← Back to एक झलक
+        <span aria-hidden="true">←</span>
+        Back to <span className="font-np">एक झलक</span>
       </Link>
     </div>
   );

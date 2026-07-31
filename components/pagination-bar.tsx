@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 
@@ -45,87 +44,79 @@ export function PaginationBar({
   totalPages,
   onPageChange,
 }: PaginationBarProps) {
-  const { palette, t } = useTheme();
+  const { t, language } = useTheme();
   const safeTotal = Math.max(totalPages, 1);
   const pageWindow = buildPageWindow(page, safeTotal);
+  const isNp = language === "np";
 
-  // Only render if there is more than one page
   if (safeTotal <= 1) return null;
+
+  const arrowClass =
+    "flex h-9 w-9 items-center justify-center rounded-full border border-rule text-ink-muted transition-colors hover:border-rule-strong hover:text-ink disabled:pointer-events-none disabled:opacity-35";
 
   return (
     <nav
       aria-label="Pagination"
-      className={cn(
-        "flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2",
-        palette.panel,
-      )}
+      className="flex flex-wrap items-center justify-between gap-4 border-t border-rule pt-6"
     >
-      <div className={cn("text-xs tabular-nums", palette.muted)}>
-        {t.pagePre}{" "}
-        <span className={cn("font-semibold", palette.text)}>{page}</span>{" "}
-        {t.pageOf}{" "}
-        <span className={cn("font-semibold", palette.text)}>{safeTotal}</span>
-      </div>
-
-      <div
-        className="flex items-center gap-1"
-        role="group"
-        aria-label="Page navigation"
+      <p
+        className={cn(
+          "eyebrow tabular-nums text-ink-muted",
+          isNp && "font-np tracking-normal",
+        )}
       >
-        {/* Previous */}
-        <Button
-          variant="outline"
-          size="icon-xs"
+        {t.pagePre} <span className="text-ink">{page}</span> {t.pageOf}{" "}
+        <span className="text-ink">{safeTotal}</span>
+      </p>
+
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
           onClick={() => onPageChange(Math.max(1, page - 1))}
           disabled={page <= 1}
-          className={cn("rounded-md", palette.ghost)}
           aria-label={t.prev}
+          className={arrowClass}
         >
-          <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
-        </Button>
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </button>
 
-        {/* Page number buttons */}
-        {pageWindow.map((entry, idx) =>
+        {pageWindow.map((entry, index) =>
           entry === "…" ? (
             <span
-              key={`ellipsis-${idx}`}
-              className={cn(
-                "flex h-6 w-6 items-center justify-center text-xs select-none",
-                palette.muted,
-              )}
+              key={`gap-${index}`}
               aria-hidden="true"
+              className="flex h-9 w-6 items-center justify-center text-sm text-ink-muted select-none"
             >
               …
             </span>
           ) : (
-            <Button
+            <button
               key={entry}
-              variant="outline"
-              size="icon-xs"
+              type="button"
               onClick={() => onPageChange(entry)}
               aria-label={`${t.pagePre} ${entry}`}
               aria-current={entry === page ? "page" : undefined}
               className={cn(
-                "h-6 w-6 rounded-md text-xs",
-                entry === page ? palette.accent : palette.ghost,
+                "flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-sm font-semibold tabular-nums transition-colors",
+                entry === page
+                  ? "bg-ink text-canvas"
+                  : "text-ink-muted hover:bg-raised hover:text-ink",
               )}
             >
               {entry}
-            </Button>
+            </button>
           ),
         )}
 
-        {/* Next */}
-        <Button
-          variant="outline"
-          size="icon-xs"
+        <button
+          type="button"
           onClick={() => onPageChange(Math.min(safeTotal, page + 1))}
           disabled={page >= safeTotal}
-          className={cn("rounded-md", palette.ghost)}
           aria-label={t.next}
+          className={arrowClass}
         >
-          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Button>
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
     </nav>
   );

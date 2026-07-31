@@ -2,17 +2,42 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* ─────────────────────────────────────────────────────────────────────────────
+   EkJhalak News — editorial design system
+
+   Two themes, one set of semantic tokens. Components never branch on theme
+   name; they read tokens, and the theme swaps the values underneath.
+
+   Light  "Newsprint"   — warm off-white paper, ink black, coral rules
+   Dark   "Press Night" — deep navy stock, warm paper-white type
+
+   The theme is set by `data-theme` on <html>, written by an inline script in
+   the document head before paint so there is never a flash of the wrong theme.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-navy: var(--navy);
+
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
-  --font-script: var(--font-script);
-  --font-mono:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
   --font-devanagari: var(--font-devanagari);
+  --font-mono: var(--font-mono-custom);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -29,98 +54,353 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-3xl: calc(var(--radius) * 2.75);
 }
 
-:root {
-  --background: #fffdfb;
-  --foreground: #1b2435;
-  --card: #ffffff;
-  --card-foreground: #1b2435;
-  --popover: #ffffff;
-  --popover-foreground: #1b2435;
-  --primary: #c53030;
+/* ── Light: Newsprint ──────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="light"] {
+  --canvas: #faf9f6;
+  --surface: #ffffff;
+  --raised: #f4f2ec;
+  --ink: #14141c;
+  --ink-soft: #3d3d4d;
+  --ink-muted: #6f6f81;
+  --rule: #e4e1d8;
+  --rule-strong: #cfcbbe;
+  --coral: #e94560;
+  --coral-soft: #fdecef;
+  --navy: #1a1a2e;
+
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--coral);
   --primary-foreground: #ffffff;
-  --secondary: #fff4eb;
-  --secondary-foreground: #1b2435;
-  --muted: #fff4eb;
-  --muted-foreground: #4c5a75;
-  --accent: #fff4eb;
-  --accent-foreground: #1b2435;
-  --destructive: #c53030;
-  --border: #ffd7bc;
-  --input: #ffcfa8;
-  --ring: #c53030;
-  --radius: 0.75rem;
+  --secondary: var(--raised);
+  --secondary-foreground: var(--ink);
+  --muted: var(--raised);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--raised);
+  --accent-foreground: var(--ink);
+  --destructive: #c0392b;
+  --border: var(--rule);
+  --input: var(--rule-strong);
+  --ring: var(--coral);
+  --radius: 0.5rem;
+
+  --shadow-card: 0 1px 2px rgb(20 20 28 / 0.04), 0 8px 24px rgb(20 20 28 / 0.05);
+  --shadow-lift: 0 4px 8px rgb(20 20 28 / 0.06), 0 20px 40px rgb(20 20 28 / 0.11);
+
+  /* Topic colours — tuned for AA contrast on the light canvas */
+  --topic-breaking: #d62246;
+  --topic-politics: #c0392b;
+  --topic-world: #1d4ed8;
+  --topic-business: #a25a02;
+  --topic-sports: #15803d;
+  --topic-culture: #7c3aed;
+  --topic-technology: #0e7490;
+  --topic-health: #be185d;
+  --topic-environment: #047857;
+  --topic-society: #4338ca;
+  --topic-opinion: #52525b;
 }
 
-.dark {
-  --background: #1e1f1d;
-  --foreground: #f2f2f4;
-  --card: #252527;
-  --card-foreground: #f2f2f4;
-  --popover: #252527;
-  --popover-foreground: #f2f2f4;
-  --primary: #4f9dff;
-  --primary-foreground: #ffffff;
-  --secondary: #252527;
-  --secondary-foreground: #f2f2f4;
-  --muted: #252527;
-  --muted-foreground: #b7b7be;
-  --accent: #252527;
-  --accent-foreground: #f2f2f4;
-  --destructive: #f85149;
-  --border: #3a3a3e;
-  --input: #4a4a51;
-  --ring: #4f9dff;
+/* ── Dark: Press Night ─────────────────────────────────────────────────────── */
+
+[data-theme="dark"] {
+  --canvas: #101018;
+  --surface: #181822;
+  --raised: #21212e;
+  --ink: #f5f3ee;
+  --ink-soft: #c9c7d2;
+  --ink-muted: #8e8ca0;
+  --rule: #2a2a38;
+  --rule-strong: #3b3b4d;
+  --coral: #ff5c7a;
+  --coral-soft: #2a1620;
+  --navy: #0b0b14;
+
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--coral);
+  --primary-foreground: #1a0710;
+  --secondary: var(--raised);
+  --secondary-foreground: var(--ink);
+  --muted: var(--raised);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--raised);
+  --accent-foreground: var(--ink);
+  --destructive: #ff6b5e;
+  --border: var(--rule);
+  --input: var(--rule-strong);
+  --ring: var(--coral);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+  --shadow-lift: 0 4px 10px rgb(0 0 0 / 0.45), 0 24px 48px rgb(0 0 0 / 0.5);
+
+  /* Lifted and desaturated so colour reads on a dark stock without glaring */
+  --topic-breaking: #ff6b85;
+  --topic-politics: #ff8a75;
+  --topic-world: #7ba6ff;
+  --topic-business: #f0b429;
+  --topic-sports: #4ade80;
+  --topic-culture: #b892ff;
+  --topic-technology: #4dd0e1;
+  --topic-health: #f472b6;
+  --topic-environment: #34d399;
+  --topic-society: #a5b4fc;
+  --topic-opinion: #a1a1b5;
 }
+
+/* ── Topic binding ─────────────────────────────────────────────────────────
+   Any element carrying data-topic exposes `--topic` to its subtree, so cards,
+   pills and rules all colour themselves from one attribute.               */
+
+[data-topic="breaking"] { --topic: var(--topic-breaking); }
+[data-topic="politics"] { --topic: var(--topic-politics); }
+[data-topic="world"] { --topic: var(--topic-world); }
+[data-topic="business"] { --topic: var(--topic-business); }
+[data-topic="sports"] { --topic: var(--topic-sports); }
+[data-topic="culture"] { --topic: var(--topic-culture); }
+[data-topic="technology"] { --topic: var(--topic-technology); }
+[data-topic="health"] { --topic: var(--topic-health); }
+[data-topic="environment"] { --topic: var(--topic-environment); }
+[data-topic="society"] { --topic: var(--topic-society); }
+[data-topic="opinion"] { --topic: var(--topic-opinion); }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   html {
-    @apply font-sans antialiased;
+    @apply antialiased;
+    font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
   }
+
   body {
-    @apply bg-background text-foreground;
-    font-family:
-      var(--font-sans),
-      system-ui,
-      -apple-system,
-      sans-serif;
+    @apply bg-canvas text-ink;
+    /* Faint paper tooth — visible on the light theme, near-invisible on dark */
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in oklab, var(--ink) 4%, transparent) 1px,
+      transparent 0
+    );
+    background-size: 28px 28px;
   }
-  h1,
-  h2,
-  h3,
-  h4 {
+
+  h1, h2, h3, h4 {
     font-family: var(--font-display), Georgia, "Times New Roman", serif;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
   }
+
   ::selection {
-    background: color-mix(in oklab, var(--primary) 28%, transparent);
-    color: var(--foreground);
+    background: color-mix(in oklab, var(--coral) 26%, transparent);
+    color: var(--ink);
+  }
+
+  /* Consistent focus ring across custom interactive elements */
+  :focus-visible {
+    outline: 2px solid var(--coral);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
 @layer utilities {
+  /* ── Typefaces ─────────────────────────────────────────────────────────── */
+
   .font-np {
     font-family: var(--font-devanagari), "Noto Sans Devanagari", sans-serif;
     font-feature-settings: "kern" 1;
+    /* Devanagari carries more vertical detail than Latin — it needs air */
+    line-height: 1.5;
   }
+
   .font-display {
     font-family: var(--font-display), Georgia, "Times New Roman", serif;
   }
-  .font-script {
-    font-family: var(--font-script), "Brush Script MT", cursive;
+
+  /* ── Editorial primitives ──────────────────────────────────────────────── */
+
+  /* All-caps metadata: kickers, timestamps, source names */
+  .eyebrow {
+    font-family: var(--font-mono-custom), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* Headline balance — stops one-word orphan lines in large display type */
+  .headline {
+    text-wrap: balance;
+  }
+
+  .copy {
+    text-wrap: pretty;
+  }
+
+  /* Clamp helpers used across card sizes */
+  .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .clamp-4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-lift { box-shadow: var(--shadow-lift); }
+
+  /* Generated cover art for stories whose feed shipped no photograph.
+     Built from the story's own topic colour so a photo-less grid still
+     reads as a coloured, categorised page rather than a row of grey boxes. */
+  .cover-art {
+    background-color: color-mix(
+      in oklab,
+      var(--topic, var(--coral)) 26%,
+      var(--raised)
+    );
+    background-image:
+      radial-gradient(
+        circle at 20% 16%,
+        color-mix(in oklab, var(--topic, var(--coral)) 88%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        circle at 84% 82%,
+        color-mix(in oklab, var(--topic, var(--coral)) 62%, transparent),
+        transparent 64%
+      ),
+      linear-gradient(
+        142deg,
+        color-mix(in oklab, var(--topic, var(--coral)) 46%, var(--raised)),
+        color-mix(in oklab, var(--topic, var(--coral)) 8%, var(--raised))
+      );
+  }
+
+  /* The glyph sits on saturated colour, so it needs to be knocked out in the
+     surface colour rather than tinted — luminosity blending turned it to mush. */
+  .cover-glyph {
+    color: var(--surface);
+    opacity: 0.62;
+  }
+
+  /* Diagonal hatch over hero photography so white headlines stay legible
+     regardless of what the publisher's image happens to look like. */
+  .photo-scrim {
+    background-image: linear-gradient(
+      to top,
+      rgb(8 8 14 / 0.92) 0%,
+      rgb(8 8 14 / 0.72) 34%,
+      rgb(8 8 14 / 0.24) 68%,
+      rgb(8 8 14 / 0.05) 100%
+    );
+  }
+
+  /* Near-opaque by default so scrolled content never shows through the sticky
+     nav; only browsers that can actually blur get the translucent version. */
+  .glass {
+    background: color-mix(in oklab, var(--canvas) 97%, transparent);
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .glass {
+      background: color-mix(in oklab, var(--canvas) 86%, transparent);
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+    }
+  }
+
+  /* ── Motion ────────────────────────────────────────────────────────────── */
+
+  .ticker-track {
+    animation: ticker-scroll 48s linear infinite;
+  }
+  .ticker-track:hover,
+  .ticker-track:focus-within {
+    animation-play-state: paused;
+  }
+
+  /* Scroll-triggered entrance. Elements start hidden and are revealed by an
+     IntersectionObserver flipping data-revealed — see components/reveal.tsx. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal[data-revealed="true"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .pulse-dot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: currentColor;
+    animation: live-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 0; transform: scale(2.4); }
+}
+
+/* Reduced motion: the ticker still shows headlines, it just stops moving and
+   becomes a horizontally scrollable strip instead. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+    overflow-x: auto;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Without scripting there is no IntersectionObserver to reveal anything, so
+   entrance animations must never be what stands between a reader and the news. */
+@media (scripting: none) {
+  .reveal {
+    opacity: 1;
+    transform: none;
   }
 }
