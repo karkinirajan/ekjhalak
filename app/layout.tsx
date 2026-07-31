@@ -151,18 +151,18 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      data-theme="dark"
+      data-theme="light"
       className={`${jakarta.variable} ${fraunces.variable} ${mukta.variable} ${jetbrainsMono.variable}`}
     >
       <head>
-        {/* Tells the browser to paint form controls, scrollbars and the address
-            bar dark too, so chrome doesn't flash white around a black page. */}
-        <meta name="color-scheme" content="dark" />
-        {/* Restores the saved language before first paint. Colour is not a
-            preference — the paper is printed dark, full stop. */}
+        {/* Lets the browser paint form controls and scrollbars to match
+            whichever theme the script below settles on. */}
+        <meta name="color-scheme" content="light dark" />
+        {/* Runs before first paint so the correct theme is painted once.
+            Falls back to the OS preference when the reader has no saved choice. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(localStorage.getItem('cfn-lang')==='np'){document.documentElement.lang='ne'}}catch(e){}})()`,
+            __html: `(function(){try{var t=localStorage.getItem('cfn-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t);var l=localStorage.getItem('cfn-lang');if(l==='np'){document.documentElement.lang='ne'}}catch(e){}})()`,
           }}
         />
         <script

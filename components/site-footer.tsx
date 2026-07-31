@@ -11,8 +11,10 @@ interface SiteFooterProps {
 }
 
 /**
- * Deep pitch footer — the visual anchor that closes the page and carries the
- * attribution obligations an aggregator has toward the newsrooms it reprints.
+ * The closing panel — the step furthest from the type in either theme, so it
+ * reads as the page's anchor whether that means blackest or whitest. Carries
+ * the attribution obligations an aggregator has toward the newsrooms it
+ * reprints.
  */
 export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
   const { t, language } = useTheme();
@@ -20,7 +22,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-20 bg-pitch text-ink-soft">
+    <footer className="mt-20 border-t border-rule bg-pitch text-ink-soft">
       <div className="mx-auto w-full max-w-[1400px] px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr]">
           {/* Brand + about */}
@@ -28,7 +30,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
             <p className="leading-none">
               <span
                 className={cn(
-                  "text-2xl font-black tracking-tight text-white",
+                  "text-2xl font-black tracking-tight text-ink",
                   isNp ? "font-np" : "font-display",
                 )}
               >
@@ -122,7 +124,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
         </div>
 
         {/* Attribution notice — an aggregator owes its sources this line */}
-        <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-7 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 flex flex-col gap-4 border-t border-rule pt-7 sm:flex-row sm:items-center sm:justify-between">
           <p
             className={cn(
               "max-w-xl text-xs leading-relaxed text-ink-muted",
