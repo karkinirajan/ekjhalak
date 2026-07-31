@@ -1,3 +1,11 @@
+# sharp ships prebuilt binaries that next/image loads at runtime; unrs-resolver
+# is the native resolver eslint-config-next pulls in. Both need their install
+# scripts to run, so both are allowed.
+#
+# This file previously shipped with pnpm's own placeholder text still in it —
+# `sharp: set this to true or false` — which is not a boolean and not valid
+# config. Every `pnpm install` aborted with ERR_PNPM_IGNORED_BUILDS, and with it
+# every `pnpm run lint`, `typecheck`, `build`, and the repo's own `verify`.
 allowBuilds:
-  sharp: set this to true or false
-  unrs-resolver: set this to true or false
+  sharp: true
+  unrs-resolver: true

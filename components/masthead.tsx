@@ -117,7 +117,7 @@ export function Masthead({
               size="sm"
               onClick={onSubscribe}
               className={cn(
-                "h-8 rounded-full bg-red px-3.5 text-xs font-semibold text-white hover:bg-red/90",
+                "h-8 rounded-full bg-red-solid px-3.5 text-xs font-semibold text-white hover:bg-red-solid/90",
                 isNp && "font-np",
               )}
             >
@@ -126,8 +126,16 @@ export function Masthead({
           </div>
         </div>
 
-        {/* ── Nameplate ──────────────────────────────────────────────────── */}
-        <div className="grid items-center gap-4 py-6 sm:py-8 lg:grid-cols-[1fr_auto_1fr]">
+        {/* ── Nameplate ──────────────────────────────────────────────────────
+            The whole block used to run 152px tall, and with the ticker, the
+            utility row and the two filter rails above and below it, the lead
+            story started 430px down — 35% of a 1230px screen, and 54% of an
+            800px laptop, spent on furniture before any news. A nameplate should
+            establish the paper, not hold the front page below the fold, so the
+            wordmark ceiling comes down from 5rem to 3.5rem and the vertical
+            padding roughly halves. It still reads as a broadsheet masthead; it
+            just stops charging the reader a screenful for the privilege. */}
+        <div className="grid items-center gap-4 py-3.5 sm:py-4 lg:grid-cols-[1fr_auto_1fr]">
           {/* Balances the search field in the third column, so the wordmark
               stays optically centred rather than merely centred in its cell. */}
           <BrandBanner className="hidden lg:block" />
@@ -136,7 +144,7 @@ export function Masthead({
             <h1 className="leading-[0.9]">
               <span
                 className={cn(
-                  "block text-[clamp(2.5rem,9vw,5rem)] font-black tracking-[-0.035em] text-ink",
+                  "block text-[clamp(2rem,6.5vw,3.5rem)] font-black tracking-[-0.035em] text-ink",
                   isNp ? "font-np" : "font-display-soft",
                 )}
               >
@@ -144,7 +152,7 @@ export function Masthead({
               </span>
               <span
                 className={cn(
-                  "mt-1.5 block text-[clamp(0.95rem,3vw,1.35rem)] font-semibold tracking-tight text-red",
+                  "mt-1 block text-[clamp(0.85rem,2.4vw,1.1rem)] font-semibold tracking-tight text-red",
                   isNp ? "font-display" : "font-np",
                 )}
               >
@@ -154,7 +162,7 @@ export function Masthead({
 
             {/* Rule-and-tagline device — the line breaking around the text is a
                 broadsheet convention that costs nothing and reads as considered. */}
-            <div className="mt-4 flex items-center justify-center gap-3">
+            <div className="mt-2.5 flex items-center justify-center gap-3">
               <span className="h-px w-8 bg-rule-strong sm:w-14" />
               <p
                 className={cn(

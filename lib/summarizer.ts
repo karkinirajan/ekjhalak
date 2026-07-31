@@ -29,8 +29,23 @@ function normalizeText(text: string): string {
     .replace(/[ \t]{2,}/g, " ");
 }
 
+/**
+ * Publisher chrome that survives into a length-valid summary.
+ *
+ * `feed-normalizer` strips the common cases at ingestion, but a length check
+ * alone will happily wave through 400 characters of subscription pitch — which
+ * is exactly what used to happen for 26 of 475 live stories. Treating these as
+ * unacceptable routes them to the model for a real rewrite instead.
+ */
+const BOILERPLATE = /unlock these with subscription|subscription benefits|already a subscriber|to continue reading|sign up (?:to|for) (?:our|the)|all rights reserved/i;
+
+export function looksLikeBoilerplate(text: string): boolean {
+  return BOILERPLATE.test(text);
+}
+
 export function isSummaryAcceptable(text: string): boolean {
   const cleaned = normalizeText(text);
+  if (BOILERPLATE.test(cleaned)) return false;
   return (
     cleaned.length >= SUMMARY_MIN_CHARS && cleaned.length <= SUMMARY_MAX_CHARS
   );

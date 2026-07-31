@@ -47,9 +47,9 @@ export function BreakingTicker({ items, fetchedAt }: BreakingTickerProps) {
   const headlines = items.slice(0, 8);
 
   return (
-    <div className="relative z-40 flex w-full items-stretch overflow-hidden bg-red text-white">
+    <div className="relative z-40 flex w-full items-stretch overflow-hidden bg-red-solid text-white">
       {/* Label block — stays pinned while headlines scroll past it */}
-      <div className="relative z-10 flex shrink-0 items-center gap-2 bg-red py-2 pr-4 pl-4 shadow-[8px_0_12px_-4px_var(--red)] sm:pl-6">
+      <div className="relative z-10 flex shrink-0 items-center gap-2 bg-red-solid py-2 pr-4 pl-4 shadow-[8px_0_12px_-4px_var(--red-solid)] sm:pl-6">
         <span className="relative flex h-2 w-2 text-white">
           <span className="pulse-dot absolute inline-flex h-full w-full" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
@@ -57,7 +57,7 @@ export function BreakingTicker({ items, fetchedAt }: BreakingTickerProps) {
         <span className="eyebrow font-semibold">{t.liveLabel}</span>
         {clock && (
           <span
-            className="eyebrow hidden tabular-nums opacity-80 sm:inline"
+            className="eyebrow hidden tabular-nums opacity-90 sm:inline"
             suppressHydrationWarning
           >
             {clock} NPT
@@ -99,8 +99,8 @@ export function BreakingTicker({ items, fetchedAt }: BreakingTickerProps) {
       </div>
 
       {/* Fetch time — the one number on this bar that is measured, not styled */}
-      <div className="hidden shrink-0 items-center bg-red pr-6 pl-4 shadow-[-8px_0_12px_-4px_var(--red)] lg:flex">
-        <span className="eyebrow tabular-nums opacity-80" suppressHydrationWarning>
+      <div className="hidden shrink-0 items-center bg-red-solid pr-6 pl-4 shadow-[-8px_0_12px_-4px_var(--red-solid)] lg:flex">
+        <span className="eyebrow tabular-nums opacity-90" suppressHydrationWarning>
           {t.updatedAt}{" "}
           {new Date(fetchedAt).toLocaleTimeString(
             language === "np" ? "ne-NP" : "en-GB",

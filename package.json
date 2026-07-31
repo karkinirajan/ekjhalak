@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
-    "verify": "pnpm run lint && pnpm run typecheck && pnpm run build"
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "verify": "pnpm run lint && pnpm run typecheck && pnpm run check:contrast && pnpm run build"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

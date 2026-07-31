@@ -10,7 +10,7 @@ export default function Loading() {
   return (
     <div className="min-h-screen bg-canvas">
       {/* Ticker */}
-      <div className="h-9 w-full bg-red opacity-90" />
+      <div className="h-9 w-full bg-red-solid opacity-90" />
 
       {/* Masthead */}
       <header className="border-b border-rule">

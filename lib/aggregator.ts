@@ -11,6 +11,7 @@ import { deduplicate } from "./deduplicator";
 import {
   summarize,
   isSummaryAcceptable,
+  looksLikeBoilerplate,
   hardTruncateSummary,
   SUMMARY_MAX_CHARS,
 } from "./summarizer";
@@ -126,7 +127,14 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
     }
 
     // Last-line-of-defense: never let the UI render a raw RSS body.
-    item.summary = hardTruncateSummary(item.summary, SUMMARY_MAX_CHARS);
+    //
+    // Truncating publisher chrome just yields shorter publisher chrome, so if
+    // the model could not turn it into news, drop it. The card renders headline
+    // only, which is the honest outcome — a story we have no summary for is
+    // better shown as a headline than as somebody's subscription pitch.
+    item.summary = looksLikeBoilerplate(item.summary)
+      ? ""
+      : hardTruncateSummary(item.summary, SUMMARY_MAX_CHARS);
   }
 
   return { items: deduped, sourceStatuses, fetchedAt };

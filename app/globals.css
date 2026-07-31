@@ -40,10 +40,12 @@
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);
   --color-red: var(--red);
+  --color-red-solid: var(--red-solid);
   --color-red-soft: var(--red-soft);
   --color-green: var(--green);
   --color-green-soft: var(--green-soft);
   --color-pitch: var(--pitch);
+  --color-topic-ink: var(--topic-ink);
 
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
@@ -87,7 +89,7 @@
   --card-foreground: var(--ink);
   --popover: var(--surface);
   --popover-foreground: var(--ink);
-  --primary: var(--red);
+  --primary: var(--red-solid);
   --primary-foreground: #ffffff;
   --secondary: var(--raised);
   --secondary-foreground: var(--ink);
@@ -95,7 +97,7 @@
   --muted-foreground: var(--ink-muted);
   --accent: var(--raised);
   --accent-foreground: var(--ink);
-  --destructive: var(--red);
+  --destructive: var(--red-solid);
   --border: var(--rule);
   --input: var(--rule-strong);
   --ring: var(--red);
@@ -128,11 +130,27 @@
   --rule: #26262a;
   --rule-strong: #3a3a40;
 
-  /* Both cleared 4.5:1 on --surface before use. */
-  --red: #e5484d;
+  /* --red and --green are *ink*: they carry text and rules on the dark stock.
+     --red is one step brighter than it was (#e5484d) — see the note on
+     --topic-politics below, which is the same value and the reason it moved.
+
+     --red-solid is the *fill* for red surfaces that carry white text — the
+     ticker, the Subscribe button, the newsletter submit. It has to be darker
+     than --red because white on the ink red is only 3.91:1. At #d13c41 white
+     clears 4.74:1 and the fill still reads 4.18:1 against the canvas, so the
+     button keeps its edge. Same red, one stop down; not a second red. */
+  --red: #e85c61;
+  --red-solid: #d13c41;
   --red-soft: #2a1214;
   --green: #3fb950;
   --green-soft: #102514;
+
+  /* The foreground for anything filled with a topic colour. On the dark stock
+     every topic is a bright tint, so the only text that survives on top of it
+     is near-black — white ran 1.73:1 on culture and 1.93:1 on sports. Against
+     the darkest topic (world, #d0555a) this clears 4.83:1; against the
+     lightest (culture) 11.43:1. */
+  --topic-ink: #0a0a0b;
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px rgb(0 0 0 / 0.45);
   --shadow-lift: 0 4px 10px rgb(0 0 0 / 0.55), 0 24px 48px rgb(0 0 0 / 0.6);
@@ -141,10 +159,18 @@
        red   — urgent or contested
        green — measured, material, played or grown
        grey  — reflective
-     Each group has a brighter member so the lead beat still separates. */
+     Each group has a brighter member so the lead beat still separates.
+
+     politics and world are each one step brighter than they were (#e5484d and
+     #d0555a). The quiet pill sets topic-coloured text on a 13% wash of that
+     same topic, so the background it is actually read against is lighter than
+     --surface — measuring against --surface alone flattered these two into
+     4.70 and 4.49 when the real figures were 4.14 and 3.97. The nudge is the
+     smallest one that clears 4.5 on the composited background; the hue ratios
+     are untouched, so both are still the same red. */
   --topic-breaking: #ff5a5f;
-  --topic-politics: #e5484d;
-  --topic-world: #d0555a;
+  --topic-politics: #e85c61;
+  --topic-world: #d66a6f;
   --topic-business: #3fb950;
   --topic-sports: #56d364;
   --topic-health: #4ac35b;
@@ -179,27 +205,44 @@
   --rule: #e2e2de;
   --rule-strong: #c6c6c0;
 
-  --red: #d11f26;
+  /* One step darker than it was (#d11f26) — same reason as the dark theme's
+     red, mirrored: see the note on --topic-politics below. */
+  --red: #bd1c22;
+  /* On paper the ink red is already dark enough to carry white — 6.26:1 — so
+     fill and ink are the same value here. The token still exists so components
+     never branch on theme. */
+  --red-solid: #bd1c22;
   --red-soft: #fdecec;
   --green: #1a7f37;
   --green-soft: #e7f4ea;
+
+  /* Mirror of the dark theme: every topic here is a dark tint, so white is the
+     foreground that survives. Minimum is business at 5.08:1. */
+  --topic-ink: #ffffff;
 
   --shadow-card: 0 1px 2px rgb(16 16 17 / 0.05), 0 8px 24px rgb(16 16 17 / 0.06);
   --shadow-lift: 0 4px 10px rgb(16 16 17 / 0.08), 0 24px 48px rgb(16 16 17 / 0.12);
 
   /* Same three groups, same ordering within each group — darkened for paper.
-     All eleven verified past 4.5:1 on --surface. */
+
+     politics, business, health and opinion are each one step darker than they
+     were (#d11f26, #1a7f37, #1f7a45, #6a6a72). The quiet pill reads its text
+     against a 13% wash of its own topic rather than against bare --surface, and
+     on that composited background those four measured 3.97, 3.94, 4.12 and
+     4.18. Mirror of the correction applied to the dark theme, and the same
+     minimal, hue-preserving step. All eleven now clear 4.5:1 both as text on
+     the tint and as --topic-ink on the solid fill. */
   --topic-breaking: #c2131a;
-  --topic-politics: #d11f26;
+  --topic-politics: #bd1c22;
   --topic-world: #a83238;
-  --topic-business: #1a7f37;
+  --topic-business: #177131;
   --topic-sports: #14682f;
-  --topic-health: #1f7a45;
+  --topic-health: #1d703f;
   --topic-environment: #116b31;
   --topic-culture: #4b4b52;
   --topic-technology: #5c5c63;
   --topic-society: #52525a;
-  --topic-opinion: #6a6a72;
+  --topic-opinion: #626269;
 }
 
 /* ── Topic binding ─────────────────────────────────────────────────────────
@@ -335,36 +378,61 @@
   /* Mixed up from --raised, not from black. Four of the eleven topics are grey,
      and a grey tint over black is just black — those cards were rendering as
      holes in the grid. Starting from the raised step guarantees every card has
-     a floor of visible tone whatever hue it carries. */
+     a floor of visible tone whatever hue it carries.
+
+     The mix runs at 55% rather than 30%. At 30% the four grey topics — culture,
+     technology, society, opinion — landed within about 2:1 of the card they sat
+     on, so half a photo-less grid read as broken images rather than as art.
+     Since 51% of stories ship no photograph, this is the common case, not the
+     edge case. 55% separates every topic from the card while still reading as a
+     tint of the stock rather than a flat colour swatch. */
   .cover-art {
     background-color: color-mix(
       in oklab,
-      var(--topic, var(--red)) 30%,
+      var(--topic, var(--red)) 55%,
       var(--raised)
     );
     background-image:
       radial-gradient(
         circle at 20% 16%,
-        color-mix(in oklab, var(--topic, var(--red)) 55%, transparent),
+        color-mix(in oklab, var(--topic, var(--red)) 62%, transparent),
         transparent 62%
       ),
       radial-gradient(
         circle at 84% 82%,
-        color-mix(in oklab, var(--topic, var(--red)) 32%, transparent),
+        color-mix(in oklab, var(--topic, var(--red)) 38%, transparent),
         transparent 66%
       ),
       linear-gradient(
         142deg,
-        color-mix(in oklab, var(--topic, var(--red)) 34%, var(--raised)),
-        color-mix(in oklab, var(--topic, var(--red)) 10%, var(--raised))
+        color-mix(in oklab, var(--topic, var(--red)) 58%, var(--raised)),
+        color-mix(in oklab, var(--topic, var(--red)) 26%, var(--raised))
       );
   }
 
-  /* Knocked out in black rather than tinted — a lighter glyph on a dark card
-     competes with the headline sitting directly beneath it. */
+  /* Knocked out in the same near-black the solid pills use, so the glyph is
+     legible against every topic in both themes rather than only the dark one. */
   .cover-glyph {
-    color: var(--pitch);
-    opacity: 0.42;
+    color: var(--topic-ink);
+    opacity: 0.5;
+  }
+
+  /* ── Focus ─────────────────────────────────────────────────────────────────
+     Each story's headline button stretches an ::after overlay across its whole
+     article, so the card is the hit target. That overlay is therefore also
+     where the focus ring belongs: an outline on the button itself traces the
+     wrapped headline text, not the card the reader is actually selecting.
+
+     Previously these buttons carried `focus-visible:outline-none` with nothing
+     replacing it, which left all 22 story controls on the page with no visible
+     focus at all. */
+  .card-focus:focus-visible {
+    outline: none;
+  }
+  .card-focus:focus-visible::after {
+    outline: 2px solid var(--red);
+    outline-offset: 3px;
+    border-radius: var(--radius);
   }
 
   /* Diagonal hatch over hero photography so white headlines stay legible

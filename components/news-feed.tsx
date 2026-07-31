@@ -72,9 +72,11 @@ function GridSkeleton() {
 
 interface NewsFeedProps {
   initialData: NewsFeedResponse;
+  /** How many stories to request on refresh — matches the server's payload cap */
+  limit?: number;
 }
 
-export function NewsFeed({ initialData }: NewsFeedProps) {
+export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
   const { t, language } = useTheme();
   const isNp = language === "np";
 
@@ -94,23 +96,28 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
   const latestRef = useRef<HTMLDivElement>(null);
   const newsletterRef = useRef<HTMLDivElement>(null);
 
-  const fetchFeed = useCallback(async (isBackground = false) => {
-    if (!isBackground) setLoadState("refreshing");
-    try {
-      const res = await fetch("/api/news?range=month&bucket=all&limit=500", {
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: NewsFeedResponse = await res.json();
-      setItems(data.items);
-      setMeta(data.meta);
-      setLoadState("idle");
-    } catch (err) {
-      console.error("[feed] refresh error:", err);
-      // Keep whatever is already on screen — a stale story beats an error page.
-      setLoadState((current) => (current === "refreshing" ? "error" : current));
-    }
-  }, []);
+  const fetchFeed = useCallback(
+    async (isBackground = false) => {
+      if (!isBackground) setLoadState("refreshing");
+      try {
+        const res = await fetch(
+          `/api/news?range=month&bucket=all&limit=${limit}`,
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: NewsFeedResponse = await res.json();
+        setItems(data.items);
+        setMeta(data.meta);
+        setLoadState("idle");
+      } catch (err) {
+        console.error("[feed] refresh error:", err);
+        // Keep whatever is already on screen — a stale story beats an error page.
+        setLoadState((current) =>
+          current === "refreshing" ? "error" : current,
+        );
+      }
+    },
+    [limit],
+  );
 
   useEffect(() => {
     // Server render produced nothing (feed was cold or the aggregator failed) —
@@ -122,10 +129,32 @@ export function NewsFeed({ initialData }: NewsFeedProps) {
     }
   }, [fetchFeed, initialData.items.length]);
 
+  // Background refresh, with two things it deliberately will not do.
+  //
+  // It will not fire while a story is open. Replacing `items` re-runs every
+  // ranking selection, so the hero, the grid, the trending rail and the current
+  // page all change at once — and that was happening underneath readers with the
+  // panel open, which meant coming back from a story to a page that no longer
+  // held the story you came from.
+  //
+  // It will not fire in a backgrounded tab either. A tab left open all day was
+  // pulling the feed every three minutes whether or not anyone was looking at
+  // it. On becoming visible again it refreshes once, immediately, so returning
+  // to the tab still shows current news rather than whatever was there at lunch.
   useEffect(() => {
-    const id = setInterval(() => fetchFeed(true), REFRESH_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [fetchFeed]);
+    if (readerOpen) return;
+
+    const tick = () => {
+      if (document.visibilityState === "visible") void fetchFeed(true);
+    };
+
+    const id = setInterval(tick, REFRESH_INTERVAL_MS);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [fetchFeed, readerOpen]);
 
   // Every filter change returns to page 1. Done in the setters rather than an
   // effect on [range, bucket, topic, search]: the reset is a direct consequence

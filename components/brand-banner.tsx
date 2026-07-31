@@ -1,44 +1,36 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The nameplate banner — a 1:2 plate that sits beside the wordmark.
+ * The masthead mark — the Himalaya and the world standing on the same horizon
+ * with the day's dispatches stacked between them, which is the masthead promise
+ * drawn rather than written.
  *
- * Two bands sharing one rule. Above it, the mark: the Himalaya and the world
- * standing on the same horizon with the day's dispatches stacked between them,
- * which is the masthead promise drawn rather than written. Below it, the brand
- * lockup in both scripts.
+ * It used to carry the brand lockup underneath, set on a bordered plate. That
+ * printed "EkJhalak / एक झलक" a second time, roughly 400px to the left of the
+ * <h1> saying exactly the same two words at five times the size — a nameplate
+ * with the paper's name on it twice reads as a mistake, not as a device. The
+ * type came out; the drawing stayed, because the drawing is the part that says
+ * something the wordmark cannot.
  *
- * Inline SVG rather than a file in /public so it draws from the design tokens
- * and the loaded typefaces: the flag and the lit summit are `--red`, the globe
- * is `--green`, the name is set in the same Fraunces and Mukta as the page. If
- * the palette or the type stack moves, the banner moves with it.
+ * Losing the plate also lost the border, which was the other problem: a filled,
+ * stroked rectangle in the middle of a broadsheet masthead reads as a UI card
+ * sitting on the page rather than as ink printed into it.
  *
- * Both scripts appear regardless of the reader's language, because a bilingual
- * paper's nameplate is the one place that should always show it is bilingual.
+ * Inline SVG rather than a file in /public so it draws from the design tokens:
+ * the flag and the lit summit are `--red`, the globe is `--green`. If the
+ * palette moves, the mark moves with it.
  *
- * Hidden from assistive tech: the <h1> wordmark immediately beside it already
- * carries the same two names as text, and a second reading is noise.
+ * Hidden from assistive tech: it is a drawing of what the <h1> beside it
+ * already says.
  */
 export function BrandBanner({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 480 240"
+      viewBox="24 24 432 90"
       aria-hidden="true"
       focusable="false"
-      className={cn("h-24 w-48 xl:h-28 xl:w-56", className)}
+      className={cn("h-16 w-auto xl:h-[4.5rem]", className)}
     >
-      {/* Plate. One step lighter than the canvas so it reads as mounted stock. */}
-      <rect
-        x="1"
-        y="1"
-        width="478"
-        height="238"
-        rx="18"
-        fill="var(--surface)"
-        stroke="var(--rule)"
-        strokeWidth="2"
-      />
-
       {/* ── Mark ─────────────────────────────────────────────────────────── */}
 
       {/* Masthead flag — the coloured bar a paper puts beside its nameplate. */}
@@ -112,34 +104,6 @@ export function BrandBanner({ className }: { className?: string }) {
           opacity="0.65"
         />
       </g>
-
-      {/* ── Lockup ───────────────────────────────────────────────────────── */}
-
-      <text
-        x="240"
-        y="176"
-        textAnchor="middle"
-        fill="var(--ink)"
-        fontFamily='var(--font-display), Georgia, "Times New Roman", serif'
-        fontSize="52"
-        fontWeight="900"
-        letterSpacing="-1.8"
-        style={{ fontVariationSettings: '"SOFT" 80, "WONK" 0, "opsz" 90' }}
-      >
-        EkJhalak
-      </text>
-
-      <text
-        x="240"
-        y="208"
-        textAnchor="middle"
-        fill="var(--red)"
-        fontFamily='var(--font-devanagari), "Noto Sans Devanagari", sans-serif'
-        fontSize="24"
-        fontWeight="600"
-      >
-        एक झलक
-      </text>
     </svg>
   );
 }

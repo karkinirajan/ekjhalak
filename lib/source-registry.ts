@@ -98,12 +98,12 @@ export const SOURCES: Source[] = [
     country: "NP",
     language: "en",
     categories: ["national", "politics", "business", "society"],
-    rssUrl: "https://myrepublica.nagariknetwork.com/feed/",
+    rssUrl: null,
     homepageUrl: "https://myrepublica.nagariknetwork.com",
     priority: 9,
-    active: true,
+    active: false,
     credibilityScore: 8,
-    note: "Leading Nepal English daily",
+    note: "Leading Nepal English daily. Feed retired: /feed/ returned 403 in production and 404 on direct probe (2026-07-31); /rss and /news/feed/ are also 404. Re-enable if the outlet publishes a new endpoint.",
   },
   {
     id: "himalayan-times",
@@ -112,12 +112,12 @@ export const SOURCES: Source[] = [
     country: "NP",
     language: "en",
     categories: ["national", "politics", "business"],
-    rssUrl: "https://thehimalayantimes.com/feed/",
+    rssUrl: null,
     homepageUrl: "https://thehimalayantimes.com",
     priority: 8,
-    active: true,
+    active: false,
     credibilityScore: 7,
-    note: "Nepali English broadsheet",
+    note: "Nepali English broadsheet. Feed retired: /feed/ is 404 (2026-07-31), and /rss returns an HTML landing page rather than XML. Re-enable if a real feed reappears.",
   },
   {
     id: "setopati-english",
@@ -126,12 +126,12 @@ export const SOURCES: Source[] = [
     country: "NP",
     language: "en",
     categories: ["national", "politics", "society"],
-    rssUrl: "https://en.setopati.com/feed/",
+    rssUrl: null,
     homepageUrl: "https://en.setopati.com",
     priority: 7,
-    active: true,
+    active: false,
     credibilityScore: 7,
-    note: "Top digital-native news in English",
+    note: "Top digital-native news in English. Feed retired: /feed/ returns 500 and /rss is 404 (2026-07-31). The outlet is still represented by the `setopati` Nepali feed below, which is healthy.",
   },
   {
     id: "setopati",
@@ -455,6 +455,13 @@ export const SOURCES: Source[] = [
     priority: 8,
     active: true,
     credibilityScore: 7,
+    // Left active deliberately. This feed reported "fetch failed" during the
+    // 2026-07-31 audit, but the entire indiatimes.com domain — homepage
+    // included — timed out from that network while every other source resolved
+    // normally. That is a egress block on the auditing host, not evidence the
+    // feed is gone, and deactivating a working source on that basis would be
+    // the worse error. Check sourceStatuses from a production deploy before
+    // concluding otherwise.
     note: "India's largest paper",
   },
   {
@@ -506,14 +513,14 @@ export const SOURCES: Source[] = [
     country: "US",
     language: "en",
     categories: ["world", "politics", "breaking"],
-    rssUrl: "https://rss.cnn.com/rss/edition_world.rss",
+    rssUrl: null,
     homepageUrl: "https://www.cnn.com",
     priority: 8,
-    active: true,
+    active: false,
     // CNN RSS includes sponsored/ad content; only keep real CNN articles
     urlPrefix: "https://www.cnn.com/",
     credibilityScore: 7,
-    note: "US breaking news",
+    note: "US breaking news. Feed retired: rss.cnn.com fails the TLS handshake outright and every alternate path (edition.cnn.com, www.cnn.com) is 404 (2026-07-31). CNN has withdrawn public RSS.",
   },
   {
     id: "south-china-morning-post",
