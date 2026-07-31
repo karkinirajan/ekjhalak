@@ -11,9 +11,10 @@ type SubmitState = "idle" | "sending" | "done" | "invalid" | "closed" | "failed"
 /**
  * Newsletter conversion band.
  *
- * A solid black field bordered off from the canvas, carrying the only place on
- * the page where both accent colours appear at once — so it reads as an offer
- * rather than as another article.
+ * A solid field bordered off from the canvas — the step furthest from the type
+ * in either theme, so it is the blackest panel on Press Night and the whitest
+ * on Press Day. It carries the only place on the page where both accent colours
+ * appear at once, which is what marks it as an offer rather than an article.
  *
  * The success state only appears when the API confirms the address reached a
  * real provider. Without one configured the reader is told signups aren't open,
@@ -78,7 +79,7 @@ export function NewsletterCta() {
         className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage:
-            "radial-gradient(ellipse 70% 90% at 8% 0%, rgb(229 72 77 / 0.30), transparent 62%), radial-gradient(ellipse 60% 80% at 96% 100%, rgb(63 185 80 / 0.18), transparent 60%)",
+            "radial-gradient(ellipse 70% 90% at 8% 0%, color-mix(in oklab, var(--red) 30%, transparent), transparent 62%), radial-gradient(ellipse 60% 80% at 96% 100%, color-mix(in oklab, var(--green) 18%, transparent), transparent 60%)",
         }}
       />
 
@@ -90,7 +91,7 @@ export function NewsletterCta() {
 
         <h2
           className={cn(
-            "headline mt-5 text-[clamp(1.6rem,4.5vw,2.6rem)] font-bold tracking-tight text-white",
+            "headline mt-5 text-[clamp(1.6rem,4.5vw,2.6rem)] font-bold tracking-tight text-ink",
             isNp ? "font-np leading-snug" : "font-display leading-[1.12]",
           )}
         >

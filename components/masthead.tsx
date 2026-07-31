@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
-import { Languages, RefreshCw, Search } from "lucide-react";
+import { Languages, MoonStar, RefreshCw, Search, Sun } from "lucide-react";
 import { BrandBanner } from "@/components/brand-banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ export function Masthead({
   isRefreshing,
   onSubscribe,
 }: MastheadProps) {
-  const { t, language, toggleLanguage } = useTheme();
+  const { t, language, toggleLanguage, themeMode, toggleTheme } = useTheme();
   const [dateline, setDateline] = useState<string | null>(null);
 
   // Rendered client-side only: the date depends on the reader's calendar
@@ -81,6 +81,20 @@ export function Masthead({
                 className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
                 aria-hidden="true"
               />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={toggleTheme}
+              aria-label={themeMode === "dark" ? t.themeLight : t.themeDark}
+              className="rounded-full text-ink-muted hover:text-ink"
+            >
+              {themeMode === "dark" ? (
+                <Sun className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <MoonStar className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
             </Button>
 
             <Button
