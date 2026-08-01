@@ -65,7 +65,7 @@ export function StoryCard({
         data-topic={item.topic}
         className="group relative border-l border-transparent py-3 pl-0 transition-all duration-200 hover:border-(--topic) hover:bg-raised/40"
       >
-        <div className="mb-4 overflow-hidden rounded-[1.25rem] border border-rule/70 bg-raised/50 shadow-[0_18px_50px_-18px_rgba(0,0,0,0.28)]">
+        <div className="mb-4 overflow-hidden rounded-md border border-rule/70 bg-raised/50 shadow-[0_18px_50px_-18px_rgba(0,0,0,0.28)]">
           <StoryImage
             src={item.imageUrl}
             alt={title}
@@ -129,7 +129,7 @@ export function StoryCard({
         className="group relative border-l border-transparent py-3 pl-4 transition-all duration-200 hover:border-(--topic) hover:bg-raised/40"
       >
         <div className="mb-3 flex flex-col gap-3 sm:flex-row">
-          <div className="h-24 w-full shrink-0 overflow-hidden rounded-xl border border-rule/70 bg-raised/50 sm:h-20 sm:w-24">
+          <div className="h-24 w-full shrink-0 overflow-hidden rounded-sm border border-rule/70 bg-raised/50 sm:h-20 sm:w-24">
             <StoryImage
               src={item.imageUrl}
               alt={title}
@@ -176,7 +176,7 @@ export function StoryCard({
   if (variant === "compact") {
     return (
       <article data-topic={item.topic} className="group flex gap-3.5 py-1">
-        <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg border border-rule/70 bg-raised/50 shadow-[0_10px_22px_-16px_rgba(0,0,0,0.22)]">
+        <div className="h-14 w-20 shrink-0 overflow-hidden rounded-sm border border-rule/70 bg-raised/50 shadow-[0_10px_22px_-16px_rgba(0,0,0,0.22)]">
           <StoryImage
             src={item.imageUrl}
             alt={title}
@@ -229,7 +229,7 @@ export function StoryCard({
       data-topic={item.topic}
       className="group relative border-l border-transparent py-3 pl-4 transition-all duration-200 hover:border-(--topic) hover:bg-raised/40"
     >
-      <div className="mb-3 overflow-hidden rounded-[1.1rem] border border-rule/70 bg-raised/50 shadow-[0_14px_34px_-20px_rgba(0,0,0,0.28)]">
+      <div className="mb-3 overflow-hidden rounded-md border border-rule/70 bg-raised/50 shadow-[0_14px_34px_-20px_rgba(0,0,0,0.28)]">
         <StoryImage
           src={item.imageUrl}
           alt={title}
