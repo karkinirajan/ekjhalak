@@ -23,7 +23,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
 
   return (
     <footer className="mt-20 border-t border-rule bg-pitch text-ink-soft">
-      <div className="mx-auto w-full max-w-[1400px] px-4 py-14 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[720px] px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr]">
           {/* Brand + about */}
           <div className="max-w-sm">

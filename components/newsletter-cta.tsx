@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 
-type SubmitState = "idle" | "sending" | "done" | "invalid" | "closed" | "failed";
+type SubmitState =
+  | "idle"
+  | "sending"
+  | "done"
+  | "invalid"
+  | "closed"
+  | "failed";
 
 /**
  * Newsletter conversion band.
@@ -70,7 +76,7 @@ export function NewsletterCta() {
   return (
     <section
       aria-label={t.newsletterTitle}
-      className="relative isolate overflow-hidden rounded-lg border border-rule-strong bg-pitch px-6 py-12 sm:px-12 sm:py-16"
+      className="relative isolate overflow-hidden border border-rule bg-surface px-6 py-12 sm:px-10 sm:py-14"
     >
       {/* Ambient wash — red in one corner, green in the other. The only place
           the two accents meet, which is what marks this band as the offer. */}
@@ -156,10 +162,7 @@ export function NewsletterCta() {
               <p
                 id="newsletter-message"
                 role="alert"
-                className={cn(
-                  "mt-3 text-sm text-red",
-                  isNp && "font-np",
-                )}
+                className={cn("mt-3 text-sm text-red", isNp && "font-np")}
               >
                 {message}
               </p>

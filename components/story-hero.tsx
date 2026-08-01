@@ -26,16 +26,16 @@ export function StoryHero({ lead, side, onOpen }: StoryHeroProps) {
   if (!lead) return null;
 
   return (
-    <section aria-label={t.leadStory} className="grid gap-6 lg:grid-cols-3">
-      <Reveal className="lg:col-span-2">
+    <section aria-label={t.leadStory} className="space-y-8">
+      <Reveal>
         <StoryCard item={lead} variant="lead" onOpen={onOpen} />
       </Reveal>
 
       {side.length > 0 && (
-        <Reveal delay={90} className="flex flex-col">
+        <Reveal delay={90} className="space-y-3">
           <h2
             className={cn(
-              "eyebrow mb-4 flex items-center gap-3 text-ink-muted",
+              "eyebrow flex items-center gap-3 text-ink-muted",
               isNp && "font-np tracking-normal",
             )}
           >
@@ -43,7 +43,7 @@ export function StoryHero({ lead, side, onOpen }: StoryHeroProps) {
             <span className="h-px flex-1 bg-rule" />
           </h2>
 
-          <div className="flex flex-col gap-4">
+          <div className="space-y-2">
             {side.map((item) => (
               <StoryCard
                 key={item.id}

@@ -23,15 +23,9 @@ import { SiteFooter } from "@/components/site-footer";
 import { StoryCard } from "@/components/story-card";
 import { StoryHero } from "@/components/story-hero";
 import { StoryReader } from "@/components/story-reader";
-import { TrendingRail } from "@/components/trending-rail";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
-import {
-  diversifyBySource,
-  selectHero,
-  selectTicker,
-  selectTrending,
-} from "@/lib/ranking";
+import { diversifyBySource, selectHero, selectTicker } from "@/lib/ranking";
 import type { TopicId } from "@/lib/taxonomy";
 import type { NewsItem, NewsFeedResponse, RangeKey } from "@/lib/news-pipeline";
 
@@ -46,12 +40,38 @@ const RANGE_CUTOFFS: Record<RangeKey, number> = {
 
 type LoadState = "idle" | "refreshing" | "error";
 
+function ReadingProgress() {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const update = () => {
+      const scrollTop = window.scrollY;
+      const height = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(height > 0 ? (scrollTop / height) * 100 : 0);
+    };
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 h-1 bg-transparent">
+      <div
+        className="h-full rounded-full bg-red transition-[width] duration-150"
+        style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+      />
+    </div>
+  );
+}
+
 function GridSkeleton() {
   return (
-    <div
-      className="grid gap-6 sm:grid-cols-2"
-      aria-hidden="true"
-    >
+    <div className="grid gap-6 sm:grid-cols-2" aria-hidden="true">
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
@@ -247,15 +267,6 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
     [filteredItems, referenceTime],
   );
 
-  const trending = useMemo(() => {
-    const shown = new Set<string>(
-      [lead, ...side].filter((item): item is NewsItem => Boolean(item)).map((item) => item.id),
-    );
-    // The rail always ranks across the whole scoped pool, not the topic-filtered
-    // slice — otherwise picking "Sports" makes "most covered" mean nothing.
-    return selectTrending(scopedItems, shown, 6, referenceTime);
-  }, [scopedItems, lead, side, referenceTime]);
-
   const tickerItems = useMemo(
     () => selectTicker(items, 8, referenceTime),
     [items, referenceTime],
@@ -296,6 +307,7 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
   return (
     <FeedClockProvider value={referenceTime}>
       <div className="min-h-screen bg-canvas">
+        <ReadingProgress />
         <BreakingTicker items={tickerItems} fetchedAt={meta?.fetchedAt ?? 0} />
 
         <Masthead
@@ -323,7 +335,7 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
           resultCount={filteredItems.length}
         />
 
-        <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className="mx-auto w-full max-w-[720px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           {showSkeleton && <GridSkeleton />}
 
           {!hasData && loadState === "error" && (
@@ -372,47 +384,42 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
                 </div>
               )}
 
-              {/* ── Latest grid + trending rail ──────────────────────────── */}
               {rest.length > 0 && (
-                <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
-                  <section aria-label={t.latestSection}>
-                    <div
-                      ref={latestRef}
-                      className="mb-6 flex scroll-mt-32 items-center gap-4"
+                <section aria-label={t.latestSection} className="space-y-6">
+                  <div
+                    ref={latestRef}
+                    className="flex scroll-mt-32 items-center gap-4"
+                  >
+                    <h2
+                      className={cn(
+                        "text-2xl font-semibold tracking-tight text-ink",
+                        isNp ? "font-np" : "font-display",
+                      )}
                     >
-                      <h2
-                        className={cn(
-                          "text-2xl font-bold tracking-tight text-ink",
-                          isNp ? "font-np" : "font-display",
-                        )}
-                      >
-                        {t.latestSection}
-                      </h2>
-                      <span className="h-px flex-1 bg-rule" />
-                      <span className="eyebrow tabular-nums text-ink-muted">
-                        {rest.length}
-                      </span>
-                    </div>
+                      {t.latestSection}
+                    </h2>
+                    <span className="h-px flex-1 bg-rule" />
+                    <span className="eyebrow tabular-nums text-ink-muted">
+                      {rest.length}
+                    </span>
+                  </div>
 
-                    <div className="grid gap-6 sm:grid-cols-2">
-                      {pagedItems.map((item, index) => (
-                        <Reveal key={item.id} delay={Math.min(index, 5) * 60}>
-                          <StoryCard item={item} onOpen={openStory} />
-                        </Reveal>
-                      ))}
-                    </div>
+                  <div className="space-y-1">
+                    {pagedItems.map((item, index) => (
+                      <Reveal key={item.id} delay={Math.min(index, 5) * 60}>
+                        <StoryCard item={item} onOpen={openStory} />
+                      </Reveal>
+                    ))}
+                  </div>
 
-                    <div className="mt-8">
-                      <PaginationBar
-                        page={safePage}
-                        totalPages={totalPages}
-                        onPageChange={handlePageChange}
-                      />
-                    </div>
-                  </section>
-
-                  <TrendingRail items={trending} onOpen={openStory} />
-                </div>
+                  <div className="pt-2">
+                    <PaginationBar
+                      page={safePage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                    />
+                  </div>
+                </section>
               )}
 
               <div ref={newsletterRef} className="scroll-mt-32">
@@ -424,7 +431,10 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
           )}
         </div>
 
-        <SiteFooter sourceCount={sourceCount} onTopicSelect={handleFooterTopic} />
+        <SiteFooter
+          sourceCount={sourceCount}
+          onTopicSelect={handleFooterTopic}
+        />
 
         <StoryReader
           item={activeStory}

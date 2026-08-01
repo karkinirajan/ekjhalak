@@ -1,42 +1,35 @@
 import type { Metadata } from "next";
 import {
-  Fraunces,
   JetBrains_Mono,
-  Mukta,
-  Plus_Jakarta_Sans,
+  Merriweather,
+  Noto_Sans_Devanagari,
+  Space_Grotesk,
 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-// Body and interface. Plus Jakarta Sans has softly rounded terminals and a very
-// tall x-height, so summary copy stays legible at 15px where Inter's tighter,
-// squarer shapes start to grey out. Loaded variable: one file, every weight.
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-// English headlines. Fraunces is an editorial serif with a SOFT axis that
-// literally rounds its terminals and an optical-size axis that thickens the
-// hairlines as type gets smaller — so headlines keep publication authority
-// without Playfair's near-invisible thin strokes on a bright canvas.
-const fraunces = Fraunces({
+// English UI and headlines use Space Grotesk for a crisp modern voice.
+const spaceGrotesk = Space_Grotesk({
   variable: "--font-display",
   subsets: ["latin"],
-  style: ["normal", "italic"],
-  axes: ["SOFT", "WONK", "opsz"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-// Nepali headlines and body. Mukta is drawn for Devanagari first: open counters,
-// low stroke contrast, rounded terminals. It holds up far better than Noto at
-// headline sizes and matches Jakarta's weight on screen.
-const mukta = Mukta({
+// English body copy uses Merriweather for long-form readability.
+const merriweather = Merriweather({
+  variable: "--font-body",
+  subsets: ["latin"],
+  weight: ["300", "400", "700", "900"],
+  display: "swap",
+});
+
+// Nepali content uses the Devanagari-native Noto family.
+const notoDevanagari = Noto_Sans_Devanagari({
   variable: "--font-devanagari",
   subsets: ["devanagari", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -152,7 +145,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       data-theme="light"
-      className={`${jakarta.variable} ${fraunces.variable} ${mukta.variable} ${jetbrainsMono.variable}`}
+      className={`${spaceGrotesk.variable} ${merriweather.variable} ${notoDevanagari.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         {/* Lets the browser paint form controls and scrollbars to match
