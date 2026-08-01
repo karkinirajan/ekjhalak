@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { buildTopicFallbackImageDataUrl } from "@/lib/default-images";
+import { useMemo, useState } from "react";
+import { resolveStoryImageSource } from "@/lib/default-images";
 import { cn } from "@/lib/utils";
 import { type TopicId } from "@/lib/taxonomy";
 
@@ -31,27 +31,15 @@ export function StoryImage({
   priority = false,
 }: StoryImageProps) {
   const [failed, setFailed] = useState(false);
-  const showFallback = !src || failed;
-  const fallbackSrc = buildTopicFallbackImageDataUrl(topic);
-
-  if (showFallback) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- fallback art is generated locally and must remain an image element
-      <img
-        src={fallbackSrc}
-        alt={alt}
-        loading={priority ? "eager" : "lazy"}
-        fetchPriority={priority ? "high" : "auto"}
-        decoding="async"
-        className={cn("h-full w-full object-cover", className)}
-      />
-    );
-  }
+  const resolvedSrc = useMemo(() => {
+    if (failed) return resolveStoryImageSource(null, topic);
+    return resolveStoryImageSource(src, topic);
+  }, [failed, src, topic]);
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- arbitrary publisher CDNs; see note above
+    // eslint-disable-next-line @next/next/no-img-element -- arbitrary publisher CDNs and local fallback art both need direct image rendering
     <img
-      src={src}
+      src={resolvedSrc}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : "auto"}

@@ -306,6 +306,12 @@
     outline-offset: 2px;
   }
 
+  .card-focus:focus-visible {
+    outline: 2px solid var(--red);
+    outline-offset: 3px;
+    border-radius: 0.75rem;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     html {
       scroll-behavior: auto;
