@@ -23,9 +23,9 @@ interface StoryCardProps {
 }
 
 const SUMMARY_CHARS: Record<StoryVariant, number> = {
-  lead: 240,
-  side: 180,
-  grid: 220,
+  lead: 220,
+  side: 0,
+  grid: 150,
   compact: 0,
 };
 

@@ -23,9 +23,15 @@ import { SiteFooter } from "@/components/site-footer";
 import { StoryCard } from "@/components/story-card";
 import { StoryHero } from "@/components/story-hero";
 import { StoryReader } from "@/components/story-reader";
+import { TrendingRail } from "@/components/trending-rail";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
-import { diversifyBySource, selectHero, selectTicker } from "@/lib/ranking";
+import {
+  diversifyBySource,
+  selectHero,
+  selectTicker,
+  selectTrending,
+} from "@/lib/ranking";
 import type { TopicId } from "@/lib/taxonomy";
 import type { NewsItem, NewsFeedResponse, RangeKey } from "@/lib/news-pipeline";
 
@@ -267,6 +273,15 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
     [filteredItems, referenceTime],
   );
 
+  const trending = useMemo(() => {
+    const shown = new Set<string>(
+      [lead, ...side]
+        .filter((item): item is NewsItem => Boolean(item))
+        .map((item) => item.id),
+    );
+    return selectTrending(scopedItems, shown, 6, referenceTime);
+  }, [scopedItems, lead, side, referenceTime]);
+
   const tickerItems = useMemo(
     () => selectTicker(items, 8, referenceTime),
     [items, referenceTime],
@@ -335,7 +350,7 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
           resultCount={filteredItems.length}
         />
 
-        <div className="mx-auto w-full max-w-[720px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           {showSkeleton && <GridSkeleton />}
 
           {!hasData && loadState === "error" && (
@@ -385,41 +400,45 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
               )}
 
               {rest.length > 0 && (
-                <section aria-label={t.latestSection} className="space-y-6">
-                  <div
-                    ref={latestRef}
-                    className="flex scroll-mt-32 items-center gap-4"
-                  >
-                    <h2
-                      className={cn(
-                        "text-2xl font-semibold tracking-tight text-ink",
-                        isNp ? "font-np" : "font-display",
-                      )}
+                <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
+                  <section aria-label={t.latestSection}>
+                    <div
+                      ref={latestRef}
+                      className="mb-6 flex scroll-mt-32 items-center gap-4"
                     >
-                      {t.latestSection}
-                    </h2>
-                    <span className="h-px flex-1 bg-rule" />
-                    <span className="eyebrow tabular-nums text-ink-muted">
-                      {rest.length}
-                    </span>
-                  </div>
+                      <h2
+                        className={cn(
+                          "text-2xl font-semibold tracking-tight text-ink",
+                          isNp ? "font-np" : "font-display",
+                        )}
+                      >
+                        {t.latestSection}
+                      </h2>
+                      <span className="h-px flex-1 bg-rule" />
+                      <span className="eyebrow tabular-nums text-ink-muted">
+                        {rest.length}
+                      </span>
+                    </div>
 
-                  <div className="space-y-1">
-                    {pagedItems.map((item, index) => (
-                      <Reveal key={item.id} delay={Math.min(index, 5) * 60}>
-                        <StoryCard item={item} onOpen={openStory} />
-                      </Reveal>
-                    ))}
-                  </div>
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      {pagedItems.map((item, index) => (
+                        <Reveal key={item.id} delay={Math.min(index, 5) * 60}>
+                          <StoryCard item={item} onOpen={openStory} />
+                        </Reveal>
+                      ))}
+                    </div>
 
-                  <div className="pt-2">
-                    <PaginationBar
-                      page={safePage}
-                      totalPages={totalPages}
-                      onPageChange={handlePageChange}
-                    />
-                  </div>
-                </section>
+                    <div className="mt-8">
+                      <PaginationBar
+                        page={safePage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                      />
+                    </div>
+                  </section>
+
+                  <TrendingRail items={trending} onOpen={openStory} />
+                </div>
               )}
 
               <div ref={newsletterRef} className="scroll-mt-32">

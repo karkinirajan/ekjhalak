@@ -7,5 +7,6 @@
 # config. Every `pnpm install` aborted with ERR_PNPM_IGNORED_BUILDS, and with it
 # every `pnpm run lint`, `typecheck`, `build`, and the repo's own `verify`.
 allowBuilds:
+  esbuild: true
   sharp: true
   unrs-resolver: true
