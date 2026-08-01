@@ -21,7 +21,6 @@ import { PaginationBar } from "@/components/pagination-bar";
 import { Reveal } from "@/components/reveal";
 import { SiteFooter } from "@/components/site-footer";
 import { StoryCard } from "@/components/story-card";
-import { StoryHero } from "@/components/story-hero";
 import { StoryReader } from "@/components/story-reader";
 import { TrendingRail } from "@/components/trending-rail";
 import { useTheme } from "@/components/theme-provider";
@@ -376,8 +375,6 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
 
           {hasData && (
             <div className="space-y-12">
-              <StoryHero lead={lead} side={side} onOpen={openStory} />
-
               {showEmpty && (
                 <div
                   role="status"
