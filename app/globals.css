@@ -2,27 +2,57 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* ─────────────────────────────────────────────────────────────────────────────
+   EkJhalak News — editorial design system
+
+   Four colours: black, grey, red, green.
+
+     black   the stock the paper is printed on
+     grey    every neutral: type, rules, surfaces, soft categories
+     red     urgency — breaking, politics, world, and the brand accent
+     green   growth and measurement — business, sports, health, environment
+
+   That is the entire palette. No blues, no purples, no ambers. Components read
+   semantic tokens and never name a colour directly, so the constraint is
+   enforced in one place rather than in forty class strings.
+
+   Two themes over one set of names:
+
+     Dark  "Press Night"  the four colours as printed
+     Light "Press Day"    the same four, reversed
+
+   The theme is set by `data-theme` on <html>, written by an inline script in
+   the document head before paint so there is never a flash of the wrong one.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-red: var(--red);
+  --color-red-solid: var(--red-solid);
+  --color-red-soft: var(--red-soft);
+  --color-green: var(--green);
+  --color-green-soft: var(--green-soft);
+  --color-pitch: var(--pitch);
+  --color-topic-ink: var(--topic-ink);
+
+  --font-sans: var(--font-display);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
   --font-devanagari: var(--font-devanagari);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
+  --font-mono: var(--font-mono-custom);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -39,100 +69,495 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-3xl: calc(var(--radius) * 2.75);
 }
+
+/* ── Shared ────────────────────────────────────────────────────────────────
+   Everything that is not a colour, plus the aliases the shadcn primitives
+   read. Both themes assign the same semantic names, so no component ever
+   branches on which one is active.                                        */
 
 :root {
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.14 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.14 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.14 0 0);
-  --primary: oklch(0.21 0.03 260);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.96 0 0);
-  --secondary-foreground: oklch(0.21 0 0);
-  --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.96 0 0);
-  --accent-foreground: oklch(0.21 0 0);
-  --destructive: oklch(0.55 0.2 25);
-  --border: oklch(0.9 0 0);
-  --input: oklch(0.9 0 0);
-  --ring: oklch(0.55 0 0);
-  --chart-1: oklch(0.55 0 0);
-  --chart-2: oklch(0.65 0 0);
-  --chart-3: oklch(0.75 0 0);
-  --chart-4: oklch(0.85 0 0);
-  --chart-5: oklch(0.95 0 0);
-  --radius: 0.375rem;
-  --sidebar: oklch(0.98 0 0);
-  --sidebar-foreground: oklch(0.14 0 0);
-  --sidebar-primary: oklch(0.21 0.03 260);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.96 0 0);
-  --sidebar-accent-foreground: oklch(0.21 0 0);
-  --sidebar-border: oklch(0.9 0 0);
-  --sidebar-ring: oklch(0.55 0 0);
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--red-solid);
+  --primary-foreground: #ffffff;
+  --secondary: var(--raised);
+  --secondary-foreground: var(--ink);
+  --muted: var(--raised);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--raised);
+  --accent-foreground: var(--ink);
+  --destructive: var(--red-solid);
+  --border: var(--rule);
+  --input: var(--rule-strong);
+  --ring: var(--red);
+  --radius: 9999px;
 }
 
-.dark {
-  --background: oklch(0.12 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.16 0 0);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.16 0 0);
-  --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.6 0.12 260);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.22 0 0);
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.22 0 0);
-  --accent-foreground: oklch(0.97 0 0);
-  --destructive: oklch(0.65 0.2 25);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.6 0.12 260);
-  --chart-1: oklch(0.55 0 0);
-  --chart-2: oklch(0.65 0 0);
-  --chart-3: oklch(0.75 0 0);
-  --chart-4: oklch(0.85 0 0);
-  --chart-5: oklch(0.95 0 0);
-  --sidebar: oklch(0.16 0 0);
-  --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: oklch(0.6 0.12 260);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.22 0 0);
-  --sidebar-accent-foreground: oklch(0.97 0 0);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.6 0.12 260);
+/* ── Dark: Press Night ─────────────────────────────────────────────────────
+   The four colours: black, grey, red, green.
+
+   The neutral ramp runs from --pitch (furthest from the type) through canvas
+   and surface to --raised (closest). The light theme mirrors that ordering
+   rather than the literal values, which is what lets one set of components
+   read correctly in both.                                                 */
+
+:root,
+[data-theme="dark"] {
+  --pitch: #0a0a0a;
+  --canvas: #0a0a0a;
+  --surface: #121212;
+  --raised: #1c1c1c;
+  --ink: #f5f5f5;
+  --ink-soft: #c8c8c8;
+  --ink-muted: #8f8f8f;
+  --rule: #2a2a2a;
+  --rule-strong: #373737;
+  --red: #f87171;
+  --red-solid: #dc2626;
+  --red-soft: #3b1818;
+  --green: #34d399;
+  --green-soft: #123123;
+  --topic-ink: #111111;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.18), 0 10px 24px rgb(0 0 0 / 0.12);
+  --shadow-lift: 0 4px 12px rgb(0 0 0 / 0.2), 0 24px 48px rgb(0 0 0 / 0.16);
+
+  /* Topic colours, drawn only from the three available hues.
+       red   — urgent or contested
+       green — measured, material, played or grown
+       grey  — reflective
+     Each group has a brighter member so the lead beat still separates.
+
+     politics and world are each one step brighter than they were (#e5484d and
+     #d0555a). The quiet pill sets topic-coloured text on a 13% wash of that
+     same topic, so the background it is actually read against is lighter than
+     --surface — measuring against --surface alone flattered these two into
+     4.70 and 4.49 when the real figures were 4.14 and 3.97. The nudge is the
+     smallest one that clears 4.5 on the composited background; the hue ratios
+     are untouched, so both are still the same red. */
+  --topic-breaking: #ff5a5f;
+  --topic-politics: #e85c61;
+  --topic-world: #d66a6f;
+  --topic-business: #3fb950;
+  --topic-sports: #56d364;
+  --topic-health: #4ac35b;
+  --topic-environment: #35a848;
+  --topic-culture: #c4c4cd;
+  --topic-technology: #a8a8b2;
+  --topic-society: #b6b6bf;
+  --topic-opinion: #92929c;
+}
+
+/* ── Light: Press Day ──────────────────────────────────────────────────────
+   The same four colours, reversed.
+
+   The ramp inverts direction but keeps its meaning: --pitch is still the step
+   furthest from the type, so the panels that were the blackest on dark are the
+   whitest here, and cards still separate from the page by one step. The two
+   accents darken just enough to clear 4.5:1 on paper while staying the same
+   red and the same green — a hue shift would make it a different brand, not a
+   different theme.                                                         */
+
+[data-theme="light"] {
+  --pitch: #fdfcf9;
+  --canvas: #fdfcf9;
+  --surface: #ffffff;
+  --raised: #faf8f2;
+  --ink: #111111;
+  --ink-soft: #525252;
+  --ink-muted: #737373;
+  --rule: #e5e5e5;
+  --rule-strong: #d6d6d6;
+  --red: #dc2626;
+  --red-solid: #dc2626;
+  --red-soft: #fef2f2;
+  --green: #15803d;
+  --green-soft: #f0fdf4;
+  --topic-ink: #ffffff;
+
+  --shadow-card:
+    0 1px 2px rgb(17 17 17 / 0.04), 0 8px 24px rgb(17 17 17 / 0.05);
+  --shadow-lift:
+    0 6px 18px rgb(17 17 17 / 0.08), 0 24px 48px rgb(17 17 17 / 0.06);
+
+  /* Same three groups, same ordering within each group — darkened for paper.
+
+     politics, business, health and opinion are each one step darker than they
+     were (#d11f26, #1a7f37, #1f7a45, #6a6a72). The quiet pill reads its text
+     against a 13% wash of its own topic rather than against bare --surface, and
+     on that composited background those four measured 3.97, 3.94, 4.12 and
+     4.18. Mirror of the correction applied to the dark theme, and the same
+     minimal, hue-preserving step. All eleven now clear 4.5:1 both as text on
+     the tint and as --topic-ink on the solid fill. */
+  --topic-breaking: #c2131a;
+  --topic-politics: #bd1c22;
+  --topic-world: #a83238;
+  --topic-business: #177131;
+  --topic-sports: #14682f;
+  --topic-health: #1d703f;
+  --topic-environment: #116b31;
+  --topic-culture: #4b4b52;
+  --topic-technology: #5c5c63;
+  --topic-society: #52525a;
+  --topic-opinion: #626269;
+}
+
+/* ── Topic binding ─────────────────────────────────────────────────────────
+   Any element carrying data-topic exposes `--topic` to its subtree, so cards,
+   pills and rules all colour themselves from one attribute.               */
+
+[data-topic="breaking"] {
+  --topic: var(--topic-breaking);
+}
+[data-topic="politics"] {
+  --topic: var(--topic-politics);
+}
+[data-topic="world"] {
+  --topic: var(--topic-world);
+}
+[data-topic="business"] {
+  --topic: var(--topic-business);
+}
+[data-topic="sports"] {
+  --topic: var(--topic-sports);
+}
+[data-topic="culture"] {
+  --topic: var(--topic-culture);
+}
+[data-topic="technology"] {
+  --topic: var(--topic-technology);
+}
+[data-topic="health"] {
+  --topic: var(--topic-health);
+}
+[data-topic="environment"] {
+  --topic: var(--topic-environment);
+}
+[data-topic="society"] {
+  --topic: var(--topic-society);
+}
+[data-topic="opinion"] {
+  --topic: var(--topic-opinion);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   html {
-    @apply font-sans antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    @apply antialiased;
+    font-family:
+      var(--font-display),
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      sans-serif;
+    font-feature-settings:
+      "kern" 1,
+      "liga" 1,
+      "calt" 1;
+    font-optical-sizing: auto;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+    line-height: 1.5;
   }
+
   body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+    @apply bg-canvas text-ink;
+    font-family: var(--font-body), Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.75;
+    letter-spacing: 0.001em;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), "Segoe UI", sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--red) 26%, transparent);
+    color: var(--ink);
+  }
+
+  /* Consistent focus ring across custom interactive elements */
+  :focus-visible {
+    outline: 2px solid var(--red);
+    outline-offset: 2px;
+  }
+
+  .card-focus:focus-visible {
+    outline: 2px solid var(--red);
+    outline-offset: 3px;
+    border-radius: 0.75rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
 @layer utilities {
+  /* ── Typefaces ─────────────────────────────────────────────────────────── */
+
+  .font-body {
+    font-family: var(--font-body), Georgia, "Times New Roman", serif;
+  }
+
+  .font-ui {
+    font-family: var(--font-display), "Segoe UI", sans-serif;
+  }
+
   .font-np {
     font-family: var(--font-devanagari), "Noto Sans Devanagari", sans-serif;
+    font-feature-settings: "kern" 1;
+    line-height: 1.75;
+    letter-spacing: 0;
+  }
+
+  .font-display {
+    font-family: var(--font-display), "Segoe UI", sans-serif;
+  }
+
+  .font-display-soft {
+    font-family: var(--font-display), "Segoe UI", sans-serif;
+  }
+
+  /* ── Editorial primitives ──────────────────────────────────────────────── */
+
+  /* All-caps metadata: kickers, timestamps, source names */
+  .eyebrow {
+    font-family: var(--font-mono-custom), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* Headline balance — stops one-word orphan lines in large display type */
+  .headline {
+    text-wrap: balance;
+  }
+
+  .copy {
+    text-wrap: pretty;
+  }
+
+  /* Clamp helpers used across card sizes */
+  .clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-lift {
+    box-shadow: var(--shadow-lift);
+  }
+
+  /* Generated cover art for stories whose feed shipped no photograph.
+     Built from the story's own topic colour so a photo-less grid still
+     reads as a coloured, categorised page rather than a row of grey boxes. */
+  /* Mixed up from --raised, not from black. Four of the eleven topics are grey,
+     and a grey tint over black is just black — those cards were rendering as
+     holes in the grid. Starting from the raised step guarantees every card has
+     a floor of visible tone whatever hue it carries.
+
+     The mix runs at 55% rather than 30%. At 30% the four grey topics — culture,
+     technology, society, opinion — landed within about 2:1 of the card they sat
+     on, so half a photo-less grid read as broken images rather than as art.
+     Since 51% of stories ship no photograph, this is the common case, not the
+     edge case. 55% separates every topic from the card while still reading as a
+     tint of the stock rather than a flat colour swatch. */
+  .cover-art {
+    background-color: color-mix(
+      in oklab,
+      var(--topic, var(--red)) 55%,
+      var(--raised)
+    );
+    background-image:
+      radial-gradient(
+        circle at 20% 16%,
+        color-mix(in oklab, var(--topic, var(--red)) 62%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        circle at 84% 82%,
+        color-mix(in oklab, var(--topic, var(--red)) 38%, transparent),
+        transparent 66%
+      ),
+      linear-gradient(
+        142deg,
+        color-mix(in oklab, var(--topic, var(--red)) 58%, var(--raised)),
+        color-mix(in oklab, var(--topic, var(--red)) 26%, var(--raised))
+      );
+  }
+
+  /* Knocked out in the same near-black the solid pills use, so the glyph is
+     legible against every topic in both themes rather than only the dark one. */
+  .cover-glyph {
+    color: var(--topic-ink);
+    opacity: 0.5;
+  }
+
+  /* ── Focus ─────────────────────────────────────────────────────────────────
+     Each story's headline button stretches an ::after overlay across its whole
+     article, so the card is the hit target. That overlay is therefore also
+     where the focus ring belongs: an outline on the button itself traces the
+     wrapped headline text, not the card the reader is actually selecting.
+
+     Previously these buttons carried `focus-visible:outline-none` with nothing
+     replacing it, which left all 22 story controls on the page with no visible
+     focus at all. */
+  .card-focus:focus-visible {
+    outline: none;
+  }
+  .card-focus:focus-visible::after {
+    outline: 2px solid var(--red);
+    outline-offset: 3px;
+    border-radius: var(--radius);
+  }
+
+  /* Diagonal hatch over hero photography so white headlines stay legible
+     regardless of what the publisher's image happens to look like. */
+  .photo-scrim {
+    background-image: linear-gradient(
+      to top,
+      rgb(8 8 14 / 0.92) 0%,
+      rgb(8 8 14 / 0.72) 34%,
+      rgb(8 8 14 / 0.24) 68%,
+      rgb(8 8 14 / 0.05) 100%
+    );
+  }
+
+  /* Fully opaque. A translucent sticky nav let headlines scroll through it and
+     collide with the nav's own labels — on a dark stock that reads as a
+     rendering fault, not as depth. The bar is separated by a rule and a shadow
+     instead, which does the same job without costing legibility. */
+  .glass {
+    background: var(--canvas);
+    box-shadow:
+      0 1px 0 var(--rule),
+      0 8px 20px -12px color-mix(in oklab, var(--pitch) 70%, transparent);
+  }
+
+  /* ── Motion ────────────────────────────────────────────────────────────── */
+
+  .ticker-track {
+    animation: ticker-scroll 48s linear infinite;
+  }
+  .ticker-track:hover,
+  .ticker-track:focus-within {
+    animation-play-state: paused;
+  }
+
+  /* Scroll-triggered entrance. Elements start hidden and are revealed by an
+     IntersectionObserver flipping data-revealed — see components/reveal.tsx. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal[data-revealed="true"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .pulse-dot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: currentColor;
+    animation: live-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+/* Reduced motion: the ticker still shows headlines, it just stops moving and
+   becomes a horizontally scrollable strip instead. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+    overflow-x: auto;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Without scripting there is no IntersectionObserver to reveal anything, so
+   entrance animations must never be what stands between a reader and the news. */
+@media (scripting: none) {
+  .reveal {
+    opacity: 1;
+    transform: none;
   }
 }

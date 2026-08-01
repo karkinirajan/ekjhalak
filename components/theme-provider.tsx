@@ -1,67 +1,97 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, startTransition } from "react";
-import { themes, type ThemeName, type ThemePalette } from "@/lib/themes";
-import { i18n, type Lang, type I18nDict } from "@/lib/i18n";
+import {
+  createContext,
+  startTransition,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { i18n, type I18nDict, type Lang } from "@/lib/i18n";
+
+export type ThemeName = "dark" | "light";
 
 interface ThemeContextValue {
   themeMode: ThemeName;
   setThemeMode: (t: ThemeName) => void;
-  palette: ThemePalette;
+  toggleTheme: () => void;
   language: Lang;
   setLanguage: (l: Lang) => void;
+  toggleLanguage: () => void;
   t: I18nDict;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  themeMode: "dark",
+  themeMode: "light",
   setThemeMode: () => {},
-  palette: themes.dark,
+  toggleTheme: () => {},
   language: "en",
   setLanguage: () => {},
+  toggleLanguage: () => {},
   t: i18n.en,
 });
 
+/**
+ * Colour and language preferences.
+ *
+ * Colour itself lives entirely in CSS custom properties keyed off `data-theme`
+ * on <html>, which the head script sets before first paint. This provider owns
+ * the *state* of that attribute so React components can render the right icon
+ * and label — it never carries the colour values themselves.
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Start with stable defaults so SSR HTML matches the first client render.
-  // After mount, read the user's saved preferences from localStorage.
-  const [themeMode, setThemeModeState] = useState<ThemeName>("dark");
+  // SSR renders the documented defaults; the head script has already painted
+  // the reader's real choice, and the effect below reconciles React to it.
+  const [themeMode, setThemeModeState] = useState<ThemeName>("light");
   const [language, setLanguageState] = useState<Lang>("en");
 
-  // Hydrate from localStorage after mount — avoids SSR mismatch.
-  // startTransition defers the update as a non-urgent transition, satisfying the
-  // react-hooks/set-state-in-effect rule which disallows direct setState in effects.
   useEffect(() => {
-    const savedTheme = localStorage.getItem("cfn-theme");
+    const attr = document.documentElement.getAttribute("data-theme");
     const savedLang = localStorage.getItem("cfn-lang");
     startTransition(() => {
-      if (savedTheme === "dark" || savedTheme === "light") {
-        setThemeModeState(savedTheme);
-      }
-      if (savedLang === "en" || savedLang === "np") {
-        setLanguageState(savedLang as Lang);
-      }
+      if (attr === "dark" || attr === "light") setThemeModeState(attr);
+      if (savedLang === "en" || savedLang === "np") setLanguageState(savedLang);
     });
   }, []);
 
-  function setThemeMode(mode: ThemeName) {
+  const setThemeMode = useCallback((mode: ThemeName) => {
     setThemeModeState(mode);
-    window.localStorage.setItem("cfn-theme", mode);
-  }
+    document.documentElement.setAttribute("data-theme", mode);
+    try {
+      window.localStorage.setItem("cfn-theme", mode);
+    } catch {
+      // Private browsing / blocked storage — the choice just won't persist.
+    }
+  }, []);
 
-  function setLanguage(l: Lang) {
-    setLanguageState(l);
-    window.localStorage.setItem("cfn-lang", l);
-  }
+  const setLanguage = useCallback((lang: Lang) => {
+    setLanguageState(lang);
+    document.documentElement.lang = lang === "np" ? "ne" : "en";
+    try {
+      window.localStorage.setItem("cfn-lang", lang);
+    } catch {
+      // Private browsing / blocked storage — the choice just won't persist.
+    }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeMode(themeMode === "dark" ? "light" : "dark");
+  }, [themeMode, setThemeMode]);
+
+  const toggleLanguage = useCallback(() => {
+    setLanguage(language === "en" ? "np" : "en");
+  }, [language, setLanguage]);
 
   return (
     <ThemeContext.Provider
       value={{
         themeMode,
         setThemeMode,
-        palette: themes[themeMode],
+        toggleTheme,
         language,
         setLanguage,
+        toggleLanguage,
         t: i18n[language],
       }}
     >

@@ -1,24 +1,43 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { useTheme } from "@/components/theme-provider";
-import { AppSidebar } from "@/components/app-sidebar";
-import { NewsCard } from "@/components/news-card";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { BreakingTicker } from "@/components/breaking-ticker";
+import {
+  CategoryNav,
+  type BucketFilter,
+  type TopicFilter,
+} from "@/components/category-nav";
+import { FeedClockProvider } from "@/components/feed-clock";
+import { Masthead } from "@/components/masthead";
+import { NewsletterCta } from "@/components/newsletter-cta";
 import { PaginationBar } from "@/components/pagination-bar";
-import { BrandImage } from "@/components/brand-image";
-import { TopNavbar } from "@/components/top-navbar";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
-
+import { Reveal } from "@/components/reveal";
+import { SiteFooter } from "@/components/site-footer";
+import { StoryCard } from "@/components/story-card";
+import { StoryHero } from "@/components/story-hero";
+import { StoryReader } from "@/components/story-reader";
+import { TrendingRail } from "@/components/trending-rail";
+import { useTheme } from "@/components/theme-provider";
+import { cn } from "@/lib/utils";
+import {
+  diversifyBySource,
+  selectHero,
+  selectTicker,
+  selectTrending,
+} from "@/lib/ranking";
+import type { TopicId } from "@/lib/taxonomy";
 import type { NewsItem, NewsFeedResponse, RangeKey } from "@/lib/news-pipeline";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 12;
 const REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 
-/** Range → lookback window in milliseconds (mirrors api/news/route.ts) */
 const RANGE_CUTOFFS: Record<RangeKey, number> = {
   day: 24 * 60 * 60 * 1000,
   week: 7 * 24 * 60 * 60 * 1000,
@@ -27,422 +46,421 @@ const RANGE_CUTOFFS: Record<RangeKey, number> = {
 
 type LoadState = "idle" | "refreshing" | "error";
 
-// ── Skeleton card ─────────────────────────────────────────────────────────────
+function ReadingProgress() {
+  const [progress, setProgress] = useState(0);
 
-interface SkeletonCardProps {
-  palette: ReturnType<typeof useTheme>["palette"];
-}
+  useEffect(() => {
+    const update = () => {
+      const scrollTop = window.scrollY;
+      const height = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(height > 0 ? (scrollTop / height) * 100 : 0);
+    };
 
-function SkeletonCard({ palette }: SkeletonCardProps) {
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
   return (
-    <div
-      className={cn(
-        "border rounded-lg overflow-hidden animate-pulse",
-        palette.card,
-      )}
-      aria-hidden="true"
-    >
-      <div className={cn("w-full h-36", palette.soft)} />
-      <div className="p-4 space-y-2.5">
-        <div className="flex gap-2">
-          <div className={cn("h-4 w-16 rounded", palette.soft)} />
-          <div className={cn("h-4 w-24 rounded", palette.soft)} />
-        </div>
-        <div className={cn("h-4 w-4/5 rounded", palette.soft)} />
-        <div className={cn("h-3 w-full rounded", palette.soft)} />
-        <div className={cn("h-3 w-5/6 rounded", palette.soft)} />
-        <div className="flex gap-2 pt-1">
-          <div className={cn("h-8 w-20 rounded-md", palette.soft)} />
-          <div className={cn("h-8 w-16 rounded-md", palette.soft)} />
-        </div>
-      </div>
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 h-1 bg-transparent">
+      <div
+        className="h-full rounded-full bg-red transition-[width] duration-150"
+        style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+      />
     </div>
   );
 }
 
-// ── NewsFeed component ────────────────────────────────────────────────────────
+function GridSkeleton() {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2" aria-hidden="true">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="overflow-hidden rounded-lg border border-rule bg-surface"
+        >
+          <div className="aspect-16/10 w-full animate-pulse bg-raised" />
+          <div className="space-y-3 p-5">
+            <div className="h-3 w-20 animate-pulse rounded bg-raised" />
+            <div className="h-5 w-11/12 animate-pulse rounded bg-raised" />
+            <div className="h-4 w-full animate-pulse rounded bg-raised" />
+            <div className="h-4 w-4/5 animate-pulse rounded bg-raised" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface NewsFeedProps {
   initialData: NewsFeedResponse;
+  /** How many stories to request on refresh — matches the server's payload cap */
+  limit?: number;
 }
 
-export function NewsFeed({ initialData }: NewsFeedProps) {
-  const { palette, language, setLanguage, t, themeMode, setThemeMode } =
-    useTheme();
+export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
+  const { t, language } = useTheme();
+  const isNp = language === "np";
 
   const [range, setRange] = useState<RangeKey>("day");
-  const [bucket, setBucket] = useState<"all" | "national" | "international">(
-    "all",
-  );
-  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
+  const [bucket, setBucket] = useState<BucketFilter>("all");
+  const [topic, setTopic] = useState<TopicFilter>("all");
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Start with server-rendered data — no loading state!
   const [items, setItems] = useState<NewsItem[]>(initialData.items);
   const [meta, setMeta] = useState<NewsFeedResponse["meta"]>(initialData.meta);
   const [loadState, setLoadState] = useState<LoadState>("idle");
+  const [activeStory, setActiveStory] = useState<NewsItem | null>(null);
+  const [readerOpen, setReaderOpen] = useState(false);
 
-  const feedTopRef = useRef<HTMLDivElement>(null);
+  const latestRef = useRef<HTMLDivElement>(null);
+  const newsletterRef = useRef<HTMLDivElement>(null);
 
-  // ── Background refresh ──────────────────────────────────────────────────────
-  // Fetches ALL items (widest range, all buckets) so local filtering stays instant.
+  const fetchFeed = useCallback(
+    async (isBackground = false) => {
+      if (!isBackground) setLoadState("refreshing");
+      try {
+        const res = await fetch(
+          `/api/news?range=month&bucket=all&limit=${limit}`,
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: NewsFeedResponse = await res.json();
+        setItems(data.items);
+        setMeta(data.meta);
+        setLoadState("idle");
+      } catch (err) {
+        console.error("[feed] refresh error:", err);
+        // Keep whatever is already on screen — a stale story beats an error page.
+        setLoadState((current) =>
+          current === "refreshing" ? "error" : current,
+        );
+      }
+    },
+    [limit],
+  );
 
-  const fetchFeed = useCallback(async (isBackground = false) => {
-    if (!isBackground) setLoadState("refreshing");
-    try {
-      const res = await fetch("/api/news?range=month&bucket=all&limit=500", {
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: NewsFeedResponse = await res.json();
-      setItems(data.items);
-      setMeta(data.meta);
-      setLoadState("idle");
-    } catch (err) {
-      console.error("[feed] refresh error:", err);
-      // Keep existing data — don't flash error if we already have content
-      setLoadState("idle");
-    }
-  }, []);
-
-  // If server returned empty data (cold start), immediately try client fetch
   useEffect(() => {
+    // Server render produced nothing (feed was cold or the aggregator failed) —
+    // recover on the client rather than showing an empty page.
     if (initialData.items.length === 0) {
-      fetchFeed(false);
+      startTransition(() => {
+        void fetchFeed(false);
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchFeed, initialData.items.length]);
+
+  // Background refresh, with two things it deliberately will not do.
+  //
+  // It will not fire while a story is open. Replacing `items` re-runs every
+  // ranking selection, so the hero, the grid, the trending rail and the current
+  // page all change at once — and that was happening underneath readers with the
+  // panel open, which meant coming back from a story to a page that no longer
+  // held the story you came from.
+  //
+  // It will not fire in a backgrounded tab either. A tab left open all day was
+  // pulling the feed every three minutes whether or not anyone was looking at
+  // it. On becoming visible again it refreshes once, immediately, so returning
+  // to the tab still shows current news rather than whatever was there at lunch.
+  useEffect(() => {
+    if (readerOpen) return;
+
+    const tick = () => {
+      if (document.visibilityState === "visible") void fetchFeed(true);
+    };
+
+    const id = setInterval(tick, REFRESH_INTERVAL_MS);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [fetchFeed, readerOpen]);
+
+  // Every filter change returns to page 1. Done in the setters rather than an
+  // effect on [range, bucket, topic, search]: the reset is a direct consequence
+  // of the reader's click, not something to re-derive after the fact.
+  const selectRange = useCallback((value: RangeKey) => {
+    setRange(value);
+    setPage(1);
   }, []);
 
-  // Update document lang attribute so screen readers announce language correctly
-  useEffect(() => {
-    document.documentElement.lang = language === "np" ? "ne" : "en";
-  }, [language]);
-
-  // Reset page when filters change
-  useEffect(() => {
+  const selectBucket = useCallback((value: BucketFilter) => {
+    setBucket(value);
     setPage(1);
-  }, [range, bucket, sourceFilter, language, search]);
+  }, []);
 
-  // Auto-refresh every 3 minutes (background)
-  useEffect(() => {
-    const id = setInterval(() => fetchFeed(true), REFRESH_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [fetchFeed]);
-
-  // ── Filtering (ALL client-side — range, bucket, source, search) ─────────────
+  const selectTopic = useCallback((value: TopicFilter) => {
+    setTopic(value);
+    setPage(1);
+  }, []);
 
   const applySearch = useCallback(() => {
     setSearch(searchDraft.trim());
+    setPage(1);
   }, [searchDraft]);
 
-  const filteredItems = useMemo(() => {
-    let result = items;
+  const resetFilters = useCallback(() => {
+    setTopic("all");
+    setBucket("all");
+    setSearch("");
+    setSearchDraft("");
+    setPage(1);
+  }, []);
 
-    // Range filter (previously done server-side in /api/news)
-    const cutoffMs = RANGE_CUTOFFS[range];
-    const since = (meta?.fetchedAt ?? Date.now()) - cutoffMs;
-    result = result.filter((item) => item.publishedTimestamp >= since);
+  const openStory = useCallback((item: NewsItem) => {
+    setActiveStory(item);
+    setReaderOpen(true);
+  }, []);
 
-    // Bucket filter (previously done server-side in /api/news)
-    if (bucket === "national") {
-      result = result.filter((item) => item.bucket === "national");
-    } else if (bucket === "international") {
-      result = result.filter((item) => item.bucket === "international");
+  // ── Filtering ─────────────────────────────────────────────────────────────
+  // Range/region/search narrow the pool that everything else is computed from.
+  // Topic is applied separately so the category counts can show what selecting
+  // each topic would actually yield.
+
+  // Range filtering is measured from the fetch time, never from a live clock:
+  // Date.now() during render disagrees between server and client and breaks
+  // hydration. Items arrive newest-first, so the freshest story is the fallback
+  // reference when meta is missing; if both are absent `since` goes negative and
+  // everything shows, which is the right way to fail.
+  const referenceTime = meta?.fetchedAt || items[0]?.publishedTimestamp || 0;
+
+  const scopedItems = useMemo(() => {
+    const since = referenceTime - RANGE_CUTOFFS[range];
+    let result = items.filter((item) => item.publishedTimestamp >= since);
+
+    if (bucket !== "all") {
+      result = result.filter((item) => item.bucket === bucket);
     }
 
-    // Source filter
-    if (sourceFilter) {
-      result = result.filter((item) => item.sourceId === sourceFilter);
-    }
-
-    // Search filter
-    if (search.trim()) {
-      const q = search.toLowerCase();
+    const query = search.trim().toLowerCase();
+    if (query) {
       result = result.filter((item) =>
-        [item.title, item.source, item.summaryEn, item.summaryNp]
-          .join(" ")
+        `${item.title} ${item.summary} ${item.sourceName}`
           .toLowerCase()
-          .includes(q),
+          .includes(query),
       );
     }
 
     return result;
-  }, [items, range, bucket, sourceFilter, search, meta?.fetchedAt]);
+  }, [items, range, bucket, search, referenceTime]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const topicCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of scopedItems) {
+      counts[item.topic] = (counts[item.topic] ?? 0) + 1;
+    }
+    return counts;
+  }, [scopedItems]);
+
+  const filteredItems = useMemo(
+    () =>
+      topic === "all"
+        ? scopedItems
+        : scopedItems.filter((item) => item.topic === topic),
+    [scopedItems, topic],
+  );
+
+  // ── Editorial layout selection ────────────────────────────────────────────
+
+  const { lead, side, rest } = useMemo(
+    () => selectHero(filteredItems, 3, referenceTime),
+    [filteredItems, referenceTime],
+  );
+
+  const trending = useMemo(() => {
+    const shown = new Set<string>(
+      [lead, ...side]
+        .filter((item): item is NewsItem => Boolean(item))
+        .map((item) => item.id),
+    );
+    return selectTrending(scopedItems, shown, 6, referenceTime);
+  }, [scopedItems, lead, side, referenceTime]);
+
+  const tickerItems = useMemo(
+    () => selectTicker(items, 8, referenceTime),
+    [items, referenceTime],
+  );
+
+  // Reordered so one newsroom's publishing burst can't fill a whole page.
+  const latestItems = useMemo(() => diversifyBySource(rest), [rest]);
+
+  const totalPages = Math.max(1, Math.ceil(latestItems.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paginatedItems = filteredItems.slice(
+  const pagedItems = latestItems.slice(
     (safePage - 1) * PAGE_SIZE,
     safePage * PAGE_SIZE,
   );
 
-  // ── Pagination with scroll-to-top ───────────────────────────────────────────
-
-  const handlePageChange = useCallback((newPage: number) => {
-    setPage(newPage);
-    feedTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const handlePageChange = useCallback((next: number) => {
+    setPage(next);
+    latestRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
-  const rangeLabel =
-    range === "day"
-      ? t.rangeDay
-      : range === "week"
-        ? t.rangeWeek
-        : t.rangeMonth;
+  const handleFooterTopic = useCallback(
+    (next: TopicId) => {
+      selectTopic(next);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [selectTopic],
+  );
+
+  const sourceCount = useMemo(
+    () => meta?.sourceStatuses.filter((status) => status.ok).length ?? 0,
+    [meta?.sourceStatuses],
+  );
 
   const hasData = items.length > 0;
   const showSkeleton = !hasData && loadState === "refreshing";
+  const showEmpty = hasData && filteredItems.length === 0;
 
   return (
-    <div
-      className={cn(
-        "min-h-screen bg-linear-to-br flex",
-        palette.app,
-        palette.page,
-      )}
-    >
-      {/* Sidebar — fixed, desktop only */}
-      <aside
-        className="hidden w-65 shrink-0 lg:flex flex-col fixed left-0 top-0 h-screen z-40"
-        aria-label="Navigation and filters"
-      >
-        <AppSidebar
-          range={range}
-          setRange={setRange}
-          bucket={bucket}
-          setBucket={setBucket}
-          sourceFilter={sourceFilter}
-          setSourceFilter={setSourceFilter}
-          sourceStatuses={meta?.sourceStatuses ?? []}
-        />
-      </aside>
+    <FeedClockProvider value={referenceTime}>
+      <div className="min-h-screen bg-canvas">
+        <ReadingProgress />
+        <BreakingTicker items={tickerItems} fetchedAt={meta?.fetchedAt ?? 0} />
 
-      {/* Main content */}
-      <div className="flex min-w-0 flex-1 flex-col lg:ml-65">
-        <TopNavbar
+        <Masthead
           searchDraft={searchDraft}
           setSearchDraft={setSearchDraft}
           applySearch={applySearch}
-          fetchFeed={fetchFeed}
-          loadState={loadState}
-          themeMode={themeMode}
-          setThemeMode={setThemeMode}
-          language={language}
-          setLanguage={setLanguage}
-          setMobileMenuOpen={setMobileMenuOpen}
-          range={range}
-          setRange={setRange}
-          bucket={bucket}
-          setBucket={setBucket}
-          setSourceFilter={setSourceFilter}
-          rangeLabel={rangeLabel}
-          filteredCount={filteredItems.length}
-          sourceFilter={sourceFilter}
-          sourceFilterLabel={
-            items.find((item) => item.sourceId === sourceFilter)?.source ?? null
+          onRefresh={() => fetchFeed(false)}
+          isRefreshing={loadState === "refreshing"}
+          onSubscribe={() =>
+            newsletterRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            })
           }
         />
 
-        <div className="flex min-w-0 flex-1 flex-col gap-3 p-2 pt-2 lg:p-3">
-          {/* Feed scroll anchor */}
-          <div ref={feedTopRef} className="sr-only" aria-hidden="true" />
+        <CategoryNav
+          topic={topic}
+          setTopic={selectTopic}
+          bucket={bucket}
+          setBucket={selectBucket}
+          range={range}
+          setRange={selectRange}
+          topicCounts={topicCounts}
+          resultCount={filteredItems.length}
+        />
 
-          {/* News feed card */}
-          <Card className={cn("border rounded-md", palette.shell)}>
-            <CardContent className="space-y-2 px-4 pt-4 pb-4">
-              {/* Loading skeleton — only when we have NO data and are fetching */}
-              {showSkeleton && (
-                <div
-                  className="space-y-2"
-                  aria-label={t.loadingStories}
-                  aria-busy="true"
-                  role="status"
-                >
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <SkeletonCard key={i} palette={palette} />
-                  ))}
-                  <span className="sr-only">{t.loadingStories}</span>
-                </div>
-              )}
+        <div className="mx-auto w-full max-w-350 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+          {showSkeleton && <GridSkeleton />}
 
-              {/* Error state — only when we have NO data */}
-              {!hasData && loadState === "error" && (
-                <div
-                  className={cn(
-                    "border border-dashed p-6 text-center text-sm rounded-md space-y-3",
-                    palette.panel,
-                    palette.muted,
-                  )}
-                  role="alert"
-                >
-                  <p>{t.errorFeed}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchFeed(false)}
-                    className={cn("rounded-md", palette.ghost)}
-                  >
-                    {t.retryLabel}
-                  </Button>
-                </div>
-              )}
-
-              {/* Feed items — rendered immediately with server data */}
-              {!showSkeleton && (hasData || loadState === "idle") && (
-                <>
-                  {paginatedItems.length > 0 ? (
-                    <div
-                      role="feed"
-                      aria-label={`${rangeLabel} ${t.rangeSuffix}`}
-                      aria-busy={loadState === "refreshing"}
-                      className="space-y-2"
-                    >
-                      {paginatedItems.map((item) => (
-                        <NewsCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div
-                      className={cn(
-                        "border border-dashed p-6 text-center text-sm rounded-md",
-                        palette.panel,
-                        palette.muted,
-                      )}
-                      role="status"
-                    >
-                      {hasData ? t.noStories : t.loadingStories}
-                    </div>
-                  )}
-                  <PaginationBar
-                    page={safePage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Footer */}
-          <footer
-            className={cn(
-              "border px-4 py-4 text-xs mt-auto rounded-md",
-              palette.panel,
-            )}
-          >
-            <div className="flex items-center justify-center gap-6">
-              <div className={cn("flex items-center gap-1.5", palette.muted)}>
-                <span suppressHydrationWarning>
-                  © {new Date().getFullYear()} एक झलक
-                </span>
-              </div>
-              <div className={cn("flex items-center gap-1.5", palette.subtext)}>
-                <span>Developed by</span>
-                <a
-                  href="https://kneeraazon.com"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className={cn("font-medium hover:underline", palette.text)}
-                >
-                  Nirajan Karki
-                </a>
-              </div>
-            </div>
-          </footer>
-        </div>
-      </div>
-
-      {/* Mobile menu sheet */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className={cn("w-70 p-0", palette.shell)}>
-          <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-          <div
-            className={cn(
-              "flex flex-col h-full overflow-y-auto p-4 gap-3",
-              palette.shell,
-            )}
-          >
-            {/* Brand */}
-            <BrandImage
-              priority
-              containerClassName="mt-3"
-              imageClassName="max-h-18"
-            />
-
-            <Separator className="opacity-50" />
-
-            {/* Language toggle */}
-            <div>
-              <div
+          {!hasData && loadState === "error" && (
+            <div
+              role="alert"
+              className="rounded-lg border border-dashed border-rule-strong bg-surface px-6 py-16 text-center"
+            >
+              <p className={cn("text-ink-soft", isNp && "font-np")}>
+                {t.errorFeed}
+              </p>
+              <button
+                type="button"
+                onClick={() => fetchFeed(false)}
                 className={cn(
-                  "mb-2 text-xs uppercase tracking-wide",
-                  palette.muted,
+                  "mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-canvas transition-opacity hover:opacity-85",
+                  isNp && "font-np",
                 )}
               >
-                {t.statLangTitle}
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setLanguage("en");
-                    setMobileMenuOpen(false);
-                  }}
-                  aria-pressed={language === "en"}
-                  className={cn(
-                    "h-9 text-xs rounded-md",
-                    language === "en" ? palette.accent : palette.ghost,
-                  )}
+                {t.retryLabel}
+              </button>
+            </div>
+          )}
+
+          {hasData && (
+            <div className="space-y-12">
+              <StoryHero lead={lead} side={side} onOpen={openStory} />
+
+              {showEmpty && (
+                <div
+                  role="status"
+                  className="rounded-lg border border-dashed border-rule-strong bg-surface px-6 py-16 text-center"
                 >
-                  {t.tabEnFirst}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setLanguage("np");
-                    setMobileMenuOpen(false);
-                  }}
-                  aria-pressed={language === "np"}
-                  className={cn(
-                    "h-9 text-xs rounded-md",
-                    language === "np" ? palette.accent : palette.ghost,
-                  )}
-                >
-                  {t.tabNpFirst}
-                </Button>
+                  <p className={cn("text-ink-soft", isNp && "font-np")}>
+                    {t.noStories}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className={cn(
+                      "mt-5 rounded-full border border-rule-strong px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-raised",
+                      isNp && "font-np",
+                    )}
+                  >
+                    {t.clearFilters}
+                  </button>
+                </div>
+              )}
+
+              {rest.length > 0 && (
+                <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
+                  <section aria-label={t.latestSection}>
+                    <div
+                      ref={latestRef}
+                      className="mb-6 flex scroll-mt-32 items-center gap-4"
+                    >
+                      <h2
+                        className={cn(
+                          "text-2xl font-semibold tracking-tight text-ink",
+                          isNp ? "font-np" : "font-display",
+                        )}
+                      >
+                        {t.latestSection}
+                      </h2>
+                      <span className="h-px flex-1 bg-rule" />
+                      <span className="eyebrow tabular-nums text-ink-muted">
+                        {rest.length}
+                      </span>
+                    </div>
+
+                    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                      {pagedItems.map((item, index) => (
+                        <Reveal key={item.id} delay={Math.min(index, 5) * 60}>
+                          <StoryCard item={item} onOpen={openStory} />
+                        </Reveal>
+                      ))}
+                    </div>
+
+                    <div className="mt-8">
+                      <PaginationBar
+                        page={safePage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                      />
+                    </div>
+                  </section>
+
+                  <TrendingRail items={trending} onOpen={openStory} />
+                </div>
+              )}
+
+              <div ref={newsletterRef} className="scroll-mt-32">
+                <Reveal>
+                  <NewsletterCta />
+                </Reveal>
               </div>
             </div>
+          )}
+        </div>
 
-            <Separator className="opacity-50" />
+        <SiteFooter
+          sourceCount={sourceCount}
+          onTopicSelect={handleFooterTopic}
+        />
 
-            {/* Inline sidebar for mobile */}
-            <AppSidebar
-              range={range}
-              setRange={(r) => {
-                setRange(r);
-                setMobileMenuOpen(false);
-              }}
-              bucket={bucket}
-              setBucket={(b) => {
-                setBucket(b);
-                setMobileMenuOpen(false);
-              }}
-              sourceFilter={sourceFilter}
-              setSourceFilter={(s) => {
-                setSourceFilter(s);
-                setMobileMenuOpen(false);
-              }}
-              sourceStatuses={meta?.sourceStatuses ?? []}
-              compact
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-    </div>
+        <StoryReader
+          item={activeStory}
+          open={readerOpen}
+          onOpenChange={setReaderOpen}
+        />
+      </div>
+    </FeedClockProvider>
   );
 }

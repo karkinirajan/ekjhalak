@@ -1,188 +1,179 @@
 export type Lang = "en" | "np";
 
 const en = {
-  appTagline: "National & International briefings",
-  appSubtitle: "Daily newsroom",
-  searchPlaceholder: "Search headlines, sources, summaries",
-  switchToLive: "Switch to live",
-  switchToDemo: "Switch to demo",
-  langButton: "EN → NP",
+  // ── Masthead ───────────────────────────────────────────────────────────────
+  wordmark: "EkJhalak",
+  wordmarkNp: "एक झलक",
+  tagline: "Nepal & World, at a glance",
+  searchPlaceholder: "Search headlines and summaries",
+  searchLabel: "Search",
+  refreshFeed: "Refresh feed",
+  langButton: "नेपाली",
   langToggleLabel: "Switch to Nepali",
-  navOverview: "Overview",
-  navToday: "Today",
-  navWeek: "This Week",
-  navMonth: "This Month",
-  feedLensLabel: "Feed lens",
-  feedAll: "All",
-  feedNational: "National",
-  feedInternational: "International",
-  themeLabel: "Theme",
-  themeDark: "Night Ink",
-  themeLight: "Warm Parchment",
-  dailyRefreshTitle: "Daily refresh",
-  dailyRefreshTime: "9:00 PM",
-  dailyRefreshNote:
-    "Same trusted sources, refreshed summaries, bilingual output.",
-  sourcesLabel: "Sources",
-  trustedSourcesTitle: "Sources",
-  trustedSourcesDesc: "Curated Nepali and international publishers",
-  sectionNepal: "National",
-  sectionInternational: "International",
-  researchStackTitle: "Research stack",
-  researchStackDesc: "Free-first pipeline for daily updates",
-  apiContractTitle: "API contract",
-  apiContractDesc: "Live mode will plug into this endpoint",
-  briefingDesc:
-    "All the news you need — Nepal and the world — clean, ad-free, and bilingual. One place, trusted sources.",
-  tabToday: "Today",
-  tabWeek: "Week",
-  tabMonth: "Month",
-  tabEnFirst: "English first",
-  tabNpFirst: "नेपाली पहिलो",
+  themeDark: "Switch to dark theme",
+  themeLight: "Switch to light theme",
+  openMenu: "Open menu",
+  closeMenu: "Close menu",
 
+  // ── Ticker ─────────────────────────────────────────────────────────────────
+  liveLabel: "Live",
+  updatedAt: "Updated",
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+  statTimelineTitle: "Range",
+  statFeedTitle: "Region",
   rangeDay: "Today",
   rangeWeek: "This Week",
   rangeMonth: "This Month",
   rangeSuffix: "briefing",
-  statItemsTitle: "Visible items",
-  statItemsNote: "Filtered and paginated",
-  statTimelineTitle: "Timeline",
-  statTimelineNote: "Today, week, or month ranking.",
-  statFeedTitle: "Feed lens",
-  statFeedNote: "National and International news.",
-  feedValueAll: "All",
-  feedValueNational: "Nepal",
-  feedValueInternational: "International",
-  langValue: "EN → NP",
-  statLangTitle: "Language",
-  statLangNote: "Primary summary plus translation.",
+  feedAll: "Top Stories",
+  feedNational: "Nepal",
+  feedInternational: "World",
+  allTopics: "All",
+  clearFilters: "Clear filters",
+
+  // ── Sections ───────────────────────────────────────────────────────────────
+  leadStory: "Lead story",
+  moreHeadlines: "More headlines",
+  latestSection: "Latest",
+  trendingSection: "Worth your time",
+  trendingHint: "Ranked by newsroom coverage, source weight and freshness",
+  briefingDesc:
+    "No clutter. No chaos. No ads. Just short, accurate news in one place.",
+  filtered: "stories",
+
+  // ── Story metadata ─────────────────────────────────────────────────────────
+  readBrief: "Read brief",
+  readFull: "Read at source",
+  outletsOne: "1 outlet",
+  outletsMany: "outlets covering",
+  minRead: "min read",
+
+  // ── Newsletter ─────────────────────────────────────────────────────────────
+  newsletterKicker: "The daily brief",
+  newsletterTitle: "One email. Every morning. Nothing else.",
+  newsletterDesc:
+    "A short digest of what mattered in Nepal and the world, in your inbox before your first cup of tea.",
+  newsletterPlaceholder: "you@example.com",
+  newsletterCta: "Subscribe",
+  newsletterSuccess: "You're on the list. Watch your inbox tomorrow morning.",
+  newsletterInvalid: "Please enter a valid email address.",
+  newsletterUnavailable:
+    "Signups aren't open yet — the briefing list is still being set up.",
+  newsletterFailed: "Something went wrong. Please try again in a moment.",
+  newsletterPrivacy: "No spam. Unsubscribe any time.",
+  subscribe: "Subscribe",
+  close: "Close",
+
+  // ── Pagination ─────────────────────────────────────────────────────────────
   pagePre: "Page",
   pageOf: "of",
-  prev: "Prev",
+  prev: "Previous",
   next: "Next",
-  badgeNepal: "Nepal",
-  badgeWorld: "International",
-  readBrief: "Read brief",
-  sourceLink: "Source",
-  langLabelEn: "English",
-  langLabelNp: "नेपाली",
 
-  // Source filter
-  filteredBySource: "Filtered by source",
-  clearFilter: "Clear filter",
-  filtered: "filtered",
+  // ── Footer ─────────────────────────────────────────────────────────────────
+  footerAbout: "About",
+  footerAboutText:
+    "EkJhalak aggregates trusted Nepali and international newsrooms into one calm, ad-free briefing. Summaries stay in the language they were published in.",
+  footerSections: "Sections",
+  footerSources: "Sources",
+  footerSourcesText: "Reading from",
+  footerNewsrooms: "newsrooms",
+  footerRights: "All rights reserved.",
+  footerBuiltBy: "Built by",
+  footerDisclaimer:
+    "Headlines and summaries belong to their original publishers. Every story links back to its source.",
 
-  // Sidebar legend
-  legendLive: "Live — click to filter",
-  legendError: "Fetch error — using last cache",
-  legendNoRss: "No RSS — not available",
-  legendRefresh: "Feed refreshes every 5 minutes",
-
-  // Feed states
-  noStories:
-    "No stories match this filter. Try a different range or source.",
+  // ── States ─────────────────────────────────────────────────────────────────
+  noStories: "No stories match this filter. Try a different range or topic.",
   loadingStories: "Loading stories…",
   errorFeed: "Could not load news feed. Check your connection or try again.",
   retryLabel: "Retry",
-
-  statusDemo:
-    "Using demo data. Connect your backend to switch to live AI-researched summaries.",
-  statusLoading: "Fetching live AI-prepared stories from your backend…",
-  statusConnected: "Live endpoint connected. Content is ready.",
-  statusUnavailable:
-    "Live endpoint not available. Falling back to demo content.",
 };
 
 export type I18nDict = typeof en;
 
 const np: I18nDict = {
-  appTagline: "अहिलेको मुख्य खबर",
-  appSubtitle: "दैनिक अपडेट",
-  searchPlaceholder: "के खोज्दै हुनुहुन्छ?",
-  switchToLive: "लाइभ समाचार",
-  switchToDemo: "डेमो हेर्नुहोस्",
-  langButton: "NP → EN",
+  wordmark: "एक झलक",
+  wordmarkNp: "EkJhalak",
+  tagline: "नेपाल र विश्व, एकै झलकमा",
+  searchPlaceholder: "शीर्षक र सारांश खोज्नुहोस्",
+  searchLabel: "खोज्नुहोस्",
+  refreshFeed: "फिड रिफ्रेस गर्नुहोस्",
+  langButton: "English",
   langToggleLabel: "अंग्रेजीमा स्विच गर्नुहोस्",
-  navOverview: "सबै खबर",
-  navToday: "आजको",
-  navWeek: "यो हप्ताको",
-  navMonth: "यो महिनाको",
-  feedLensLabel: "खबरको प्रकार",
-  feedAll: "सबै",
-  feedNational: "स्वदेश",
-  feedInternational: "विदेश",
-  themeLabel: "थिम",
-  themeDark: "डार्क मोड",
-  themeLight: "उज्यालो मोड",
-  dailyRefreshTitle: "दैनिक अपडेट",
-  dailyRefreshTime: "बेलुका ९:०० बजे",
-  dailyRefreshNote: "भरपर्दो स्रोतबाट छानिएका खबरहरू।",
-  sourcesLabel: "स्रोतहरू",
-  trustedSourcesTitle: "स्रोतहरू",
-  trustedSourcesDesc: "हामीले विश्वास गरेका पत्रिकाहरू",
-  sectionNepal: "नेपाल",
-  sectionInternational: "विदेश",
-  researchStackTitle: "कसरी चल्छ?",
-  researchStackDesc: "समाचार संकलन गर्ने तरिका",
-  apiContractTitle: "प्राविधिक कुरा",
-  apiContractDesc: "हाम्रो सिस्टमको कनेक्सन",
-  briefingDesc:
-    "के ठीक, के बेठीक, के सत्य, के हावा छुट्याउँदै कपालै दुखिसक्यो ।\
- अबदेखि सबै यहीँ पढ्ने हो। एकै ठाउँमा सबै, भरपर्दो समाचार। ढुक्कै !!!",
-  tabToday: "आज",
-  tabWeek: "हप्ता",
-  tabMonth: "महिना",
-  tabEnFirst: "अंग्रेजीमा",
-  tabNpFirst: "नेपालीमा",
+  themeDark: "डार्क मोडमा जानुहोस्",
+  themeLight: "उज्यालो मोडमा जानुहोस्",
+  openMenu: "मेनु खोल्नुहोस्",
+  closeMenu: "मेनु बन्द गर्नुहोस्",
 
+  liveLabel: "प्रत्यक्ष",
+  updatedAt: "अद्यावधिक",
+
+  statTimelineTitle: "समय",
+  statFeedTitle: "क्षेत्र",
   rangeDay: "आजको",
   rangeWeek: "यो हप्ताको",
   rangeMonth: "यो महिनाको",
   rangeSuffix: "ब्रिफिङ",
-  statItemsTitle: "खबर संख्या",
-  statItemsNote: "अहिले देखिएका खबरहरू।",
-  statTimelineTitle: "समय",
-  statTimelineNote: "आज वा यो हप्ताको।",
-  statFeedTitle: "खबरको क्षेत्र",
-  statFeedNote: "कुन ठाउँको खबर हेर्ने।",
-  statLangTitle: "भाषा",
-  statLangNote: "पढ्न चाहेको भाषा।",
-  feedValueAll: "सबै",
-  feedValueNational: "स्वदेश",
-  feedValueInternational: "विदेश",
-  langValue: "नेपाली",
+  feedAll: "मुख्य समाचार",
+  feedNational: "स्वदेश",
+  feedInternational: "विश्व",
+  allTopics: "सबै",
+  clearFilters: "फिल्टर हटाउनुहोस्",
+
+  leadStory: "मुख्य समाचार",
+  moreHeadlines: "थप शीर्षक",
+  latestSection: "पछिल्लो",
+  trendingSection: "पढ्नै पर्ने",
+  trendingHint: "सञ्चारगृहको समेटाइ, स्रोतको भार र नयाँपनका आधारमा",
+  briefingDesc:
+    "अनावश्यक कुरा छैन, विज्ञापनको झन्झट छैन — छोटो र सही समाचार, सबै एकै ठाउँमा।",
+  filtered: "खबर",
+
+  readBrief: "पूरा पढ्नुहोस्",
+  readFull: "स्रोतमा पढ्नुहोस्",
+  outletsOne: "१ सञ्चारगृह",
+  outletsMany: "सञ्चारगृहले समेटे",
+  minRead: "मिनेट",
+
+  newsletterKicker: "दैनिक ब्रिफिङ",
+  newsletterTitle: "एउटा इमेल। हरेक बिहान। अरू केही होइन।",
+  newsletterDesc:
+    "नेपाल र विश्वमा के महत्त्वपूर्ण भयो — छोटो सारांश, बिहानको चिया अघि नै तपाईंको इनबक्समा।",
+  newsletterPlaceholder: "you@example.com",
+  newsletterCta: "सदस्यता लिनुहोस्",
+  newsletterSuccess: "धन्यवाद! भोलि बिहान इनबक्स हेर्नुहोला।",
+  newsletterInvalid: "कृपया मान्य इमेल ठेगाना राख्नुहोस्।",
+  newsletterUnavailable:
+    "अहिले दर्ता खुला छैन — ब्रिफिङ सूची तयारीकै क्रममा छ।",
+  newsletterFailed: "केही गडबड भयो। केही बेरपछि पुनः प्रयास गर्नुहोस्।",
+  newsletterPrivacy: "स्प्याम छैन। जुनसुकै बेला बन्द गर्न सक्नुहुन्छ।",
+  subscribe: "सदस्यता",
+  close: "बन्द गर्नुहोस्",
+
   pagePre: "पृष्ठ",
   pageOf: "/",
   prev: "अघिल्लो",
   next: "अर्को",
-  badgeNepal: "स्वदेश",
-  badgeWorld: "विदेश",
-  readBrief: "पूरा पढ्नुहोस्",
-  sourceLink: "स्रोत",
-  langLabelEn: "English",
-  langLabelNp: "नेपाली",
 
-  // Source filter
-  filteredBySource: "स्रोत अनुसार",
-  clearFilter: "हटाउनुहोस्",
-  filtered: "छानिएको",
+  footerAbout: "हाम्रो बारेमा",
+  footerAboutText:
+    "एक झलकले भरपर्दा नेपाली र अन्तर्राष्ट्रिय सञ्चारगृहका समाचार एकै ठाउँमा, विज्ञापनरहित रूपमा प्रस्तुत गर्छ। सारांश प्रकाशित भएकै भाषामा राखिन्छ।",
+  footerSections: "विषय",
+  footerSources: "स्रोत",
+  footerSourcesText: "हाल",
+  footerNewsrooms: "सञ्चारगृहबाट",
+  footerRights: "सर्वाधिकार सुरक्षित।",
+  footerBuiltBy: "निर्माता",
+  footerDisclaimer:
+    "शीर्षक र सारांशको अधिकार सम्बन्धित प्रकाशकको हो। हरेक समाचार आफ्नै स्रोतमा जोडिएको छ।",
 
-  // Sidebar legend
-  legendLive: "लाइभ — क्लिक गरेर छान्नुहोस्",
-  legendError: "त्रुटि — पुरानो क्यास देखाइएको",
-  legendNoRss: "RSS छैन — उपलब्ध छैन",
-  legendRefresh: "फिड हरेक ५ मिनेटमा अपडेट",
-
-  // Feed states
-  noStories: "तपाईंले खोज्नुभएको कुरा भेटिएन। अर्कै केही खोज्नुहोस् न।",
+  noStories: "यो फिल्टरमा कुनै समाचार भेटिएन। अर्कै दायरा वा विषय हेर्नुहोस्।",
   loadingStories: "समाचार लोड गर्दैछौं…",
-  errorFeed: "समाचार लोड गर्न सकिएन। इन्टरनेट जाँच्नुहोस् वा पुनः प्रयास गर्नुहोस्।",
+  errorFeed:
+    "समाचार लोड गर्न सकिएन। इन्टरनेट जाँच्नुहोस् वा पुनः प्रयास गर्नुहोस्।",
   retryLabel: "पुनः प्रयास",
-
-  statusDemo: "अहिले डेमो मात्र हो। लाइभ समाचारका लागि कनेक्सन चाहिन्छ।",
-  statusLoading: "ताजा समाचार खोज्दैछौं…",
-  statusConnected: "सिस्टम जोडिएको छ। समाचार तयार छ।",
-  statusUnavailable: "अहिले लाइभ समाचार चल्न सकेन। डेमो हेर्दै गर्नुहोस्।",
 };
 
 export const i18n = { en, np };

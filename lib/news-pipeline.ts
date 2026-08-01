@@ -1,51 +1,50 @@
 // lib/news-pipeline.ts
-// Core data types for the feed pipeline.
-// NewsItem is the canonical shape used from ingestion through to the UI.
+// Canonical shape for a news item — used from RSS ingestion through to UI.
+// The summary is always in the article's original language; no translation.
+
+import type { TopicId } from "./taxonomy";
 
 export type RangeKey = "day" | "week" | "month";
 export type BucketKey = "national" | "international";
+export type OriginalLang = "np" | "en";
 
 export interface NewsItem {
   /** SHA-256 fingerprint of the normalized article URL (first 12 hex chars) */
   id: string;
   /** National (Nepal) or International */
   bucket: BucketKey;
-  /** Headline, HTML-stripped */
+  /** Language of the source article — also the language of `summary` */
+  originalLang: OriginalLang;
+  /** Headline in the original language, HTML-stripped */
   title: string;
-  /** Nepali headline (translated or native) */
-  titleNp: string;
-  /** Display name of the source publication */
-  source: string;
-  /** Source registry id, e.g. "kathmandu-post" */
-  sourceId: string;
-  /** Canonical article URL */
+  /** Canonical article URL — links out to the publisher */
   sourceUrl: string;
-  /** Formatted display string, e.g. "Today • 07:15" or "Apr 1 • 09:00" */
+  /** Formatted display string, e.g. "Apr 18 • 09:00" */
   publishedAt: string;
   /** Unix milliseconds — used for range filtering and sort order */
   publishedTimestamp: number;
-  /** English summary (from RSS description, HTML-stripped) */
-  summaryEn: string;
-  /**
-   * Nepali summary.
-   * Populated for Nepali-language sources; empty for EN sources until a
-   * translation pipeline is connected. UI falls back to summaryEn when empty.
-   */
-  summaryNp: string;
-  /** Lead image URL from the RSS feed (optional) */
-  imageUrl?: string;
-  /** Primary category derived from the source registry */
+  /** Concise summary in the original language (≤ 600 chars). */
+  summary: string;
+  /** Primary category from the source registry. Server-side only — see lib/feed-payload.ts */
   category?: string;
+  /** Editorial topic derived from the article's own words — drives colour coding */
+  topic: TopicId;
+  /** Lead image from feed metadata. null when the feed supplied none. */
+  imageUrl: string | null;
+  /** Publisher attribution */
+  sourceId: string;
+  sourceName: string;
+  /** Server-side only — stripped from the client payload. See lib/feed-payload.ts */
+  sourceHomepage?: string;
+  /** Editorial credibility score 1–10 from the source registry */
+  credibility: number;
   /**
-   * Source IDs of other outlets that published the same story (dedup pass).
-   * Populated by deduplicator when duplicate clusters are found.
+   * How many distinct outlets we saw running this story, counted while
+   * deduplicating. 1 = a single outlet carried it. This is the real signal
+   * behind the trending rail — no synthetic engagement metrics.
    */
-  alternateSourceIds?: string[];
-  /** Number of duplicate stories collapsed into this canonical item */
-  duplicateCount?: number;
+  coverageCount: number;
 }
-
-// ── API response types ───────────────────────────────────────────────────────
 
 export interface SourceStatusMeta {
   id: string;

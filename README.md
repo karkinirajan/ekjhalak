@@ -57,7 +57,7 @@ Two independent cache layers run in series:
 
 A cache miss at the aggregation layer fetches all sources in parallel. A hit returns the stored `AggregatedFeed` immediately with no upstream I/O.
 
-On-demand invalidation: `POST /api/revalidate` calls `revalidateTag("news-feed", "max")` to bust the tag across all cache layers. A Vercel Cron running every 5 minutes keeps the cache warm.
+On-demand invalidation: `POST /api/revalidate` calls `revalidateTag("news-feed", "max")` to bust the tag across all cache layers. A Vercel Cron running once per day keeps the cache warm within hobby-plan limits.
 
 ---
 
@@ -145,6 +145,7 @@ Filtering is applied against `item.publishedTimestamp` relative to `feed.fetched
 
 1. Open `lib/source-registry.ts`.
 2. Add an entry to `SOURCES`:
+
    ```ts
    {
      id: "your-source",        // lowercase, hyphenated, unique
@@ -160,6 +161,7 @@ Filtering is applied against `item.publishedTimestamp` relative to `feed.fetched
      note: "Short description",
    },
    ```
+
 3. Test the feed URL with `curl -s https://example.com/feed | head -c 500` — confirm it returns XML.
 4. Set `active: false` initially; run the dev server and check `/api/news` source statuses before enabling.
 5. If the source injects sponsored/ad items into the RSS feed, add `urlPrefix: "https://example.com/"` to filter them out.
@@ -220,7 +222,7 @@ Returns all registered sources with live fetch status merged in.
 
 ### `POST /api/revalidate?secret=SECRET`
 
-On-demand cache invalidation. Busts the `"news-feed"` tag immediately — next request triggers a fresh aggregation. Use from a Vercel Cron job (every 5 minutes) for near-real-time freshness.
+On-demand cache invalidation. Busts the `"news-feed"` tag immediately — next request triggers a fresh aggregation. Use from a Vercel Cron job (once per day on hobby accounts) for periodic freshness.
 
 Set `REVALIDATE_SECRET` in Vercel environment variables. Without it, the endpoint is open (fine for dev/staging).
 
@@ -288,13 +290,17 @@ By default the app runs entirely in-memory (no database needed). To enable persi
 
 1. Create a [Supabase](https://supabase.com) project.
 2. Run the migration in the SQL editor:
+
    ```sql
    -- paste contents of supabase/migrations/001_initial.sql
    ```
+
 3. Seed sources:
+
    ```sql
    -- paste contents of supabase/seed/sources.sql
    ```
+
 4. Set `DATABASE_URL` to the **Transaction Pooler** URL (port `6543`) in your environment.
 
 ---
@@ -331,3 +337,142 @@ GitHub Actions runs lint → type-check → build on every push to `main`:
 ```
 .github/workflows/ci.yml
 ```
+
+---
+
+## Next-Level Roadmap (10 Upgrades)
+
+1. Personal Briefing Profiles
+Users pick topics, regions, and reading depth (`60s`, `3m`, `deep read`) so the homepage feels intentional per user instead of one-size-fits-all.
+
+2. Morning/Evening Digest Delivery
+Ship polished digests to email, Telegram, and WhatsApp at user-selected times with timezone awareness and skip logic for low-news days.
+
+3. Trust Layer + Source Transparency
+Add visible source signals: source diversity score, first-published timestamp, correction notes, and direct-source prominence badges.
+
+4. Story Clusters + Live Timelines
+Cluster related reports across sources into one evolving story timeline (first report, major updates, latest status).
+
+5. Explain-It Module
+For major events, add quick context cards: `What happened`, `Why it matters`, `What to watch next`, and `Known unknowns`.
+
+6. Audio Briefings (Nepali + English)
+Generate a short daily audio summary with clean voice options and chapter markers by topic.
+
+7. Smart Alerts (High Signal Only)
+Push notifications only for user-selected severity and categories to avoid alert fatigue and maintain trust.
+
+8. Pro Research Mode
+Power users get advanced search, date/source filters, quote extraction, and export to PDF/Markdown/CSV.
+
+9. Publisher + Institution Dashboard
+Offer a B2B dashboard for embassies, NGOs, media teams, and analysts with trend snapshots, media pulse, and briefing exports.
+
+10. Performance + Reliability Hardening
+Add uptime SLOs, feed quality dashboards, dead-source auto-quarantine, and synthetic checks for critical routes.
+
+---
+
+## Monetization Guide (Step-by-Step)
+
+### Phase 1: Validate Demand (Weeks 1–3)
+
+1. Define your paid value proposition
+`Save 30–60 minutes/day with clean, verified Nepal + world briefings.`
+
+2. Add a waitlist and interest capture
+Collect intent by user type: student, journalist, policy, business, diaspora.
+
+3. Run 20 short user interviews
+Focus on willingness-to-pay, not just feature requests.
+
+4. Pick one paid wedge
+Choose one entry product first: `Pro Alerts` or `Morning Digest Pro`.
+
+### Phase 2: Launch Revenue v1 (Weeks 4–8)
+
+1. Introduce 3 tiers
+`Free`: core feed
+`Pro Individual`: personalization, alerts, advanced filters
+`Pro Team`: shared dashboards, exports, scheduled reports
+
+2. Suggested starter pricing
+`Pro Individual`: $4.99–$7.99/month
+`Pro Team`: $29–$99/month depending on seats and report limits
+
+3. Add paywall boundaries
+Keep public trust features open; gate convenience and productivity features.
+
+4. Add Stripe checkout + billing portal
+Support monthly and annual plans (`2 months free` on annual).
+
+### Phase 3: Strengthen Retention (Months 3–4)
+
+1. Build habit loops
+Daily digest streaks, weekly recap, and save/read-later collections.
+
+2. Add usage-based nudges
+If user misses 3 days, send a lighter digest. If user is highly active, upsell Pro Team.
+
+3. Track activation metric
+Target: user reads at least 5 stories across 3 days in week 1.
+
+4. Reduce churn with exit-intent offers
+Offer pause plan, lower tier, or topic-only subscription before cancellation.
+
+### Phase 4: Expand B2B (Months 5+)
+
+1. Package institutional plans
+Policy desks, PR teams, NGOs, and research organizations.
+
+2. Add branded weekly intelligence reports
+White-label PDF/email reports with custom topic packs.
+
+3. Offer annual contracts
+Discount annual prepay to improve cash flow and retention.
+
+4. Build partner channels
+University journalism programs, think tanks, and diaspora associations.
+
+---
+
+## Recommended Revenue Mix
+
+1. Subscriptions (primary)
+Individual and team recurring plans should drive most revenue.
+
+2. B2B intelligence reports (high margin)
+Recurring institutional briefings with SLA-backed delivery.
+
+3. Ethical sponsorships (secondary)
+Limited, clearly labeled sponsorship placements in digest emails only.
+
+4. Affiliate referrals (selective)
+Only for relevant tools and services with strict quality standards.
+
+---
+
+## KPIs to Track Weekly
+
+1. Visitor → signup conversion
+2. Signup → activated user conversion
+3. Activated user → paid conversion
+4. Monthly churn rate
+5. ARPU (average revenue per user)
+6. LTV/CAC ratio
+7. Digest open and click-through rates
+8. Retention at day 7, 30, and 90
+
+---
+
+## 30-Day Execution Checklist
+
+1. Add waitlist + pricing page
+2. Implement auth + Stripe billing
+3. Launch one premium feature (`Pro Digest` recommended)
+4. Add product analytics events (activation funnel)
+5. Run first 10 paid user pilots
+6. Publish one institutional plan page
+7. Ship weekly product update notes
+8. Review KPI dashboard every Monday

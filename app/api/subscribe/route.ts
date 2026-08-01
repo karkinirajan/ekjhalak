@@ -1,89 +1,59 @@
-// app/api/subscribe/route.ts
-// Newsletter subscription endpoint.
-// Rate-limited to 5 requests per 10 minutes per IP.
-
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import sql from "@/lib/db";
-import {
-  rateLimit,
-  SUBSCRIBE_LIMIT,
-  getClientIp,
-  rateLimitHeaders,
-} from "@/lib/security/rate-limit";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+/**
+ * Newsletter signup.
+ *
+ * There is no mailing list infrastructure in this repo, so rather than show a
+ * confirmation the site cannot honour, this route forwards to whatever provider
+ * is configured via NEWSLETTER_WEBHOOK_URL (Buttondown, ConvertKit, Formspree,
+ * a Zapier hook — anything that accepts `{ email }` as JSON).
+ *
+ * With no provider configured it returns 503 and the form tells the reader
+ * signups aren't open yet, which is true. It never claims a subscription that
+ * was not actually recorded somewhere.
+ */
 
-const BodySchema = z.object({
-  email: z
-    .string()
-    .email("Invalid email address")
-    .max(254, "Email too long")
-    .toLowerCase()
-    .trim(),
-  lang: z.enum(["en", "np"]).optional().default("en"),
-});
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-export async function POST(req: NextRequest) {
-  // Rate limiting
-  const ip = getClientIp(req.headers);
-  const rl = rateLimit(ip, SUBSCRIBE_LIMIT);
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests. Please try again later." },
-      { status: 429, headers: rateLimitHeaders(rl) },
-    );
-  }
+export async function POST(request: NextRequest) {
+  let email: unknown;
 
-  // Parse body
-  let body: unknown;
   try {
-    body = await req.json();
+    ({ email } = await request.json());
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  const parsed = BodySchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.flatten() },
-      { status: 422, headers: rateLimitHeaders(rl) },
-    );
+  if (typeof email !== "string" || !EMAIL_PATTERN.test(email.trim())) {
+    return NextResponse.json({ error: "invalid_email" }, { status: 400 });
   }
 
-  const { email, lang } = parsed.data;
-
-  if (!process.env.DATABASE_URL) {
-    // Graceful degradation — accept the email but note it wasn't saved
-    console.warn(
-      "[subscribe] No DATABASE_URL — subscription not persisted:",
-      email,
-    );
-    return NextResponse.json(
-      { ok: true, message: "Subscribed (demo mode — not persisted)" },
-      { status: 200, headers: rateLimitHeaders(rl) },
-    );
+  const endpoint = process.env.NEWSLETTER_WEBHOOK_URL;
+  if (!endpoint) {
+    return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
 
   try {
-    await sql`
-      INSERT INTO subscribers (email, lang, status)
-      VALUES (${email}, ${lang}, 'active')
-      ON CONFLICT (email) DO UPDATE SET
-        lang      = EXCLUDED.lang,
-        status    = 'active',
-        updated_at = NOW()
-    `;
-    return NextResponse.json(
-      { ok: true, message: "Successfully subscribed" },
-      { status: 200, headers: rateLimitHeaders(rl) },
-    );
+    const upstream = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.NEWSLETTER_API_KEY
+          ? { Authorization: `Bearer ${process.env.NEWSLETTER_API_KEY}` }
+          : {}),
+      },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!upstream.ok) {
+      console.error("[api/subscribe] provider rejected:", upstream.status);
+      return NextResponse.json({ error: "provider_error" }, { status: 502 });
+    }
+
+    return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("[subscribe] DB error:", err);
-    return NextResponse.json(
-      { error: "Subscription failed. Please try again." },
-      { status: 500, headers: rateLimitHeaders(rl) },
-    );
+    console.error("[api/subscribe] request failed:", err);
+    return NextResponse.json({ error: "provider_error" }, { status: 502 });
   }
 }
