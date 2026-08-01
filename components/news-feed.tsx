@@ -420,7 +420,7 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
                       </span>
                     </div>
 
-                    <div className="grid gap-6 sm:grid-cols-2">
+                    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                       {pagedItems.map((item, index) => (
                         <Reveal key={item.id} delay={Math.min(index, 5) * 60}>
                           <StoryCard item={item} onOpen={openStory} />

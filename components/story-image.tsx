@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { resolveStoryImageSource } from "@/lib/default-images";
 import { cn } from "@/lib/utils";
-import { TOPICS, type TopicId } from "@/lib/taxonomy";
+import { type TopicId } from "@/lib/taxonomy";
 
 interface StoryImageProps {
   src: string | null;
@@ -11,8 +12,6 @@ interface StoryImageProps {
   className?: string;
   /** Lead images above the fold should load eagerly */
   priority?: boolean;
-  /** Scale of the fallback glyph */
-  glyphClassName?: string;
 }
 
 /**
@@ -30,35 +29,17 @@ export function StoryImage({
   topic,
   className,
   priority = false,
-  glyphClassName = "text-4xl",
 }: StoryImageProps) {
   const [failed, setFailed] = useState(false);
-  const showFallback = !src || failed;
-
-  if (showFallback) {
-    return (
-      <div
-        className={cn(
-          "cover-art relative flex items-center justify-center overflow-hidden",
-          className,
-        )}
-        role="img"
-        aria-label={alt}
-      >
-        <span
-          aria-hidden="true"
-          className={cn("cover-glyph drop-shadow-sm", glyphClassName)}
-        >
-          {TOPICS[topic].glyph}
-        </span>
-      </div>
-    );
-  }
+  const resolvedSrc = useMemo(() => {
+    if (failed) return resolveStoryImageSource(null, topic);
+    return resolveStoryImageSource(src, topic);
+  }, [failed, src, topic]);
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- arbitrary publisher CDNs; see note above
+    // eslint-disable-next-line @next/next/no-img-element -- arbitrary publisher CDNs and local fallback art both need direct image rendering
     <img
-      src={src}
+      src={resolvedSrc}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : "auto"}

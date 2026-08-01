@@ -51,7 +51,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
         // `.data-[side=right]:sm:max-w-sm[data-side=right]` at (0,2,0), so the
         // panel silently rendered at 384px instead of 672px. Matching the prefix
         // also lets twMerge see the two as one utility and drop the default.
-        className="w-full overflow-y-auto border-l-rule bg-canvas p-0 data-[side=right]:sm:max-w-[40rem]"
+        className="w-full overflow-y-auto border-l-rule bg-canvas p-0 data-[side=right]:sm:max-w-2xl"
       >
         {/* Lead image doubles as the panel header */}
         <div className="relative h-52 w-full shrink-0 overflow-hidden sm:h-64">
@@ -61,7 +61,6 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
             topic={item.topic}
             priority
             className="h-full w-full"
-            glyphClassName="text-6xl"
           />
           <div className="photo-scrim absolute inset-0" />
           <div className="absolute right-0 bottom-0 left-0 p-5 sm:p-7">
@@ -74,7 +73,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
             <SheetTitle
               lang={langAttr}
               className={cn(
-                "headline text-[1.7rem] leading-[1.16] font-semibold tracking-[-0.02em] text-ink sm:text-[2rem]",
+                "headline text-[1.55rem] leading-[1.16] font-semibold tracking-[-0.02em] text-ink sm:text-[2rem]",
                 isNp ? "font-np leading-[1.35]" : "font-display",
               )}
             >
@@ -95,7 +94,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
               {item.coverageCount > 1 && (
                 <>
                   <span aria-hidden="true" className="h-3 w-px bg-rule" />
-                  <span className="inline-flex items-center gap-1.5 text-[var(--topic)]">
+                  <span className="inline-flex items-center gap-1.5 text-(--topic)">
                     <Newspaper className="h-3 w-3" aria-hidden="true" />
                     {item.coverageCount} {t.outletsMany}
                   </span>
@@ -116,7 +115,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
                   isNp && "font-np text-[1.125rem] leading-[1.9]",
                   index === 0 &&
                     !isNp &&
-                    "first-letter:float-left first-letter:mt-1 first-letter:mr-2.5 first-letter:font-display first-letter:text-[3.25rem] first-letter:leading-[0.82] first-letter:font-black first-letter:text-[var(--topic)]",
+                    "first-letter:float-left first-letter:mt-1 first-letter:mr-2.5 first-letter:font-display first-letter:text-[3.25rem] first-letter:leading-[0.82] first-letter:font-black first-letter:text-(--topic)",
                 )}
               >
                 {paragraph}

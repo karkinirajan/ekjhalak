@@ -1,6 +1,7 @@
 "use client";
 
 import { Newspaper } from "lucide-react";
+import { StoryImage } from "@/components/story-image";
 import { SourceMark, TopicPill } from "@/components/topic-pill";
 import { useFeedClock } from "@/components/feed-clock";
 import { useTheme } from "@/components/theme-provider";
@@ -62,8 +63,18 @@ export function StoryCard({
     return (
       <article
         data-topic={item.topic}
-        className="group relative border-l border-transparent py-3 pl-0 transition-all duration-200 hover:border-[var(--topic)] hover:bg-raised/40"
+        className="group relative border-l border-transparent py-3 pl-0 transition-all duration-200 hover:border-(--topic) hover:bg-raised/40"
       >
+        <div className="mb-4 overflow-hidden rounded-[1.25rem] border border-rule/70 bg-raised/50 shadow-[0_18px_50px_-18px_rgba(0,0,0,0.28)]">
+          <StoryImage
+            src={item.imageUrl}
+            alt={title}
+            topic={item.topic}
+            priority
+            className="aspect-16/10 w-full"
+          />
+        </div>
+
         <div className="flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-ink-muted">
           <TopicPill topic={item.topic} lang={language} tone="quiet" />
           {item.coverageCount > 1 && (
@@ -77,7 +88,7 @@ export function StoryCard({
         <h2
           lang={langAttr}
           className={cn(
-            "mt-4 text-[clamp(1.7rem,3.4vw,2.4rem)] font-semibold leading-[1.08] tracking-[-0.025em] text-ink",
+            "mt-4 text-[clamp(1.7rem,3.4vw,2.4rem)] font-semibold leading-tight text-ink",
             isNp ? "font-np" : "font-display",
           )}
         >
@@ -115,37 +126,49 @@ export function StoryCard({
     return (
       <article
         data-topic={item.topic}
-        className="group relative border-l border-transparent py-3 pl-4 transition-all duration-200 hover:border-[var(--topic)] hover:bg-raised/40"
+        className="group relative border-l border-transparent py-3 pl-4 transition-all duration-200 hover:border-(--topic) hover:bg-raised/40"
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <TopicPill topic={item.topic} lang={language} tone="quiet" />
-          <span className="eyebrow text-ink-muted">{relative}</span>
-        </div>
-        <h3
-          lang={langAttr}
-          className={cn(
-            "mt-2 text-[1.05rem] font-semibold leading-[1.3] tracking-[-0.015em] text-ink",
-            isNp ? "font-np" : "font-display",
-          )}
-        >
-          <button
-            type="button"
-            onClick={() => onOpen(item)}
-            className="card-focus text-left"
-          >
-            {title}
-          </button>
-        </h3>
-        {summary && (
-          <p
-            className={cn(
-              "mt-2 text-[0.95rem] leading-[1.7] text-ink-soft",
-              isNp && "font-np",
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row">
+          <div className="h-24 w-full shrink-0 overflow-hidden rounded-xl border border-rule/70 bg-raised/50 sm:h-20 sm:w-24">
+            <StoryImage
+              src={item.imageUrl}
+              alt={title}
+              topic={item.topic}
+              className="h-full w-full"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <TopicPill topic={item.topic} lang={language} tone="quiet" />
+              <span className="eyebrow text-ink-muted">{relative}</span>
+            </div>
+            <h3
+              lang={langAttr}
+              className={cn(
+                "mt-2 text-[1.05rem] font-semibold leading-[1.3] tracking-[-0.015em] text-ink",
+                isNp ? "font-np" : "font-display",
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => onOpen(item)}
+                className="card-focus text-left"
+              >
+                {title}
+              </button>
+            </h3>
+            {summary && (
+              <p
+                className={cn(
+                  "mt-2 text-[0.95rem] leading-[1.7] text-ink-soft",
+                  isNp && "font-np",
+                )}
+              >
+                {summary}
+              </p>
             )}
-          >
-            {summary}
-          </p>
-        )}
+          </div>
+        </div>
       </article>
     );
   }
@@ -153,9 +176,18 @@ export function StoryCard({
   if (variant === "compact") {
     return (
       <article data-topic={item.topic} className="group flex gap-3.5 py-1">
+        <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg border border-rule/70 bg-raised/50 shadow-[0_10px_22px_-16px_rgba(0,0,0,0.22)]">
+          <StoryImage
+            src={item.imageUrl}
+            alt={title}
+            topic={item.topic}
+            className="h-full w-full"
+          />
+        </div>
+
         <span
           aria-hidden="true"
-          className="font-display text-2xl leading-none font-semibold text-ink-muted transition-colors group-hover:text-[var(--topic)]"
+          className="font-display text-2xl leading-none font-semibold text-ink-muted transition-colors group-hover:text-(--topic)"
         >
           {String(rank ?? 0).padStart(2, "0")}
         </span>
@@ -164,7 +196,7 @@ export function StoryCard({
           <h3
             lang={langAttr}
             className={cn(
-              "text-sm font-semibold leading-snug text-ink transition-colors group-hover:text-[var(--topic)]",
+              "text-sm font-semibold leading-snug text-ink transition-colors group-hover:text-(--topic)",
               isNp && "font-np",
             )}
           >
@@ -181,7 +213,7 @@ export function StoryCard({
             {item.coverageCount > 1 && (
               <>
                 <span aria-hidden="true">·</span>
-                <span className="text-[var(--topic)]">
+                <span className="text-(--topic)">
                   {item.coverageCount} {t.outletsMany}
                 </span>
               </>
@@ -195,8 +227,17 @@ export function StoryCard({
   return (
     <article
       data-topic={item.topic}
-      className="group relative border-l border-transparent py-3 pl-4 transition-all duration-200 hover:border-[var(--topic)] hover:bg-raised/40"
+      className="group relative border-l border-transparent py-3 pl-4 transition-all duration-200 hover:border-(--topic) hover:bg-raised/40"
     >
+      <div className="mb-3 overflow-hidden rounded-[1.1rem] border border-rule/70 bg-raised/50 shadow-[0_14px_34px_-20px_rgba(0,0,0,0.28)]">
+        <StoryImage
+          src={item.imageUrl}
+          alt={title}
+          topic={item.topic}
+          className="aspect-16/10 w-full"
+        />
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <TopicPill topic={item.topic} lang={language} tone="quiet" />
         <span className="eyebrow text-ink-muted">{relative}</span>
@@ -205,7 +246,7 @@ export function StoryCard({
       <h3
         lang={langAttr}
         className={cn(
-          "mt-2 text-[1.13rem] font-semibold leading-[1.25] tracking-[-0.015em] text-ink",
+          "mt-2 text-[1.13rem] font-semibold leading-tight text-ink",
           isNp ? "font-np" : "font-display",
         )}
       >

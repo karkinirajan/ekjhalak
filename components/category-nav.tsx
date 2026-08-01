@@ -72,16 +72,16 @@ export function CategoryNav({
       aria-label={t.footerSections}
       className="sticky top-0 z-30 border-b border-rule glass"
     >
-      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[87.5rem] px-4 sm:px-6 lg:px-8">
         {/* ── Topic rail ─────────────────────────────────────────────────── */}
-        <div className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 py-2 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 [&::-webkit-scrollbar]:hidden">
+        <div className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 py-2 scrollbar-none sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <button
             type="button"
             ref={topic === "all" ? activeRef : undefined}
             onClick={() => setTopic("all")}
             aria-current={topic === "all" ? "true" : undefined}
             className={cn(
-              "eyebrow shrink-0 rounded-full px-3 py-1.5 transition-colors",
+              "eyebrow shrink-0 rounded-full px-3 py-1.5 transition-colors sm:px-3.5",
               topic === "all"
                 ? "bg-ink text-canvas"
                 : "text-ink-muted hover:bg-raised hover:text-ink",
@@ -106,8 +106,8 @@ export function CategoryNav({
                 className={cn(
                   "eyebrow shrink-0 rounded-full px-3 py-1.5 transition-colors",
                   isActive
-                    ? "bg-[var(--topic)] text-topic-ink"
-                    : "text-ink-muted hover:bg-[color-mix(in_oklab,var(--topic)_12%,transparent)] hover:text-[var(--topic)]",
+                    ? "bg-(--topic) text-topic-ink"
+                    : "text-ink-muted hover:bg-[color-mix(in_oklab,var(--topic)_12%,transparent)] hover:text-(--topic)",
                   isNp && "font-np tracking-normal",
                 )}
               >
