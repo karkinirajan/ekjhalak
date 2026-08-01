@@ -61,7 +61,6 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
             topic={item.topic}
             priority
             className="h-full w-full"
-            glyphClassName="text-6xl"
           />
           <div className="photo-scrim absolute inset-0" />
           <div className="absolute right-0 bottom-0 left-0 p-5 sm:p-7">

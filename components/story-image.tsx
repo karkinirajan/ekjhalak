@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { buildTopicFallbackImageDataUrl } from "@/lib/default-images";
 import { cn } from "@/lib/utils";
-import { TOPICS, type TopicId } from "@/lib/taxonomy";
+import { type TopicId } from "@/lib/taxonomy";
 
 interface StoryImageProps {
   src: string | null;
@@ -11,8 +12,6 @@ interface StoryImageProps {
   className?: string;
   /** Lead images above the fold should load eagerly */
   priority?: boolean;
-  /** Scale of the fallback glyph */
-  glyphClassName?: string;
 }
 
 /**
@@ -30,28 +29,22 @@ export function StoryImage({
   topic,
   className,
   priority = false,
-  glyphClassName = "text-4xl",
 }: StoryImageProps) {
   const [failed, setFailed] = useState(false);
   const showFallback = !src || failed;
+  const fallbackSrc = buildTopicFallbackImageDataUrl(topic);
 
   if (showFallback) {
     return (
-      <div
-        className={cn(
-          "cover-art relative flex items-center justify-center overflow-hidden",
-          className,
-        )}
-        role="img"
-        aria-label={alt}
-      >
-        <span
-          aria-hidden="true"
-          className={cn("cover-glyph drop-shadow-sm", glyphClassName)}
-        >
-          {TOPICS[topic].glyph}
-        </span>
-      </div>
+      // eslint-disable-next-line @next/next/no-img-element -- fallback art is generated locally and must remain an image element
+      <img
+        src={fallbackSrc}
+        alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding="async"
+        className={cn("h-full w-full object-cover", className)}
+      />
     );
   }
 
