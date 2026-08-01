@@ -51,7 +51,9 @@ export function CategoryNav({
     });
   }, [topic]);
 
-  const availableTopics = TOPIC_ORDER.filter((id) => (topicCounts[id] ?? 0) > 0);
+  const availableTopics = TOPIC_ORDER.filter(
+    (id) => (topicCounts[id] ?? 0) > 0,
+  );
 
   const buckets: { key: BucketFilter; label: string }[] = [
     { key: "all", label: t.feedAll },
@@ -70,7 +72,7 @@ export function CategoryNav({
       aria-label={t.footerSections}
       className="sticky top-0 z-30 border-b border-rule glass"
     >
-      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[720px] px-4 sm:px-6 lg:px-8">
         {/* ── Topic rail ─────────────────────────────────────────────────── */}
         <div className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 py-2 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 [&::-webkit-scrollbar]:hidden">
           <button

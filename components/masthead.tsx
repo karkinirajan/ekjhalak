@@ -58,7 +58,7 @@ export function Masthead({
 
   return (
     <header className="border-b border-rule bg-canvas">
-      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[720px] px-4 py-4 sm:px-6 lg:px-8">
         {/* ── Top rule: dateline + utilities ─────────────────────────────── */}
         <div className="flex items-center justify-between gap-3 border-b border-rule/60 py-2.5">
           <p
@@ -135,7 +135,7 @@ export function Masthead({
             wordmark ceiling comes down from 5rem to 3.5rem and the vertical
             padding roughly halves. It still reads as a broadsheet masthead; it
             just stops charging the reader a screenful for the privilege. */}
-        <div className="grid items-center gap-4 py-3.5 sm:py-4 lg:grid-cols-[1fr_auto_1fr]">
+        <div className="grid items-center gap-4 py-4 sm:py-5 lg:grid-cols-[1fr_auto_1fr]">
           {/* Balances the search field in the third column, so the wordmark
               stays optically centred rather than merely centred in its cell. */}
           <BrandBanner className="hidden lg:block" />
@@ -144,15 +144,15 @@ export function Masthead({
             <h1 className="leading-[0.9]">
               <span
                 className={cn(
-                  "block text-[clamp(2rem,6.5vw,3.5rem)] font-black tracking-[-0.035em] text-ink",
-                  isNp ? "font-np" : "font-display-soft",
+                  "block text-[clamp(2rem,6.5vw,3.4rem)] font-semibold tracking-[-0.035em] text-ink",
+                  isNp ? "font-np" : "font-display",
                 )}
               >
                 {t.wordmark}
               </span>
               <span
                 className={cn(
-                  "mt-1 block text-[clamp(0.85rem,2.4vw,1.1rem)] font-semibold tracking-tight text-red",
+                  "mt-1 block text-[clamp(0.85rem,2.4vw,1rem)] font-semibold tracking-[0.16em] text-red uppercase",
                   isNp ? "font-display" : "font-np",
                 )}
               >
