@@ -83,7 +83,7 @@ function GridSkeleton() {
           key={index}
           className="overflow-hidden rounded-lg border border-rule bg-surface"
         >
-          <div className="aspect-[16/10] w-full animate-pulse bg-raised" />
+          <div className="aspect-16/10 w-full animate-pulse bg-raised" />
           <div className="space-y-3 p-5">
             <div className="h-3 w-20 animate-pulse rounded bg-raised" />
             <div className="h-5 w-11/12 animate-pulse rounded bg-raised" />
@@ -350,7 +350,7 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
           resultCount={filteredItems.length}
         />
 
-        <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className="mx-auto w-full max-w-350 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           {showSkeleton && <GridSkeleton />}
 
           {!hasData && loadState === "error" && (

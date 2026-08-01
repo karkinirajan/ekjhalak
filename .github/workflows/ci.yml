@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [main, dev]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   lint-typecheck-build:
@@ -22,6 +22,8 @@ jobs:
       # pnpm-lock.yaml is now the only lockfile in the repo, and this matches it.
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,6 +41,9 @@ jobs:
       # files from the tsconfig.typecheck.json the repo's own script targets.
       - name: Type-check
         run: pnpm run typecheck
+
+      - name: Unit tests
+        run: pnpm run test
 
       # Parses the real token values out of globals.css and checks every colour
       # pairing the UI paints. The palette previously shipped with six WCAG AA

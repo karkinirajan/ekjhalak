@@ -71,8 +71,8 @@ export function CategoryNav({
     <nav
       aria-label={t.footerSections}
       className="sticky top-0 z-30 border-b border-rule glass"
-    >
-      <div className="mx-auto w-full max-w-[87.5rem] px-4 sm:px-6 lg:px-8">
+    > 
+      <div className="mx-auto w-full max-w-350 px-4 sm:px-6 lg:px-8">
         {/* ── Topic rail ─────────────────────────────────────────────────── */}
         <div className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 py-2 scrollbar-none sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <button
