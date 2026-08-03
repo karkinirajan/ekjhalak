@@ -70,12 +70,25 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  --radius-sm: calc(var(--radius) * 0.5);
-  --radius-md: calc(var(--radius) * 0.75);
+  /* ── Corners ────────────────────────────────────────────────────────────
+     A flat, near-square scale rather than a multiplied one.
+
+     `--radius` used to be 9999px so the shadcn buttons would render as pills,
+     and because the whole derived scale is computed from it, every `rounded-sm`
+     through `rounded-3xl` in the codebase became a stadium too. Cards, inputs,
+     panels and pills all ended up on the same fully-round corner, which is the
+     opposite of the crisp broadsheet this is meant to be — and it meant no
+     component could ask for a small corner without writing a literal.
+
+     The steps are now absolute and close together: 3px on the small things,
+     8px at the top. Anything that genuinely wants to be a circle asks for
+     `rounded-full`, which is unaffected by this scale.                     */
+  --radius-sm: 2px;
+  --radius-md: 3px;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.5);
-  --radius-2xl: calc(var(--radius) * 2);
-  --radius-3xl: calc(var(--radius) * 2.75);
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-3xl: 10px;
 }
 
 /* ── Shared ────────────────────────────────────────────────────────────────
@@ -102,7 +115,9 @@
   --border: var(--rule);
   --input: var(--rule-strong);
   --ring: var(--red);
-  --radius: 9999px;
+  /* The base step every shadcn primitive reaches for by default. See the
+     corner scale in @theme inline above for why this is 4px and not 9999px. */
+  --radius: 4px;
 }
 
 /* ── Dark: Press Night ─────────────────────────────────────────────────────
@@ -331,8 +346,16 @@
     font-family: var(--font-display), "Segoe UI", sans-serif;
   }
 
+  /* Mukta, as on ekantipur.com. The fallback chain lists what a Nepali reader's
+     machine is most likely to already have installed before giving up to a
+     generic sans, so a failed webfont still renders Devanagari rather than
+     tofu. Devanagari needs more leading than Latin at the same size — the
+     matras above and below the headstroke collide otherwise — and it must not
+     be letterspaced at all, which would break the conjuncts apart. */
   .font-np {
-    font-family: var(--font-devanagari), "Noto Sans Devanagari", sans-serif;
+    font-family:
+      var(--font-devanagari), "Mukta", "Noto Sans Devanagari", "Kalimati",
+      "Mangal", sans-serif;
     font-feature-settings: "kern" 1;
     line-height: 1.75;
     letter-spacing: 0;

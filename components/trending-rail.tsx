@@ -28,7 +28,7 @@ export function TrendingRail({ items, onOpen }: TrendingRailProps) {
 
   return (
     <aside className="lg:sticky lg:top-32">
-      <div className="rounded-[1.15rem] border border-rule bg-surface p-5 shadow-card">
+      <div className="rounded-sm border border-rule bg-surface p-5 shadow-card">
         <div className="mb-5 border-b border-rule pb-4">
           <h2
             className={cn(

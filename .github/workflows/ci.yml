@@ -56,6 +56,9 @@ jobs:
         env:
           # Stub values so the build does not fail on missing env vars.
           NEXT_PUBLIC_SITE_URL: https://www.ekjhalak.news
-          GROQ_API_KEY: stub
           REVALIDATE_SECRET: stub
           CRON_SECRET: stub
+          # GEMINI_API_KEY is deliberately absent. With no key the enrichment
+          # pass is skipped entirely, so the build stays fast and deterministic
+          # and CI never spends the project's daily model quota. A stub value
+          # would be worse than none: it would send real requests that 401.

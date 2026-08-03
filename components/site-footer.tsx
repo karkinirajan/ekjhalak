@@ -1,7 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
+import { STANDING_PAGES } from "@/lib/site-nav";
+import {
+  OWNER_NAME,
+  OWNER_TITLE_EN,
+  OWNER_TITLE_NP,
+  OWNER_URL,
+} from "@/lib/site-pages";
 import { TOPIC_ORDER, topicLabel, type TopicId } from "@/lib/taxonomy";
 
 interface SiteFooterProps {
@@ -90,7 +98,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
             </ul>
           </nav>
 
-          {/* Credits */}
+          {/* Standing pages + credit */}
           <div>
             <h2
               className={cn(
@@ -98,19 +106,22 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
                 isNp && "font-np tracking-normal",
               )}
             >
-              {t.footerAbout}
+              {t.footerCompany}
             </h2>
             <ul className="mt-4 space-y-2.5 text-sm">
-              <li>
-                <a
-                  href="https://kneeraazon.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-ink-soft transition-colors hover:text-ink"
-                >
-                  kneeraazon
-                </a>
-              </li>
+              {STANDING_PAGES.map((page) => (
+                <li key={page.slug}>
+                  <Link
+                    href={page.href}
+                    className={cn(
+                      "text-ink-soft transition-colors hover:text-ink",
+                      isNp && "font-np",
+                    )}
+                  >
+                    {t[page.labelKey]}
+                  </Link>
+                </li>
+              ))}
               <li>
                 <a
                   href="/sitemap.xml"
@@ -120,6 +131,21 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
                 </a>
               </li>
             </ul>
+
+            <p className={cn("mt-6 text-sm text-ink-muted", isNp && "font-np")}>
+              {t.footerBuiltBy}{" "}
+              <a
+                href={OWNER_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-ink-soft underline decoration-rule-strong underline-offset-4 transition-colors hover:text-ink hover:decoration-red"
+              >
+                {OWNER_NAME}
+              </a>
+              <span className="block text-xs text-ink-muted">
+                {isNp ? OWNER_TITLE_NP : OWNER_TITLE_EN}
+              </span>
+            </p>
           </div>
         </div>
 

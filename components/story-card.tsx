@@ -5,6 +5,7 @@ import { StoryImage } from "@/components/story-image";
 import { SourceMark, TopicPill } from "@/components/topic-pill";
 import { useFeedClock } from "@/components/feed-clock";
 import { useTheme } from "@/components/theme-provider";
+import { langAttr, storyText } from "@/lib/story-text";
 import {
   cn,
   formatRelativeTime,
@@ -25,27 +26,28 @@ interface StoryCardProps {
   priority?: boolean;
 }
 
-const GRID_SUMMARY_CHARS = 150;
+const GRID_SUMMARY_CHARS = 190;
 
 /**
- * Every story picture is framed identically: a 16:10 rectangle, a small corner,
- * and a hairline in the story's own category colour. `--topic` is supplied by
- * the `data-topic` attribute on the surrounding <article>, so each frame is
- * categorised without a per-topic class list here.
+ * The picture frame.
  *
- * The radius is written as a literal rather than as `rounded-sm` because this
- * theme sets `--radius: 9999px` to make the shadcn buttons pills, and the whole
- * derived scale — `rounded-sm` through `rounded-2xl` — inherits from it. A
- * `rounded-sm` frame would render as a stadium. `0.25rem` is the value stock
- * Tailwind gives `rounded-sm`, and it is what keeps these frames rectangular.
+ * No border of its own. The topic colour used to be a hairline around the
+ * photograph, which meant every card carried two competing rectangles — the
+ * card's edge and the picture's — and the coloured one belonged to the smaller,
+ * less important of the two. The colour now runs around the whole card, so a
+ * card is one categorised object and the photograph is simply part of it.
+ *
+ * The radius is written as a literal rather than as `rounded-sm` because the
+ * derived Tailwind scale is driven by `--radius`, and pinning it here keeps the
+ * frame square-cornered no matter what that token is set to.
  */
 const IMAGE_FRAME =
-  "overflow-hidden rounded-[0.25rem] border border-(--topic) bg-raised/50";
+  "overflow-hidden rounded-[3px] bg-raised/60 border border-rule/70";
 
 /**
  * One story, in two editorial weights.
  *
- *   grid    — the feed card: photo above, headline and standfirst below
+ *   grid    — the feed card: text column on the left, photograph on the right
  *   compact — ranked text row for the trending rail
  *
  * There is no dominant lead variant. Every story in the feed is rendered at the
@@ -65,9 +67,9 @@ export function StoryCard({
   const { t, language } = useTheme();
   const now = useFeedClock();
 
-  const isNp = item.originalLang === "np";
-  const langAttr = isNp ? "ne" : "en";
-  const title = sanitizeTextForDisplay(item.title);
+  const text = storyText(item, language);
+  const isNp = text.lang === "np";
+  const title = sanitizeTextForDisplay(text.title);
   const relative = formatRelativeTime(item.publishedTimestamp, language, now);
 
   if (variant === "compact") {
@@ -101,7 +103,7 @@ export function StoryCard({
 
         <div className="min-w-0 flex-1">
           <h3
-            lang={langAttr}
+            lang={langAttr(text.lang)}
             className={cn(
               "text-sm font-semibold leading-snug text-ink transition-colors group-hover:text-(--topic)",
               isNp && "font-np",
@@ -132,69 +134,101 @@ export function StoryCard({
   }
 
   const summary = truncate(
-    sanitizeTextForDisplay(item.summary),
+    sanitizeTextForDisplay(text.summary),
     GRID_SUMMARY_CHARS,
   );
 
+  // Text left, picture right.
+  //
   // `h-full` plus `mt-auto` on the footer: grid items stretch to the tallest
   // card in their row, so without this the source line floats wherever the
   // headline happens to end and the row reads as ragged.
+  //
+  // The topic colour lives on this element's border, which is what makes the
+  // whole card the categorised object. It sits at 45% against the card surface
+  // at rest so a grid of eleven topics reads as a page rather than a paint
+  // chart, and resolves to the full colour on hover.
   return (
     <article
       data-topic={item.topic}
-      className="group relative flex h-full flex-col border-l border-transparent py-3 pl-4 transition-all duration-200 hover:border-(--topic) hover:bg-raised/40"
+      className="group relative flex h-full flex-col overflow-hidden rounded-[3px] border border-[color-mix(in_oklab,var(--topic)_45%,var(--rule))] bg-surface transition-colors duration-200 hover:border-(--topic) hover:bg-raised/40"
     >
-      <div className={cn("mb-3 aspect-16/10 w-full", IMAGE_FRAME)}>
-        <StoryImage
-          src={item.imageUrl}
-          alt={title}
-          topic={item.topic}
-          priority={priority}
-          className="h-full w-full"
-        />
-      </div>
+      <div className="flex flex-1 items-start gap-4 p-4">
+        <div className="flex min-w-0 flex-1 flex-col self-stretch">
+          <div className="flex flex-wrap items-center gap-2">
+            <TopicPill topic={item.topic} lang={language} tone="quiet" />
+            <span className="eyebrow text-ink-muted">{relative}</span>
+          </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <TopicPill topic={item.topic} lang={language} tone="quiet" />
-        <span className="eyebrow text-ink-muted">{relative}</span>
-      </div>
+          <h3
+            lang={langAttr(text.lang)}
+            className={cn(
+              "mt-2.5 text-[1.06rem] leading-[1.3] font-semibold tracking-[-0.015em] text-ink transition-colors group-hover:text-(--topic)",
+              isNp ? "font-np leading-[1.45]" : "font-display",
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => onOpen(item)}
+              className="card-focus cursor-pointer text-left"
+            >
+              {title}
+            </button>
+          </h3>
 
-      <h3
-        lang={langAttr}
-        className={cn(
-          "mt-2 text-[1.13rem] font-semibold leading-[1.25] tracking-[-0.015em] text-ink",
-          isNp ? "font-np" : "font-display",
-        )}
-      >
-        <button
-          type="button"
-          onClick={() => onOpen(item)}
-          className="card-focus cursor-pointer text-left"
-        >
-          {title}
-        </button>
-      </h3>
+          {summary && (
+            <p
+              lang={langAttr(text.lang)}
+              className={cn(
+                "clamp-3 mt-2 text-[0.9rem] leading-[1.65] text-ink-soft",
+                isNp && "font-np leading-[1.75]",
+              )}
+            >
+              {summary}
+            </p>
+          )}
 
-      {summary && (
-        <p
-          lang={langAttr}
+          <div className="eyebrow mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-1.5 pt-3 text-ink-muted">
+            <SourceMark name={item.sourceName} className="min-w-0" />
+            <span aria-hidden="true" className="h-3 w-px shrink-0 bg-rule" />
+            <time
+              dateTime={new Date(item.publishedTimestamp).toISOString()}
+              className="tabular-nums"
+            >
+              {item.publishedAt}
+            </time>
+            {item.coverageCount > 1 && (
+              <>
+                <span aria-hidden="true" className="h-3 w-px shrink-0 bg-rule" />
+                <span className="inline-flex items-center gap-1.5 text-(--topic)">
+                  <Newspaper className="h-3 w-3" aria-hidden="true" />
+                  {item.coverageCount} {t.outletsMany}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Fixed width, fixed ratio, `self-start`: the picture column is the same
+            size on every card in the grid regardless of how long the headline
+            beside it runs. Without `self-start` the row's `items-start` would
+            still leave the frame free to grow on a tall card.
+            It steps up between the one-column and two-column layouts so the
+            picture stays in proportion to a card that roughly doubles in width. */}
+        <div
           className={cn(
-            "mt-2 max-w-[64ch] text-[0.95rem] leading-[1.7] text-ink-soft",
-            isNp && "font-np",
+            "aspect-4/3 w-24 shrink-0 self-start sm:w-36 xl:w-32",
+            IMAGE_FRAME,
           )}
         >
-          {summary}
-        </p>
-      )}
-
-      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 pt-3 text-[0.8rem] uppercase tracking-[0.16em] text-ink-muted">
-        <SourceMark name={item.sourceName} className="min-w-0" />
-        {item.coverageCount > 1 && (
-          <span className="inline-flex items-center gap-1.5">
-            <Newspaper className="h-3 w-3" aria-hidden="true" />
-            {item.coverageCount} {t.outletsMany}
-          </span>
-        )}
+          <StoryImage
+            src={item.imageUrl}
+            alt={title}
+            topic={item.topic}
+            priority={priority}
+            className="h-full w-full"
+          />
+        </div>
       </div>
     </article>
   );

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import {
   JetBrains_Mono,
   Merriweather,
-  Noto_Sans_Devanagari,
+  Mukta,
   Space_Grotesk,
 } from "next/font/google";
 import "./globals.css";
@@ -25,11 +25,18 @@ const merriweather = Merriweather({
   display: "swap",
 });
 
-// Nepali content uses the Devanagari-native Noto family.
-const notoDevanagari = Noto_Sans_Devanagari({
+// Nepali content is set in Mukta — the face Kantipur uses.
+//
+// ekantipur.com declares `body { font-family: "Mukta" }` and reaches for it
+// again on headlines, navigation and the ticker, so it is the typeface a Nepali
+// reader already associates with reading the news online. Mukta was drawn for
+// Devanagari first rather than extended into it, which is why its matras and
+// conjuncts hold together at body sizes where a Latin-first family with a
+// Devanagari range starts to look grafted on.
+const mukta = Mukta({
   variable: "--font-devanagari",
   subsets: ["devanagari", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -145,7 +152,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       data-theme="light"
-      className={`${spaceGrotesk.variable} ${merriweather.variable} ${notoDevanagari.variable} ${jetbrainsMono.variable}`}
+      className={`${spaceGrotesk.variable} ${merriweather.variable} ${mukta.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         {/* Lets the browser paint form controls and scrollbars to match

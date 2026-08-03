@@ -81,7 +81,7 @@ export function CategoryNav({
             onClick={() => setTopic("all")}
             aria-current={topic === "all" ? "true" : undefined}
             className={cn(
-              "eyebrow shrink-0 rounded-full px-3 py-1.5 transition-colors sm:px-3.5",
+              "eyebrow shrink-0 rounded-sm px-3 py-1.5 transition-colors sm:px-3.5",
               topic === "all"
                 ? "bg-ink text-canvas"
                 : "text-ink-muted hover:bg-raised hover:text-ink",
@@ -104,7 +104,7 @@ export function CategoryNav({
                 onClick={() => setTopic(id)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "eyebrow shrink-0 rounded-full px-3 py-1.5 transition-colors",
+                  "eyebrow shrink-0 rounded-sm px-3 py-1.5 transition-colors",
                   isActive
                     ? "bg-(--topic) text-topic-ink"
                     : "text-ink-muted hover:bg-[color-mix(in_oklab,var(--topic)_12%,transparent)] hover:text-(--topic)",
@@ -130,7 +130,7 @@ export function CategoryNav({
                 onClick={() => setBucket(option.key)}
                 aria-pressed={bucket === option.key}
                 className={cn(
-                  "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                  "rounded-sm px-3 py-1 text-xs font-semibold transition-colors",
                   bucket === option.key
                     ? "bg-red-soft text-red"
                     : "text-ink-muted hover:text-ink",
@@ -151,7 +151,7 @@ export function CategoryNav({
                   onClick={() => setRange(option.key)}
                   aria-pressed={range === option.key}
                   className={cn(
-                    "eyebrow rounded-full px-2.5 py-1 transition-colors",
+                    "eyebrow rounded-sm px-2.5 py-1 transition-colors",
                     range === option.key
                       ? "text-ink underline decoration-red decoration-2 underline-offset-4"
                       : "text-ink-muted hover:text-ink",

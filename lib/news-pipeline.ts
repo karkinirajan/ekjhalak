@@ -1,6 +1,10 @@
 // lib/news-pipeline.ts
 // Canonical shape for a news item — used from RSS ingestion through to UI.
-// The summary is always in the article's original language; no translation.
+//
+// Every story carries two versions of itself: the one its newsroom published,
+// and the same story in the other language. `title`/`summary` are always the
+// original; `titleTranslated`/`summaryTranslated` are always the counterpart.
+// Which pair the reader sees is decided at render time by `storyText()`.
 
 import type { TopicId } from "./taxonomy";
 
@@ -23,8 +27,17 @@ export interface NewsItem {
   publishedAt: string;
   /** Unix milliseconds — used for range filtering and sort order */
   publishedTimestamp: number;
-  /** Concise summary in the original language (≤ 600 chars). */
+  /** Concise summary in the original language (≤ SUMMARY_MAX_CHARS). */
   summary: string;
+  /**
+   * The headline rendered into the *other* language — Nepali for an English
+   * source, English for a Nepali one. Absent until the enrichment pass has
+   * reached this story; the UI falls back to the original when it is missing,
+   * which is the honest failure mode for a translation we do not have yet.
+   */
+  titleTranslated?: string;
+  /** The summary in the same other language. Absent under the same conditions. */
+  summaryTranslated?: string;
   /** Primary category from the source registry. Server-side only — see lib/feed-payload.ts */
   category?: string;
   /** Editorial topic derived from the article's own words — drives colour coding */

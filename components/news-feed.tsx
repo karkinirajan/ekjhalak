@@ -73,7 +73,7 @@ function ReadingProgress() {
   return (
     <div className="pointer-events-none fixed inset-x-0 top-0 z-50 h-1 bg-transparent">
       <div
-        className="h-full rounded-full bg-red transition-[width] duration-150"
+        className="h-full bg-red transition-[width] duration-150"
         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
       />
     </div>
@@ -89,15 +89,15 @@ function GridSkeleton() {
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="overflow-hidden rounded-[0.25rem] border border-rule bg-surface"
+          className="flex items-start gap-4 rounded-sm border border-rule bg-surface p-4"
         >
-          <div className="aspect-16/10 w-full animate-pulse bg-raised" />
-          <div className="space-y-3 p-5">
-            <div className="h-3 w-20 animate-pulse rounded bg-raised" />
-            <div className="h-5 w-11/12 animate-pulse rounded bg-raised" />
-            <div className="h-4 w-full animate-pulse rounded bg-raised" />
-            <div className="h-4 w-4/5 animate-pulse rounded bg-raised" />
+          <div className="min-w-0 flex-1 space-y-2.5">
+            <div className="h-3 w-20 animate-pulse rounded-sm bg-raised" />
+            <div className="h-4 w-11/12 animate-pulse rounded-sm bg-raised" />
+            <div className="h-3 w-full animate-pulse rounded-sm bg-raised" />
+            <div className="h-3 w-4/5 animate-pulse rounded-sm bg-raised" />
           </div>
+          <div className="aspect-4/3 w-24 shrink-0 animate-pulse rounded-sm bg-raised sm:w-28 lg:w-32" />
         </div>
       ))}
     </div>
@@ -326,7 +326,7 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
     <FeedClockProvider value={referenceTime}>
       <div className="min-h-screen bg-canvas">
         <ReadingProgress />
-        <BreakingTicker items={tickerItems} fetchedAt={meta?.fetchedAt ?? 0} />
+        <BreakingTicker items={tickerItems} />
 
         <Masthead
           searchDraft={searchDraft}
@@ -334,6 +334,7 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
           applySearch={applySearch}
           onRefresh={() => fetchFeed(false)}
           isRefreshing={loadState === "refreshing"}
+          fetchedAt={meta?.fetchedAt ?? 0}
           onSubscribe={() =>
             newsletterRef.current?.scrollIntoView({
               behavior: "smooth",
@@ -368,7 +369,7 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
                 type="button"
                 onClick={() => fetchFeed(false)}
                 className={cn(
-                  "mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-canvas transition-opacity hover:opacity-85",
+                  "mt-5 rounded-sm bg-ink px-5 py-2.5 text-sm font-semibold text-canvas transition-opacity hover:opacity-85",
                   isNp && "font-np",
                 )}
               >
@@ -391,7 +392,7 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
                     type="button"
                     onClick={resetFilters}
                     className={cn(
-                      "mt-5 rounded-full border border-rule-strong px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-raised",
+                      "mt-5 rounded-sm border border-rule-strong px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-raised",
                       isNp && "font-np",
                     )}
                   >
@@ -421,7 +422,16 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
                       </span>
                     </div>
 
-                    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {/* One column until there is room for two.
+                        The card is a row — text column, then picture — and a row
+                        needs width. Three columns inside this container left the
+                        text 136px wide once the picture and the padding were
+                        taken out, which wrapped ordinary headlines to six lines
+                        and left the cards half empty below them. The grid area
+                        runs 608px at lg and 984px at full width, so one card per
+                        row below xl and two above it keeps every headline at a
+                        readable measure. */}
+                    <div className="grid gap-5 xl:grid-cols-2">
                       {pagedItems.map((item, index) => (
                         <Reveal
                           key={item.id}

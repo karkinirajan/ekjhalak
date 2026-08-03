@@ -7,8 +7,6 @@ import type { NewsItem } from "@/lib/news-pipeline";
 
 interface BreakingTickerProps {
   items: NewsItem[];
-  /** When the feed was last fetched — the timestamp shown is real, not decorative */
-  fetchedAt: number;
 }
 
 const KATHMANDU_TZ = "Asia/Kathmandu";
@@ -16,11 +14,17 @@ const KATHMANDU_TZ = "Asia/Kathmandu";
 /**
  * Full-bleed urgency bar.
  *
- * The clock ticks in Kathmandu time and is rendered only after mount: a live
- * clock in server HTML is guaranteed to be wrong by the time it reaches anyone,
- * and would hydrate-mismatch every single request.
+ * Carries the live Kathmandu clock and the headlines, and nothing else. The
+ * "updated at" stamp that used to sit on the right-hand end has moved next to
+ * the refresh control in the masthead, where it says what it means: that button
+ * is what changes the number, so the number belongs beside the button rather
+ * than at the far edge of a scrolling marquee.
+ *
+ * The clock is rendered only after mount: a live clock in server HTML is
+ * guaranteed to be wrong by the time it reaches anyone, and would hydrate-
+ * mismatch every single request.
  */
-export function BreakingTicker({ items, fetchedAt }: BreakingTickerProps) {
+export function BreakingTicker({ items }: BreakingTickerProps) {
   const { language, t } = useTheme();
   const [clock, setClock] = useState<string | null>(null);
 
@@ -96,22 +100,6 @@ export function BreakingTicker({ items, fetchedAt }: BreakingTickerProps) {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Fetch time — the one number on this bar that is measured, not styled */}
-      <div className="hidden shrink-0 items-center bg-red-solid pr-6 pl-4 shadow-[-8px_0_12px_-4px_var(--red-solid)] lg:flex">
-        <span className="eyebrow tabular-nums opacity-90" suppressHydrationWarning>
-          {t.updatedAt}{" "}
-          {new Date(fetchedAt).toLocaleTimeString(
-            language === "np" ? "ne-NP" : "en-GB",
-            {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-              timeZone: KATHMANDU_TZ,
-            },
-          )}
-        </span>
       </div>
     </div>
   );

@@ -46,6 +46,7 @@ const en = {
   outletsOne: "1 outlet",
   outletsMany: "outlets covering",
   minRead: "min read",
+  translatedNotice: "Machine translated",
 
   // ── Newsletter ─────────────────────────────────────────────────────────────
   newsletterKicker: "The daily brief",
@@ -81,6 +82,13 @@ const en = {
   footerBuiltBy: "Built by",
   footerDisclaimer:
     "Headlines and summaries belong to their original publishers. Every story links back to its source.",
+  footerCompany: "Publication",
+  navAbout: "About",
+  navEditorial: "Editorial standards",
+  navPrivacy: "Privacy",
+  navTerms: "Terms",
+  navContact: "Contact",
+  backToNews: "Back to the news",
 
   // ── States ─────────────────────────────────────────────────────────────────
   noStories: "No stories match this filter. Try a different range or topic.",
@@ -132,6 +140,7 @@ const np: I18nDict = {
   outletsOne: "१ सञ्चारगृह",
   outletsMany: "सञ्चारगृहले समेटे",
   minRead: "मिनेट",
+  translatedNotice: "मेसिन अनुवाद",
 
   newsletterKicker: "दैनिक ब्रिफिङ",
   newsletterTitle: "एउटा इमेल। हरेक बिहान। अरू केही होइन।",
@@ -164,6 +173,13 @@ const np: I18nDict = {
   footerBuiltBy: "निर्माता",
   footerDisclaimer:
     "शीर्षक र सारांशको अधिकार सम्बन्धित प्रकाशकको हो। हरेक समाचार आफ्नै स्रोतमा जोडिएको छ।",
+  footerCompany: "प्रकाशन",
+  navAbout: "हाम्रो बारेमा",
+  navEditorial: "सम्पादकीय मापदण्ड",
+  navPrivacy: "गोपनीयता",
+  navTerms: "सर्तहरू",
+  navContact: "सम्पर्क",
+  backToNews: "समाचारमा फर्कनुहोस्",
 
   noStories: "यो फिल्टरमा कुनै समाचार भेटिएन। अर्कै दायरा वा विषय हेर्नुहोस्।",
   loadingStories: "समाचार लोड गर्दैछौं…",

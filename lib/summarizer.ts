@@ -1,21 +1,95 @@
+// lib/summarizer.ts
+// Bilingual enrichment against the Gemini API. Server-only.
+//
+// One request handles a whole batch of stories and returns, for each, a clean
+// summary in the language it was published in *and* a full translation of both
+// headline and summary into the other one. Batching is not an optimisation here
+// — it is the only way the workload fits. See the quota notes on MODEL_CHAIN.
+//
+// Everything degrades rather than throws: no key, exhausted quota, a malformed
+// response or a timeout all end with the caller keeping whatever it already had.
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL =
-  process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
-const GEMINI_COOLDOWN_MS = 2 * 60 * 1_000;
-
-let geminiBlockedUntil = 0;
-
-function isGeminiCoolingDown() {
-  return geminiBlockedUntil > Date.now();
-}
-
-function blockGemini() {
-  geminiBlockedUntil = Date.now() + GEMINI_COOLDOWN_MS;
-}
-
+/**
+ * The length window quoted to the model.
+ *
+ * Guidance, not a gate. An earlier version rejected any summary outside these
+ * bounds and retried, which meant a two-line wire brief — legitimately a
+ * 160-character story — burned three requests and then fell through to raw
+ * truncation anyway. The maximum is still enforced, by truncation rather than
+ * rejection; the minimum is only ever a hint, because a short source cannot
+ * honestly yield a long summary.
+ */
 export const SUMMARY_MAX_CHARS = 880;
-export const SUMMARY_MIN_CHARS = 360;
+export const SUMMARY_MIN_CHARS = 300;
+
+/** Stories per request. */
+const BATCH_SIZE = clampInt(process.env.GEMINI_BATCH_SIZE, 10, 1, 40);
+/** Requests in flight at once. */
+const CONCURRENCY = clampInt(process.env.GEMINI_CONCURRENCY, 3, 1, 8);
+const REQUEST_TIMEOUT_MS = 45_000;
+
+/**
+ * Models tried in order, first to answer wins.
+ *
+ * This list is a quota strategy, not indecision. Gemini's free tier meters
+ * `GenerateRequestsPerDayPerProjectPerModel` — per *model* — so five models is
+ * five separate daily allowances rather than one. Measured on this project's own
+ * key: gemini-3.6-flash allows 20 requests/day and gemini-2.0-flash allows 0.
+ * Twenty requests would enrich two hundred stories a day; the chain plus the
+ * batch size above is what turns that into a number a live feed can live on.
+ *
+ * GEMINI_MODEL still wins — set it to a single name to pin one model, or to a
+ * comma-separated list to replace the chain outright. Whatever it names is tried
+ * first and the defaults follow as fallbacks.
+ *
+ * Ordered cheapest-and-fastest first. The lite models do not spend tokens on
+ * thinking, which for a rewrite-and-translate task buys nothing and costs the
+ * entire output budget — see MAX_OUTPUT_TOKENS.
+ */
+const DEFAULT_MODELS = [
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-3.6-flash",
+];
+
+/**
+ * Deliberately far above what the answer needs (~300 tokens per story per
+ * language).
+ *
+ * The thinking models bill their reasoning against this same ceiling and spend
+ * it first. The previous setting of 380 was consumed entirely by 361 thinking
+ * tokens on gemini-3.6-flash: every response came back `finishReason:
+ * MAX_TOKENS` holding a 61-character fragment, was rejected as too short,
+ * retried twice into the same wall, and the whole feed silently fell through to
+ * hard truncation. A ceiling this high cannot be reached by thinking on a task
+ * this small, so it works whether or not the configured model reasons.
+ */
+const MAX_OUTPUT_TOKENS = 32_000;
+
+const API_KEY = process.env.GEMINI_API_KEY;
+
+function clampInt(
+  raw: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const parsed = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function modelChain(): string[] {
+  const configured = (process.env.GEMINI_MODEL ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  return [...new Set([...configured, ...DEFAULT_MODELS])];
+}
+
+// ── Text hygiene ────────────────────────────────────────────────────────────
 
 function normalizeText(text: string): string {
   return text
@@ -25,21 +99,12 @@ function normalizeText(text: string): string {
     .replace(/[ \t]{2,}/g, " ");
 }
 
-
-const BOILERPLATE = /unlock these with subscription|subscription benefits|already a subscriber|to continue reading|sign up (?:to|for) (?:our|the)|all rights reserved/i;
+const BOILERPLATE =
+  /unlock these with subscription|subscription benefits|already a subscriber|to continue reading|sign up (?:to|for) (?:our|the)|all rights reserved/i;
 
 export function looksLikeBoilerplate(text: string): boolean {
   return BOILERPLATE.test(text);
 }
-
-export function isSummaryAcceptable(text: string): boolean {
-  const cleaned = normalizeText(text);
-  if (BOILERPLATE.test(cleaned)) return false;
-  return (
-    cleaned.length >= SUMMARY_MIN_CHARS && cleaned.length <= SUMMARY_MAX_CHARS
-  );
-}
-
 
 export function hardTruncateSummary(
   text: string,
@@ -55,89 +120,343 @@ export function hardTruncateSummary(
   }
 
   const lastSpace = slice.lastIndexOf(" ");
-  const safeSlice = lastSpace > Math.floor(max * 0.5) ? slice.slice(0, lastSpace) : slice;
+  const safeSlice =
+    lastSpace > Math.floor(max * 0.5) ? slice.slice(0, lastSpace) : slice;
   return `${safeSlice.trim().replace(/[,;:\-–—]+$/, "")}…`;
 }
 
-const SYSTEM_EN =
-  `You are a precise news editor. Rewrite the source into one clean English summary. ` +
-  `Hard length bound: output MUST be between ${SUMMARY_MIN_CHARS} and ${SUMMARY_MAX_CHARS} characters — aim for the shortest length that still delivers the full idea. ` +
-  `Cover the who, what, when, where, and outcome. Use only facts from the source; never invent names, numbers, or quotes. ` +
-  `Every sentence must be complete and self-contained — never end mid-thought. ` +
-  `Neutral newsroom tone. One paragraph. No labels, headings, lists, or markdown.`;
+/**
+ * Is this text actually in the language we asked for?
+ *
+ * Both translation directions fail the same way when a model gives up: it echoes
+ * the source back untranslated. Devanagari and Latin share no code points, so
+ * counting which script the letters belong to settles it.
+ *
+ * A proportion rather than a presence test, because either language legitimately
+ * borrows from the other — English copy quotes a Nepali party name in Devanagari,
+ * Nepali copy leaves "IMF" and "COVID-19" in Latin. A single stray glyph must not
+ * condemn an otherwise correct translation, so the bar is which script carries
+ * the majority of the letters.
+ */
+const DEVANAGARI_LETTER = /[ऀ-ॿ]/gu;
+const LATIN_LETTER = /[A-Za-z]/gu;
 
-const SYSTEM_NP =
-  `तपाईं अनुभवी नेपाली समाचार सम्पादक हुनुहुन्छ। स्रोतबाट एक सफा नेपाली सारांश लेख्नुहोस्। ` +
-  `कडा नियम: सारांशको लम्बाइ ${SUMMARY_MIN_CHARS} देखि ${SUMMARY_MAX_CHARS} अक्षर भित्र अनिवार्य हो — सकेसम्म छोटो राख्नुहोस् तर पूर्ण अर्थ दिनुहोस्। ` +
-  `को, के, कहिले, कहाँ र के भयो — मुख्य तथ्य, मिति, आंकडा समावेश गर्नुहोस्। स्रोतमा नभएको कुरा कहिल्यै नलेख्नुहोस्। ` +
-  `प्रत्येक वाक्य पूर्ण हुनुपर्छ, कहीँ पनि बीचमा नकाट्नुहोस्। तटस्थ समाचार शैली। एउटा अनुच्छेद। शीर्षक, क्रम वा markdown नराख्नुहोस्।`;
+function isInLanguage(text: string, lang: "en" | "np"): boolean {
+  const cleaned = normalizeText(text);
+  if (cleaned.length < 8) return false;
 
-async function callGemini(
-  text: string,
-  lang: "en" | "np",
-  retryHint?: string,
-): Promise<string> {
-  const system = lang === "np" ? SYSTEM_NP : SYSTEM_EN;
-  const user = retryHint
-    ? `Rewrite so the final output is strictly between ${SUMMARY_MIN_CHARS} and ${SUMMARY_MAX_CHARS} characters with complete sentences:\n\n${retryHint}`
-    : text;
+  const devanagari = cleaned.match(DEVANAGARI_LETTER)?.length ?? 0;
+  const latin = cleaned.match(LATIN_LETTER)?.length ?? 0;
+  if (devanagari + latin === 0) return false;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: system }],
-        },
-        contents: [
-          {
-            parts: [{ text: user }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.15,
-          maxOutputTokens: lang === "np" ? 700 : 380,
-        },
-      }),
-      signal: AbortSignal.timeout(20_000),
-    }
-  );
-
-  if (res.status === 429) {
-    blockGemini();
-    return "";
-  }
-  if (!res.ok) return "";
-
-  const data = await res.json();
-  return normalizeText(
-    data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? ""
-  );
+  return lang === "np" ? devanagari > latin : latin > devanagari;
 }
 
+// ── Per-model cooldowns ─────────────────────────────────────────────────────
+//
+// A 429 means one model is out, not that Gemini is down, so the cooldown is
+// keyed by model and the chain simply moves on to the next one.
 
-export async function summarize(
-  text: string,
-  lang: "en" | "np" = "en",
-): Promise<string> {
-  const source = normalizeText(text);
-  if (!source) return "";
+const cooldownUntil = new Map<string, number>();
 
-  if (!GEMINI_API_KEY || isGeminiCoolingDown()) {
-    return isSummaryAcceptable(source) ? source : "";
+function isCoolingDown(model: string): boolean {
+  return (cooldownUntil.get(model) ?? 0) > Date.now();
+}
+
+function coolDown(model: string, ms: number) {
+  cooldownUntil.set(model, Date.now() + ms);
+}
+
+const DAILY_QUOTA_COOLDOWN_MS = 30 * 60 * 1_000;
+const MIN_COOLDOWN_MS = 30 * 1_000;
+
+/**
+ * How long to shelve a model after a 429.
+ *
+ * Google reports two different exhaustions through the same status code. A
+ * per-minute limit clears on its own in under a minute and the response says so
+ * in `retryDelay`. A per-day limit does not clear until the quota resets, and
+ * retrying it every minute for the rest of the day is pure noise — so those get
+ * a much longer shelf regardless of what retryDelay claims.
+ */
+function cooldownFor(body: unknown): number {
+  const raw = JSON.stringify(body ?? "");
+  if (/PerDay|per_day|RequestsPerDay/i.test(raw)) return DAILY_QUOTA_COOLDOWN_MS;
+
+  const match = raw.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
+  const seconds = match ? Number.parseFloat(match[1]) : NaN;
+  return Number.isFinite(seconds)
+    ? Math.max(MIN_COOLDOWN_MS, seconds * 1_000)
+    : MIN_COOLDOWN_MS;
+}
+
+// ── Prompt ──────────────────────────────────────────────────────────────────
+
+const SYSTEM_PROMPT =
+  `You are the bilingual desk of a Nepali newsroom. You receive a JSON array of source items. ` +
+  `For every item, produce the story twice: once in English and once in Nepali (Devanagari script). ` +
+  `Each version needs a headline and one summary paragraph.\n\n` +
+  `Rules, all of them binding:\n` +
+  `1. Each summary must be between ${SUMMARY_MIN_CHARS} and ${SUMMARY_MAX_CHARS} characters. Aim for the shortest length that still delivers the whole story.\n` +
+  `2. Cover who, what, when, where and the outcome. Keep every name, place, number, date and quantity exactly as the source gives it.\n` +
+  `3. Use only what the source says. Never invent a name, a number, a quote or a consequence. If the source is thin, write a shorter but complete summary rather than padding it.\n` +
+  `4. The two language versions must state the same facts. The Nepali is a translation of the story, not a different story, and the same holds in reverse.\n` +
+  `5. Write natural, idiomatic Nepali — the register of a printed Nepali daily. Do not transliterate English sentences into Devanagari. Keep proper nouns and organisation names readable, transliterating them the way Nepali papers do.\n` +
+  `6. Every sentence must be complete. Never end mid-thought or trail off.\n` +
+  `7. Neutral newsroom tone. One paragraph. No headings, labels, lists, markdown or emoji.\n` +
+  `8. Strip publisher chrome: subscription pitches, "read more", bylines, copyright lines, section tags.\n` +
+  `9. Return one object per input item, in the same order, echoing the item's id exactly.`;
+
+/**
+ * Structured output, so parsing is a `JSON.parse` rather than a set of
+ * heuristics over prose. Gemini validates against this before answering, which
+ * is also what stops a model dropping one of the four fields on a hard item.
+ */
+const RESPONSE_SCHEMA = {
+  type: "ARRAY",
+  items: {
+    type: "OBJECT",
+    properties: {
+      id: { type: "STRING" },
+      titleEn: { type: "STRING" },
+      summaryEn: { type: "STRING" },
+      titleNp: { type: "STRING" },
+      summaryNp: { type: "STRING" },
+    },
+    required: ["id", "titleEn", "summaryEn", "titleNp", "summaryNp"],
+  },
+} as const;
+
+// ── Public shape ────────────────────────────────────────────────────────────
+
+export interface EnrichInput {
+  id: string;
+  title: string;
+  /** Raw body from the feed — may be empty, over-long, or publisher chrome. */
+  body: string;
+  lang: "en" | "np";
+}
+
+export interface EnrichResult {
+  /** The summary in the story's own language. */
+  summary: string;
+  /**
+   * Headline and summary in the other language. Empty strings when the model
+   * answered in the wrong script — callers fall back to the original.
+   */
+  titleTranslated: string;
+  summaryTranslated: string;
+}
+
+interface ModelReply {
+  id?: string;
+  titleEn?: string;
+  summaryEn?: string;
+  titleNp?: string;
+  summaryNp?: string;
+}
+
+export function isEnrichmentConfigured(): boolean {
+  return Boolean(API_KEY);
+}
+
+/** Longest source body we send. Beyond this the tail is never the news. */
+const MAX_SOURCE_CHARS = 2_400;
+
+function buildRequestBody(batch: EnrichInput[]) {
+  const payload = batch.map((item) => ({
+    id: item.id,
+    sourceLanguage: item.lang === "np" ? "Nepali" : "English",
+    headline: normalizeText(item.title).slice(0, 400),
+    body: normalizeText(item.body).slice(0, MAX_SOURCE_CHARS),
+  }));
+
+  return {
+    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [{ parts: [{ text: JSON.stringify(payload) }] }],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      responseMimeType: "application/json",
+      responseSchema: RESPONSE_SCHEMA,
+    },
+  };
+}
+
+/**
+ * One batch against one model.
+ *
+ * Returns null for "this model could not answer, try the next one" and an array
+ * for "this model answered". An empty array is a real answer — a model that
+ * returns nothing usable should not send the caller round the chain again.
+ */
+async function callModel(
+  model: string,
+  batch: EnrichInput[],
+): Promise<ModelReply[] | null> {
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": API_KEY as string,
+        },
+        body: JSON.stringify(buildRequestBody(batch)),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      },
+    );
+  } catch {
+    // Timeout or transport failure. Shelve briefly so a flapping model does not
+    // eat the whole run's deadline batch after batch.
+    coolDown(model, MIN_COOLDOWN_MS);
+    return null;
   }
 
-  let candidate = await callGemini(source, lang);
-  if (isSummaryAcceptable(candidate)) return candidate;
-
-  for (let i = 0; i < 2; i++) {
-    candidate = await callGemini(source, lang, candidate || source);
-    if (isSummaryAcceptable(candidate)) return candidate;
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    if (res.status === 429 || res.status === 503) {
+      coolDown(model, cooldownFor(detail));
+    } else if (res.status === 400 || res.status === 404) {
+      // Bad model name or a request shape this model rejects — never going to
+      // work, so take it out of the chain for this process.
+      coolDown(model, 24 * 60 * 60 * 1_000);
+      console.warn(`[enrich] ${model} rejected the request: ${detail.slice(0, 200)}`);
+    } else {
+      coolDown(model, MIN_COOLDOWN_MS);
+    }
+    return null;
   }
 
-  return "";
+  const data = await res.json().catch(() => null);
+  const candidate = data?.candidates?.[0];
+  if (!candidate) return null;
+
+  // A truncated answer is not a partial answer: the JSON will not parse, and the
+  // stories in this batch are better served by the next model than by salvage.
+  if (candidate.finishReason && candidate.finishReason !== "STOP") {
+    console.warn(`[enrich] ${model} stopped early: ${candidate.finishReason}`);
+    return null;
+  }
+
+  const text = (candidate.content?.parts ?? [])
+    .map((part: { text?: string }) => part.text ?? "")
+    .join("")
+    .trim();
+  if (!text) return null;
+
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? (parsed as ModelReply[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Walks the model chain until one answers. */
+async function enrichBatch(batch: EnrichInput[]): Promise<ModelReply[]> {
+  for (const model of modelChain()) {
+    if (isCoolingDown(model)) continue;
+    const replies = await callModel(model, batch);
+    if (replies) return replies;
+  }
+  return [];
+}
+
+/**
+ * Turns one model reply into a stored result, or nothing.
+ *
+ * The gate is deliberately asymmetric. A summary that misses the length window
+ * is still usable prose and gets kept — the window is guidance to the model, not
+ * a contract with the reader. A translation in the wrong script is not usable at
+ * all, so it is dropped and the UI falls back to the original.
+ */
+function toResult(reply: ModelReply, input: EnrichInput): EnrichResult | null {
+  const otherLang = input.lang === "np" ? "en" : "np";
+
+  const summary = normalizeText(
+    (input.lang === "np" ? reply.summaryNp : reply.summaryEn) ?? "",
+  );
+  if (!isInLanguage(summary, input.lang) || looksLikeBoilerplate(summary)) {
+    return null;
+  }
+
+  const translatedTitle = normalizeText(
+    (input.lang === "np" ? reply.titleEn : reply.titleNp) ?? "",
+  );
+  const translatedSummary = normalizeText(
+    (input.lang === "np" ? reply.summaryEn : reply.summaryNp) ?? "",
+  );
+  const translationUsable =
+    isInLanguage(translatedTitle, otherLang) &&
+    isInLanguage(translatedSummary, otherLang) &&
+    !looksLikeBoilerplate(translatedSummary);
+
+  return {
+    summary: hardTruncateSummary(summary),
+    titleTranslated: translationUsable ? translatedTitle : "",
+    summaryTranslated: translationUsable
+      ? hardTruncateSummary(translatedSummary)
+      : "",
+  };
+}
+
+/**
+ * Enrich as many of `inputs` as the deadline allows.
+ *
+ * Stories are processed in the order given, so callers that care which ones get
+ * done first — and with a metered quota every caller should — sort before
+ * calling. Anything not reached is simply absent from the returned map.
+ */
+export async function enrichStories(
+  inputs: EnrichInput[],
+  deadline: number,
+): Promise<Map<string, EnrichResult>> {
+  const out = new Map<string, EnrichResult>();
+  if (!API_KEY || inputs.length === 0) return out;
+
+  const batches: EnrichInput[][] = [];
+  for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
+    batches.push(inputs.slice(i, i + BATCH_SIZE));
+  }
+
+  let cursor = 0;
+
+  async function worker() {
+    while (true) {
+      if (Date.now() >= deadline) return;
+      const index = cursor++;
+      if (index >= batches.length) return;
+
+      const batch = batches[index];
+      const byId = new Map(batch.map((item) => [item.id, item]));
+
+      let replies: ModelReply[];
+      try {
+        replies = await enrichBatch(batch);
+      } catch (err) {
+        console.warn("[enrich] batch failed:", err);
+        continue;
+      }
+
+      // Match on the echoed id, falling back to position. Models are reliable
+      // about the id but not universally, and a batch answered in order with a
+      // mangled id is still four good summaries.
+      replies.forEach((reply, position) => {
+        const input =
+          (reply.id ? byId.get(reply.id) : undefined) ?? batch[position];
+        if (!input || out.has(input.id)) return;
+        const result = toResult(reply, input);
+        if (result) out.set(input.id, result);
+      });
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, batches.length) }, worker),
+  );
+
+  return out;
 }

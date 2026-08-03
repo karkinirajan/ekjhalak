@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowUpRight, Clock, Newspaper } from "lucide-react";
+import { ArrowUpRight, Clock, Languages, Newspaper } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { StoryImage } from "@/components/story-image";
 import { SourceMark, TopicPill } from "@/components/topic-pill";
 import { useFeedClock } from "@/components/feed-clock";
 import { useTheme } from "@/components/theme-provider";
+import { langAttr, storyText } from "@/lib/story-text";
 import {
   cn,
   formatRelativeTime,
@@ -34,10 +35,10 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
 
   if (!item) return null;
 
-  const isNp = item.originalLang === "np";
-  const langAttr = isNp ? "ne" : "en";
-  const title = sanitizeTextForDisplay(item.title);
-  const summary = sanitizeTextForDisplay(item.summary);
+  const text = storyText(item, language);
+  const isNp = text.lang === "np";
+  const title = sanitizeTextForDisplay(text.title);
+  const summary = sanitizeTextForDisplay(text.summary);
   const paragraphs = splitIntoParagraphs(summary, 5);
 
   return (
@@ -71,7 +72,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
         <div className="space-y-6 p-5 pb-12 sm:p-7">
           <div className="space-y-4">
             <SheetTitle
-              lang={langAttr}
+              lang={langAttr(text.lang)}
               className={cn(
                 "headline text-[1.55rem] leading-[1.16] font-semibold tracking-[-0.02em] text-ink sm:text-[2rem]",
                 isNp ? "font-np leading-[1.35]" : "font-display",
@@ -100,6 +101,18 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
                   </span>
                 </>
               )}
+              {/* Said out loud rather than left for the reader to notice. A news
+                  site that silently prints a machine translation as though a
+                  person wrote it is claiming an accuracy it cannot vouch for. */}
+              {text.translated && (
+                <>
+                  <span aria-hidden="true" className="h-3 w-px bg-rule" />
+                  <span className="inline-flex items-center gap-1.5">
+                    <Languages className="h-3 w-3" aria-hidden="true" />
+                    {t.translatedNotice}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -109,7 +122,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
             {paragraphs.map((paragraph, index) => (
               <p
                 key={index}
-                lang={langAttr}
+                lang={langAttr(text.lang)}
                 className={cn(
                   "copy text-[1.0625rem] leading-[1.75] text-ink-soft",
                   isNp && "font-np text-[1.125rem] leading-[1.9]",
@@ -129,7 +142,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-full bg-red-solid px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90",
+                "inline-flex items-center justify-center gap-2 rounded-sm bg-red-solid px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90",
                 language === "np" && "font-np",
               )}
             >

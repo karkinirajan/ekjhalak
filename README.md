@@ -178,7 +178,7 @@ npm install
 
 # Copy and configure environment (optional — app works without keys)
 cp .env.example .env.local
-# Set GROQ_API_KEY to enable EN→NP translation and summarization
+# Set GEMINI_API_KEY to enable summarization and translation
 
 # Run dev server
 npm run dev
@@ -191,7 +191,7 @@ curl http://localhost:3000/api/sources | jq '.sources[] | {name, active, status}
 curl 'http://localhost:3000/api/news?range=day' | jq '{total: (.items | length), sources: [.meta.sourceStatuses[] | {name, ok, itemCount}]}'
 ```
 
-**No environment variables required** for local development. The aggregator fetches public RSS feeds directly. Without `GROQ_API_KEY`, translation is skipped and English summaries are shown in both language modes.
+**No environment variables required** for local development. The aggregator fetches public RSS feeds directly. Without `GEMINI_API_KEY` the enrichment pass is skipped entirely: summaries fall back to a deterministic truncation of the publisher's own body text, and every story renders in the language it was published in whichever language mode the reader picks.
 
 ---
 
@@ -230,20 +230,18 @@ Set `REVALIDATE_SECRET` in Vercel environment variables. Without it, the endpoin
 
 ## Nepali Language Support
 
-**Native NP sources:** Setopati, Ratopati, and Nagarik News deliver content in Nepali script. Their `summaryNp` is populated directly from the RSS `description` field — no translation required.
+Every story is held twice. `title`/`summary` are always the language the newsroom published in; `titleTranslated`/`summaryTranslated` are always the other one. `storyText()` in `lib/story-text.ts` picks the pair to render and falls back to the original whenever a translation is missing, so a story the enrichment pass has not reached yet still renders — in its source language, typeset correctly, rather than blank.
 
-**EN→NP translation:** English-language sources have their titles and summaries translated inside the `unstable_cache` boundary in `lib/aggregator.ts` — so translation runs once per 5-minute window, not on every request.
+**Enrichment** runs inside the `unstable_cache` boundary in `lib/aggregator.ts`, so it happens once per 5-minute window rather than per request. One Gemini call carries a batch of ten stories and returns both languages as structured JSON: a summary in the source language plus a translated headline and summary.
 
-Translation cascade (priority order):
+Two things shape the design, both of them quota:
 
-1. **Groq LLM** (`llama-3.3-70b-versatile`) — batch mode, ~15 texts per API call, good Nepali quality. Requires `GROQ_API_KEY`.
-2. **Google Translate** — paid, highest quality. Requires `GOOGLE_TRANSLATE_API_KEY`.
-3. **LibreTranslate** — free self-hosted or public endpoints. Requires `LIBRETRANSLATE_API_URL`.
-4. **MyMemory** — free fallback, rate-limited. No key needed (set `MYMEMORY_EMAIL` for higher quota).
+- The free tier meters `GenerateRequestsPerDay` **per model** — measured at 20/day for `gemini-3.6-flash`, and 0/day for `gemini-2.0-flash`, on a fresh key. `lib/summarizer.ts` therefore walks a chain of five models, shelving each one when it 429s, which turns one allowance into five.
+- `lib/enrichment-cache.ts` remembers what the model has already written for as long as the process lives. Without it, 288 regenerations a day would re-translate the same stories and exhaust the allowance before breakfast. With it, each pass spends its budget on stories nobody has seen yet, best stories first — so a cold feed converges on fully enriched over a morning instead of thrashing.
 
-If all providers are unavailable, items show English summaries in Nepali mode.
+A translation that comes back in the wrong script is discarded rather than shown. Headlines are never rewritten: the card carries the publisher's own headline unless it is being translated.
 
-**Typography:** Both `Inter` (Latin) and `Noto Sans Devanagari` are loaded via `next/font/google`. The `font-np` CSS utility class applies the Devanagari font stack. It is used automatically in NewsCard and NewsCard brief sheet when rendering Nepali content.
+**Typography:** `Space Grotesk` (Latin display), `Merriweather` (Latin body) and `Mukta` (Devanagari) are loaded via `next/font/google`. Mukta is the face `ekantipur.com` sets its own body text in. The `.font-np` utility applies the Devanagari stack and is used automatically wherever Nepali is rendered.
 
 ---
 
@@ -251,14 +249,13 @@ If all providers are unavailable, items show English summaries in Nepali mode.
 
 | Variable                   | Required    | Default                     | Purpose                               |
 | -------------------------- | ----------- | --------------------------- | ------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL`     | Production  | `https://www.ekjhalak.news` | Metadata, sitemap, OG tags            |
-| `GROQ_API_KEY`             | Recommended | —                           | EN→NP translation + summarization     |
-| `GROQ_MODEL`               | No          | `llama-3.3-70b-versatile`   | Groq model override                   |
-| `GOOGLE_TRANSLATE_API_KEY` | No          | —                           | Translation fallback                  |
-| `LIBRETRANSLATE_API_URL`   | No          | —                           | LibreTranslate endpoint               |
-| `LIBRETRANSLATE_API_KEY`   | No          | —                           | LibreTranslate auth (if required)     |
-| `MYMEMORY_EMAIL`           | No          | —                           | Last-resort free translation fallback |
-| `REVALIDATE_SECRET`        | Production  | —                           | Protects POST /api/revalidate         |
+| `NEXT_PUBLIC_SITE_URL` | Production  | `https://www.ekjhalak.news` | Metadata, sitemap, OG tags                   |
+| `GEMINI_API_KEY`       | Recommended | —                           | Summarization + translation                  |
+| `GEMINI_MODEL`         | No          | built-in 5-model chain      | Pins a model, or a comma-separated list      |
+| `GEMINI_BATCH_SIZE`    | No          | `10`                        | Stories per request (1–40)                   |
+| `GEMINI_CONCURRENCY`   | No          | `3`                         | Requests in flight at once (1–8)             |
+| `GEMINI_BUDGET_MS`     | No          | `25000`                     | Wall-clock one regeneration may spend        |
+| `REVALIDATE_SECRET`    | Production  | —                           | Protects POST /api/revalidate                |
 
 See `.env.example` for full documentation.
 
@@ -270,7 +267,9 @@ Two themes: **Night Ink** (dark, default) and **Clean Slate** (light). Preferenc
 
 A blocking inline script in `<head>` sets `data-cfn-theme` on the root element before first paint — `ThemeProvider` reads this attribute as the initial state, preventing a flash of the wrong theme on load.
 
-The Nepali script uses `Noto Sans Devanagari` loaded via `next/font/google`. Apply with the `.font-np` utility class.
+The Nepali script uses `Mukta` — the face Kantipur uses — loaded via `next/font/google`. Apply with the `.font-np` utility class.
+
+Corners are a flat, near-square scale: `--radius` is 4px and the derived `--radius-sm` … `--radius-3xl` steps run 2px to 10px as absolute values rather than multiples. Anything that must be a circle asks for `rounded-full`, which the scale does not touch.
 
 ---
 

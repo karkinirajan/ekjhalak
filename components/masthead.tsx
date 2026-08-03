@@ -14,6 +14,8 @@ interface MastheadProps {
   applySearch: () => void;
   onRefresh: () => void;
   isRefreshing: boolean;
+  /** When the feed was last fetched — the timestamp shown is real, not decorative */
+  fetchedAt: number;
   onSubscribe: () => void;
 }
 
@@ -32,6 +34,7 @@ export function Masthead({
   applySearch,
   onRefresh,
   isRefreshing,
+  fetchedAt,
   onSubscribe,
 }: MastheadProps) {
   const { t, language, toggleLanguage, themeMode, toggleTheme } = useTheme();
@@ -56,6 +59,18 @@ export function Masthead({
 
   const isNp = language === "np";
 
+  // An em dash until the first fetch lands, rather than 05:45 — the epoch
+  // rendered in Kathmandu time, which is what formatting 0 would print.
+  const updatedLabel =
+    fetchedAt > 0
+      ? new Date(fetchedAt).toLocaleTimeString(isNp ? "ne-NP" : "en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+          timeZone: KATHMANDU_TZ,
+        })
+      : "—";
+
   return (
     <header className="border-b border-rule bg-canvas">
       <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
@@ -69,18 +84,30 @@ export function Masthead({
           </p>
 
           <div className="flex items-center gap-1 md:gap-1.5">
+            {/* Refresh, with the stamp it produces alongside it.
+                This number used to sit at the far right of the breaking ticker,
+                two rows away from the only control that changes it and with
+                nothing to say what it measured. Here it reads as one statement:
+                this is when the feed was last pulled, and this is the button
+                that pulls it again. */}
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="sm"
               onClick={onRefresh}
               disabled={isRefreshing}
               aria-label={t.refreshFeed}
-              className="rounded-full text-ink-muted hover:text-ink"
+              className="h-8 gap-2 px-2 text-ink-muted hover:text-ink"
             >
               <RefreshCw
                 className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
                 aria-hidden="true"
               />
+              <span className="eyebrow hidden tabular-nums sm:inline">
+                <span className={cn(isNp && "font-np tracking-normal")}>
+                  {t.updatedAt}
+                </span>{" "}
+                <span suppressHydrationWarning>{updatedLabel}</span>
+              </span>
             </Button>
 
             <Button
@@ -88,7 +115,7 @@ export function Masthead({
               size="icon-sm"
               onClick={toggleTheme}
               aria-label={themeMode === "dark" ? t.themeLight : t.themeDark}
-              className="rounded-full text-ink-muted hover:text-ink"
+              className="rounded-sm text-ink-muted hover:text-ink"
             >
               {themeMode === "dark" ? (
                 <Sun className="h-3.5 w-3.5" aria-hidden="true" />
@@ -103,7 +130,7 @@ export function Masthead({
               onClick={toggleLanguage}
               aria-label={t.langToggleLabel}
               className={cn(
-                "h-8 gap-1.5 rounded-full px-2.5 text-xs text-ink-muted hover:text-ink",
+                "h-8 gap-1.5 rounded-sm px-2.5 text-xs text-ink-muted hover:text-ink",
                 !isNp && "font-np",
               )}
             >
@@ -117,7 +144,7 @@ export function Masthead({
               size="sm"
               onClick={onSubscribe}
               className={cn(
-                "h-8 rounded-full bg-red-solid px-3.5 text-xs font-semibold text-white hover:bg-red-solid/90",
+                "h-8 rounded-sm bg-red-solid px-3.5 text-xs font-semibold text-white hover:bg-red-solid/90",
                 isNp && "font-np",
               )}
             >
@@ -197,7 +224,7 @@ export function Masthead({
                 placeholder={t.searchPlaceholder}
                 aria-label={t.searchPlaceholder}
                 className={cn(
-                  "h-9 rounded-full border-rule-strong bg-surface pl-9 text-sm placeholder:text-ink-muted",
+                  "h-9 rounded-sm border-rule-strong bg-surface pl-9 text-sm placeholder:text-ink-muted",
                   isNp && "font-np",
                 )}
               />
