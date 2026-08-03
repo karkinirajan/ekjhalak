@@ -14,8 +14,8 @@ function blockGemini() {
   geminiBlockedUntil = Date.now() + GEMINI_COOLDOWN_MS;
 }
 
-export const SUMMARY_MAX_CHARS = 480;
-export const SUMMARY_MIN_CHARS = 160;
+export const SUMMARY_MAX_CHARS = 880;
+export const SUMMARY_MIN_CHARS = 360;
 
 function normalizeText(text: string): string {
   return text
