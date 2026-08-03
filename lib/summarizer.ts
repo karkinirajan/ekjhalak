@@ -5,7 +5,7 @@
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL =
-  process.env.GROQ_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct";
+  process.env.GROQ_MODEL ?? "openai/gpt-oss-20b";
 const GROQ_COOLDOWN_MS = 2 * 60 * 1_000;
 
 let groqBlockedUntil = 0;
