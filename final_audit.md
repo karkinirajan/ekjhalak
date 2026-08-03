@@ -61,7 +61,7 @@ each other or anything else.
 cross-source pairs within the 2-hour window in the live feed:
 
 | tokenizer | pairs ≥ 0.65 | pairs ≥ 0.45 | highest observed |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | current (`\w`) | **0** | 3 | **0.50** |
 | unicode-aware | 11 | 30 | 1.00 |
 
@@ -125,7 +125,7 @@ on every grid card, the hero, the reader header, and the active category chip.
 White on the dark-theme topic colours, computed:
 
 | topic | ratio | | topic | ratio |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | culture | **1.73:1** | | environment | 3.07:1 |
 | sports | **1.93:1** | | opinion | 3.08:1 |
 | society | **2.01:1** | | breaking | 3.05:1 |
@@ -154,7 +154,7 @@ background actually composited is a *lighter wash of the same hue*. Against the
 real background six more pairings fail:
 
 | theme | topic | on `--surface` (as measured) | on the real 13% wash |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | dark | politics | 4.70 ✓ | **4.14** ✗ |
 | dark | world | 4.49 | **3.97** ✗ |
 | light | politics | 4.89 ✓ | **3.97** ✗ |
@@ -260,7 +260,7 @@ as a flat dark rectangle that reads as a broken image.
 ### 4.1 78 of 475 cards (16.4%) show no usable summary
 
 | defect | count | sources |
-|---|---|---|
+| --- | --- | --- |
 | summary repeats the headline verbatim | 52 | mixed |
 | summary is publisher boilerplate | 26 | The Hindu ×20, Guardian ×4, BBC ×2 |
 
@@ -276,7 +276,7 @@ chars — so boilerplate passes and is never sent to the summarizer for a rewrit
 ### 4.2 Five of 41 sources are dead
 
 | source | status |
-|---|---|
+| --- | --- |
 | My Republica | HTTP 403 |
 | The Himalayan Times | HTTP 404 |
 | Setopati English | HTTP 500 |
@@ -295,7 +295,7 @@ Three are core Nepali outlets — the product's home market. The footer reports
 Measured from the production build:
 
 | artifact | size |
-|---|---|
+| --- | --- |
 | prerendered `index.html` | **697 KB** (163 KB gzip) |
 | RSC flight payload | **587 KB** |
 | client JS | 805 KB raw / 240 KB gzip |
@@ -379,7 +379,7 @@ Worth stating, because a list of faults misrepresents the codebase:
 ## Remediation status
 
 | # | Finding | Severity | Status |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1.1 | `coverageCount` always 1 | Critical | **Fixed** |
 | 1.2 | Cron targets missing route | Critical | **Fixed** |
 | 1.3 | `/api/revalidate` fails open | Critical | **Fixed** |
@@ -413,7 +413,7 @@ Every figure below was measured against the rebuilt production bundle and a live
 ### Payload
 
 | | before | after | |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | prerendered `index.html` | 697,919 B | **312,024 B** | −56% |
 | gzipped | 162,886 B | **70,925 B** | −57% |
 | RSC flight payload | 587,000 B | **218,531 B** | −63% |
@@ -423,7 +423,7 @@ Every figure below was measured against the rebuilt production bundle and a live
 ### Content quality (live feed, 180 items)
 
 | | before | after |
-|---|---|---|
+| --- | --- | --- |
 | summary repeats the headline | 52 | **0** |
 | summary is publisher boilerplate | 26 | **0** |
 | stories with coverage from >1 outlet | **0 of 475** | **8 of 180** (max 3) |
@@ -437,7 +437,7 @@ it, and "3 OUTLETS COVERING" now renders on the hero.
 ### Accessibility
 
 | | before | after |
-|---|---|---|
+| --- | --- | --- |
 | solid topic pills, dark | 1.73–4.09:1, **11 fail** | **4.83–11.43:1, all pass** |
 | quiet topic pills, both themes | 3.94–8.15:1, **6 fail** | **4.54–8.15:1, all pass** |
 | white on the red CTA, dark | 3.91:1 | **4.74:1** |
@@ -450,7 +450,7 @@ Enforced by `pnpm run check:contrast`, wired into `pnpm verify` and CI.
 ### Layout
 
 | | before | after |
-|---|---|---|
+| --- | --- | --- |
 | story reader panel | 384px | **672px** |
 | chrome above the lead story | 430px (35% of first screen) | **362px (31%)** |
 | brand lockup appearances in the masthead | 2 | **1** |
@@ -458,7 +458,7 @@ Enforced by `pnpm run check:contrast`, wired into `pnpm verify` and CI.
 ### Security and infrastructure
 
 | check | result |
-|---|---|
+| --- | --- |
 | `/api/news` `Cache-Control` | `public, s-maxage=300, stale-while-revalidate=600` |
 | `POST /api/revalidate`, no secret, production | **401** (was 200 — open to anyone) |
 | `GET /api/revalidate`, no secret, production | **401** (was 405 — no handler existed) |

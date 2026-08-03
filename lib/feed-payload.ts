@@ -31,7 +31,7 @@ import type { NewsItem } from "./news-pipeline";
  * populated — the largest single topic in a live feed was 145 — while cutting
  * the initial payload by about two thirds.
  */
-export const FEED_PAGE_LIMIT = 180;
+export const FEED_PAGE_LIMIT = 1500;
 
 /**
  * Fields nothing on the client reads, stripped before serialization.

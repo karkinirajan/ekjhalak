@@ -82,7 +82,10 @@ function ReadingProgress() {
 
 function GridSkeleton() {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
+    <div
+      className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+      aria-hidden="true"
+    >
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
@@ -107,7 +110,7 @@ interface NewsFeedProps {
   limit?: number;
 }
 
-export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
+export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
   const { t, language } = useTheme();
   const isNp = language === "np";
 
