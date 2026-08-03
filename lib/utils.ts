@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { decodeEntities } from "./html-entities";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -12,28 +13,18 @@ export function truncate(text: string, maxLength: number) {
 }
 
 /**
- * Decode common HTML entities and remove unresolved tokens for clean display.
+ * Decode HTML entities for clean display.
+ *
+ * The hand-written chain this replaces finished with `.replace(/&#\d+;/g, " ")`,
+ * which turned every numeric entity it had not listed into a space. That is
+ * lossy for Latin punctuation and total for Devanagari: text that arrives
+ * entity-encoded — which some Nepali newsrooms serve — came out as a row of
+ * blanks. The shared decoder resolves entities by code point instead, so it
+ * covers every script without a lookup table.
  */
 export function sanitizeTextForDisplay(text: string): string {
   if (!text) return "";
-  return text
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;|&ldquo;|&rdquo;/gi, '"')
-    .replace(/&apos;|&lsquo;|&rsquo;/gi, "'")
-    .replace(/&ndash;/gi, "-")
-    .replace(/&mdash;/gi, " - ")
-    .replace(/&hellip;/gi, "…")
-    .replace(/&#x2018;|&#x2019;|&#8216;|&#8217;/gi, "'")
-    .replace(/&#x201c;|&#x201d;|&#8220;|&#8221;/gi, '"')
-    .replace(/&#x2026;|&#8230;/gi, "…")
-    .replace(/&#\d+;/g, " ")
-    .replace(/&#x[0-9a-f]+;/gi, " ")
-    .replace(/&[a-z]+;/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return decodeEntities(text).replace(/\s+/g, " ").trim();
 }
 
 /**

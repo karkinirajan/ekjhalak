@@ -232,7 +232,13 @@ Set `REVALIDATE_SECRET` in Vercel environment variables. Without it, the endpoin
 
 Every story is held twice. `title`/`summary` are always the language the newsroom published in; `titleTranslated`/`summaryTranslated` are always the other one. `storyText()` in `lib/story-text.ts` picks the pair to render and falls back to the original whenever a translation is missing, so a story the enrichment pass has not reached yet still renders — in its source language, typeset correctly, rather than blank.
 
+**Body text** comes from the feed's own `<description>` where there is one, and from the article's page where the feed's is thinner. `lib/article-extractor.ts` reads JSON-LD `articleBody`, then `og:description`, then the article's paragraphs, and the longest of feed-or-page wins. Structured metadata is preferred over paragraph scraping even when shorter — several CMSes render their whole section menu inside `<p>`, so joining paragraphs on those sites returns a site map rather than a story.
+
+Anything still empty after that is **dropped**. A headline with no body under it is the one card this site should not render: it tells a reader something happened and refuses to say what. Per-source coverage is reported as `itemsWithText` on each `sourceStatus`, so an outlet that goes headline-only is visible rather than looking like it went quiet.
+
 **Enrichment** runs inside the `unstable_cache` boundary in `lib/aggregator.ts`, so it happens once per 5-minute window rather than per request. One Gemini call carries a batch of ten stories and returns both languages as structured JSON: a summary in the source language plus a translated headline and summary.
+
+Text that is already the right length is **not rewritten**. When a newsroom's own words arrive between `SUMMARY_MIN_CHARS` and `VERBATIM_MAX_CHARS`, they are shown as they stand and the model is asked only for the translation — a rewrite of prose that is already the right size can only lose a fact, and it would spend a request from a metered daily quota to do it. On a live sample that is 51 of the top 60 stories, so it is the common path, not the exception.
 
 Two things shape the design, both of them quota:
 
@@ -255,6 +261,7 @@ A translation that comes back in the wrong script is discarded rather than shown
 | `GEMINI_BATCH_SIZE`    | No          | `10`                        | Stories per request (1–40)                   |
 | `GEMINI_CONCURRENCY`   | No          | `3`                         | Requests in flight at once (1–8)             |
 | `GEMINI_BUDGET_MS`     | No          | `25000`                     | Wall-clock one regeneration may spend        |
+| `EXTRACT_BUDGET_MS`    | No          | `15000`                     | Wall-clock for the article-page pass         |
 | `REVALIDATE_SECRET`    | Production  | —                           | Protects POST /api/revalidate                |
 
 See `.env.example` for full documentation.

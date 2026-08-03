@@ -18,9 +18,27 @@
  * truncation anyway. The maximum is still enforced, by truncation rather than
  * rejection; the minimum is only ever a hint, because a short source cannot
  * honestly yield a long summary.
+ *
+ * The ceiling is double what it was. At 880 the model was dropping the second
+ * half of any story with more than one thread to it — the reaction, the figure,
+ * the thing that happens next — and a summary that stops after the first fact
+ * is not shorter, it is incomplete. The card clamps to three lines regardless,
+ * so the extra length costs nothing there; it is the reader panel, where the
+ * whole brief is on screen, that gets the benefit.
  */
-export const SUMMARY_MAX_CHARS = 880;
+export const SUMMARY_MAX_CHARS = 1_760;
 export const SUMMARY_MIN_CHARS = 300;
+
+/**
+ * How much publisher-written text is kept unrewritten.
+ *
+ * When a newsroom's own og:description is fuller than the blurb its feed
+ * shipped, that text *is* the summary — it was written by the desk that
+ * reported the story, and putting a model between the reader and it can only
+ * lose something. So it is shown as it stands, up to three times the old
+ * ceiling, and only text longer than this is handed to the model to compress.
+ */
+export const VERBATIM_MAX_CHARS = 2_640;
 
 /** Stories per request. */
 const BATCH_SIZE = clampInt(process.env.GEMINI_BATCH_SIZE, 10, 1, 40);
@@ -197,15 +215,18 @@ const SYSTEM_PROMPT =
   `For every item, produce the story twice: once in English and once in Nepali (Devanagari script). ` +
   `Each version needs a headline and one summary paragraph.\n\n` +
   `Rules, all of them binding:\n` +
-  `1. Each summary must be between ${SUMMARY_MIN_CHARS} and ${SUMMARY_MAX_CHARS} characters. Aim for the shortest length that still delivers the whole story.\n` +
-  `2. Cover who, what, when, where and the outcome. Keep every name, place, number, date and quantity exactly as the source gives it.\n` +
-  `3. Use only what the source says. Never invent a name, a number, a quote or a consequence. If the source is thin, write a shorter but complete summary rather than padding it.\n` +
-  `4. The two language versions must state the same facts. The Nepali is a translation of the story, not a different story, and the same holds in reverse.\n` +
-  `5. Write natural, idiomatic Nepali — the register of a printed Nepali daily. Do not transliterate English sentences into Devanagari. Keep proper nouns and organisation names readable, transliterating them the way Nepali papers do.\n` +
-  `6. Every sentence must be complete. Never end mid-thought or trail off.\n` +
-  `7. Neutral newsroom tone. One paragraph. No headings, labels, lists, markdown or emoji.\n` +
-  `8. Strip publisher chrome: subscription pitches, "read more", bylines, copyright lines, section tags.\n` +
-  `9. Return one object per input item, in the same order, echoing the item's id exactly.`;
+  `1. Length: aim for ${SUMMARY_MIN_CHARS}–${SUMMARY_MAX_CHARS} characters. Use the length the story earns — a wire brief with one fact stays short, a story with several threads uses the room. Never pad to reach a number and never stop before the story is told.\n` +
+  `2. Completeness is the priority. Carry every load-bearing fact across: who acted, what they did, when and where, the numbers, the stated reason, who is affected, what happens next, and any reaction or denial the source records. A summary that reports the event but drops the consequence has failed.\n` +
+  `3. Precision over compression. Keep every name, title, place, date, figure, currency amount and unit exactly as the source gives it — never round, convert, approximate or re-date. Preserve the source's own hedging: "alleged" stays alleged, "reportedly" stays reportedly, an accusation never becomes a finding, a proposal never becomes a decision.\n` +
+  `4. Attribute claims to whoever made them. "The minister said X" must not become "X". If the source names who is speaking, so must you.\n` +
+  `5. Use only what the source says. Never add background, context, explanation or consequence that is not in the text in front of you, however obvious it seems.\n` +
+  `6. The two language versions must state the same facts in the same order. The Nepali is a translation of the story, not a different story, and the same holds in reverse. Neither may contain a fact the other lacks.\n` +
+  `7. Write natural, idiomatic Nepali — the register of a printed Nepali daily. Do not transliterate English sentences into Devanagari. Transliterate proper nouns and organisation names the way Nepali papers do. Use Devanagari digits only where the source does.\n` +
+  `8. Every sentence must be complete and self-contained. Never end mid-thought or trail off into an ellipsis.\n` +
+  `9. Neutral newsroom tone. One paragraph. No headings, labels, lists, markdown, emoji or first person.\n` +
+  `10. Strip publisher chrome: subscription pitches, "read more", bylines, datelines, copyright lines, section tags, navigation words.\n` +
+  `11. An item marked "verbatim": true must have its summary in the source language reproduced EXACTLY as supplied, character for character, with no rewriting, trimming or reordering. Only the other language is yours to write. This is the publisher's own text and it is not to be improved.\n` +
+  `12. Return one object per input item, in the same order, echoing the item's id exactly.`;
 
 /**
  * Structured output, so parsing is a `JSON.parse` rather than a set of
@@ -235,6 +256,13 @@ export interface EnrichInput {
   /** Raw body from the feed — may be empty, over-long, or publisher chrome. */
   body: string;
   lang: "en" | "np";
+  /**
+   * The body is already the summary — the publisher's own words, at a length
+   * the reader can take. The model is told to reproduce it unchanged and only
+   * write the translation; the caller enforces that regardless of what comes
+   * back, so this is a token saving rather than a trust decision.
+   */
+  verbatim?: boolean;
 }
 
 export interface EnrichResult {
@@ -260,8 +288,15 @@ export function isEnrichmentConfigured(): boolean {
   return Boolean(API_KEY);
 }
 
-/** Longest source body we send. Beyond this the tail is never the news. */
-const MAX_SOURCE_CHARS = 2_400;
+/**
+ * Longest source body we send.
+ *
+ * Raised alongside the output ceiling. At 2,400 the model was being asked to
+ * write a fuller summary from a body that had already been cut — the extra
+ * length would have come from somewhere other than the source, which is the one
+ * thing this pipeline must never do.
+ */
+const MAX_SOURCE_CHARS = 6_000;
 
 function buildRequestBody(batch: EnrichInput[]) {
   const payload = batch.map((item) => ({
@@ -269,6 +304,7 @@ function buildRequestBody(batch: EnrichInput[]) {
     sourceLanguage: item.lang === "np" ? "Nepali" : "English",
     headline: normalizeText(item.title).slice(0, 400),
     body: normalizeText(item.body).slice(0, MAX_SOURCE_CHARS),
+    ...(item.verbatim ? { verbatim: true } : {}),
   }));
 
   return {
@@ -376,9 +412,12 @@ async function enrichBatch(batch: EnrichInput[]): Promise<ModelReply[]> {
 function toResult(reply: ModelReply, input: EnrichInput): EnrichResult | null {
   const otherLang = input.lang === "np" ? "en" : "np";
 
-  const summary = normalizeText(
-    (input.lang === "np" ? reply.summaryNp : reply.summaryEn) ?? "",
-  );
+  // A verbatim item's own-language summary is the text we sent, not whatever
+  // came back. Rule 11 asks the model to echo it, but asking is not enforcing —
+  // this is what guarantees the publisher's words reach the reader unedited.
+  const summary = input.verbatim
+    ? normalizeText(input.body)
+    : normalizeText((input.lang === "np" ? reply.summaryNp : reply.summaryEn) ?? "");
   if (!isInLanguage(summary, input.lang) || looksLikeBoilerplate(summary)) {
     return null;
   }
@@ -394,11 +433,12 @@ function toResult(reply: ModelReply, input: EnrichInput): EnrichResult | null {
     isInLanguage(translatedSummary, otherLang) &&
     !looksLikeBoilerplate(translatedSummary);
 
+  const ceiling = input.verbatim ? VERBATIM_MAX_CHARS : SUMMARY_MAX_CHARS;
   return {
-    summary: hardTruncateSummary(summary),
+    summary: hardTruncateSummary(summary, ceiling),
     titleTranslated: translationUsable ? translatedTitle : "",
     summaryTranslated: translationUsable
-      ? hardTruncateSummary(translatedSummary)
+      ? hardTruncateSummary(translatedSummary, ceiling)
       : "",
   };
 }

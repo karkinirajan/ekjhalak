@@ -3,6 +3,7 @@
 // Server-only: uses fetch() with Next.js Data Cache revalidation.
 
 import { XMLParser } from "fast-xml-parser";
+import { htmlToText } from "./html-entities";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,37 +62,16 @@ const PARSER = new XMLParser({
 
 // ── HTML utilities ────────────────────────────────────────────────────────────
 
-/** Strip HTML tags and collapse whitespace */
+/**
+ * Strip HTML tags and collapse whitespace.
+ *
+ * Delegates to the shared decoder in lib/html-entities.ts. The version that
+ * lived here ended with `.replace(/&#\d+;/g, " ")`, which deleted every numeric
+ * entity it had not named individually — and some Nepali newsrooms serve their
+ * text entity-encoded, so a Devanagari headline became a row of spaces.
+ */
 function stripHtml(html: string): string {
-  if (!html) return "";
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&apos;/gi, "'")
-    .replace(/&lsquo;|&rsquo;/gi, "'")
-    .replace(/&ldquo;|&rdquo;/gi, '"')
-    .replace(/&ndash;/gi, "-")
-    .replace(/&mdash;/gi, " - ")
-    .replace(/&hellip;/gi, "…")
-    .replace(/&#8217;/g, "'")
-    .replace(/&#8216;/g, "'")
-    .replace(/&#8220;/g, '"')
-    .replace(/&#8221;/g, '"')
-    .replace(/&#8230;/g, "…")
-    .replace(/&#x2018;|&#x2019;/gi, "'")
-    .replace(/&#x201c;|&#x201d;/gi, '"')
-    .replace(/&#x2026;/gi, "…")
-    .replace(/&#\d+;/g, " ")
-    .replace(/&#x[0-9a-f]+;/gi, " ")
-    .replace(/&[a-z]+;/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return htmlToText(html);
 }
 
 /** Extract string from a field that may be a string, CDATA object, or #text object */

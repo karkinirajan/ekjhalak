@@ -34,6 +34,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# …except the template, which is the point of having one. `.env*` was matching
+# it too, so the file the README tells you to copy was never in the repo. It
+# holds placeholders only — every real value lives in .env.local or in Vercel.
+!.env.example
 
 # vercel
 .vercel

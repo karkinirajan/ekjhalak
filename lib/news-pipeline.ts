@@ -66,6 +66,12 @@ export interface SourceStatusMeta {
   itemCount: number;
   fetchedAt: number;
   error?: string;
+  /**
+   * How many of this outlet's stories survived with body text — after the feed's
+   * own description, the article-page extraction fallback, and the drop of
+   * anything still empty. A source at 0 is publishing headlines only.
+   */
+  itemsWithText?: number;
 }
 
 export interface NewsFeedResponse {
