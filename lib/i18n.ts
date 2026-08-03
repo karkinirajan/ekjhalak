@@ -33,8 +33,6 @@ const en = {
   clearFilters: "Clear filters",
 
   // ── Sections ───────────────────────────────────────────────────────────────
-  leadStory: "Lead story",
-  moreHeadlines: "More headlines",
   latestSection: "Latest",
   trendingSection: "Worth your time",
   trendingHint: "Ranked by newsroom coverage, source weight and freshness",
@@ -122,8 +120,6 @@ const np: I18nDict = {
   allTopics: "सबै",
   clearFilters: "फिल्टर हटाउनुहोस्",
 
-  leadStory: "मुख्य समाचार",
-  moreHeadlines: "थप शीर्षक",
   latestSection: "पछिल्लो",
   trendingSection: "पढ्नै पर्ने",
   trendingHint: "सञ्चारगृहको समेटाइ, स्रोतको भार र नयाँपनका आधारमा",

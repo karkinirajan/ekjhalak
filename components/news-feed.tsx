@@ -27,7 +27,7 @@ import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import {
   diversifyBySource,
-  selectHero,
+  rankStories,
   selectTicker,
   selectTrending,
 } from "@/lib/ranking";
@@ -36,6 +36,12 @@ import type { NewsItem, NewsFeedResponse, RangeKey } from "@/lib/news-pipeline";
 
 const PAGE_SIZE = 12;
 const REFRESH_INTERVAL_MS = 3 * 60 * 1000;
+
+/** Cards in the first row are above the fold and load their photo eagerly. */
+const EAGER_CARDS = 3;
+
+/** Nothing is held back from the rail now that the feed has no hero block. */
+const NOTHING_EXCLUDED: ReadonlySet<string> = new Set();
 
 const RANGE_CUTOFFS: Record<RangeKey, number> = {
   day: 24 * 60 * 60 * 1000,
@@ -76,11 +82,11 @@ function ReadingProgress() {
 
 function GridSkeleton() {
   return (
-    <div className="grid gap-6 sm:grid-cols-2" aria-hidden="true">
+    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="overflow-hidden rounded-lg border border-rule bg-surface"
+          className="overflow-hidden rounded-[0.25rem] border border-rule bg-surface"
         >
           <div className="aspect-16/10 w-full animate-pulse bg-raised" />
           <div className="space-y-3 p-5">
@@ -267,27 +273,22 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
 
   // ── Editorial layout selection ────────────────────────────────────────────
 
-  const { lead, side, rest } = useMemo(
-    () => selectHero(filteredItems, 3, referenceTime),
-    [filteredItems, referenceTime],
+  const trending = useMemo(
+    () => selectTrending(scopedItems, NOTHING_EXCLUDED, 6, referenceTime),
+    [scopedItems, referenceTime],
   );
-
-  const trending = useMemo(() => {
-    const shown = new Set<string>(
-      [lead, ...side]
-        .filter((item): item is NewsItem => Boolean(item))
-        .map((item) => item.id),
-    );
-    return selectTrending(scopedItems, shown, 6, referenceTime);
-  }, [scopedItems, lead, side, referenceTime]);
 
   const tickerItems = useMemo(
     () => selectTicker(items, 8, referenceTime),
     [items, referenceTime],
   );
 
-  // Reordered so one newsroom's publishing burst can't fill a whole page.
-  const latestItems = useMemo(() => diversifyBySource(rest), [rest]);
+  // Ranked so the biggest story is the first card, then reordered so one
+  // newsroom's publishing burst can't fill a whole page.
+  const latestItems = useMemo(
+    () => diversifyBySource(rankStories(filteredItems, referenceTime)),
+    [filteredItems, referenceTime],
+  );
 
   const totalPages = Math.max(1, Math.ceil(latestItems.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -396,7 +397,7 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
                 </div>
               )}
 
-              {rest.length > 0 && (
+              {latestItems.length > 0 && (
                 <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
                   <section aria-label={t.latestSection}>
                     <div
@@ -413,14 +414,22 @@ export function NewsFeed({ initialData, limit = 180 }: NewsFeedProps) {
                       </h2>
                       <span className="h-px flex-1 bg-rule" />
                       <span className="eyebrow tabular-nums text-ink-muted">
-                        {rest.length}
+                        {latestItems.length}
                       </span>
                     </div>
 
                     <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                       {pagedItems.map((item, index) => (
-                        <Reveal key={item.id} delay={Math.min(index, 5) * 60}>
-                          <StoryCard item={item} onOpen={openStory} />
+                        <Reveal
+                          key={item.id}
+                          delay={Math.min(index, 5) * 60}
+                          className="h-full"
+                        >
+                          <StoryCard
+                            item={item}
+                            onOpen={openStory}
+                            priority={safePage === 1 && index < EAGER_CARDS}
+                          />
                         </Reveal>
                       ))}
                     </div>

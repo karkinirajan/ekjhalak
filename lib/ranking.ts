@@ -33,43 +33,25 @@ export function scoreStory(item: NewsItem, now: number): number {
 }
 
 /**
- * Picks the stories for the hero block: one dominant lead plus `sideCount`
- * supporting stories.
+ * Every story in newsworthiness order.
  *
- * The lead is biased toward having a photograph, because a lead slot without
- * one is a much weaker piece of design. We only accept that bias when the
- * photographed story is genuinely competitive — within 15% of the top score —
- * so a picture never promotes a minor story over a major one.
+ * This replaces the old hero split, which pulled one story into a dominant slot
+ * and three more into a supporting stack. The feed is now a single grid of
+ * equally weighted cards, so ranking's only remaining job is deciding the order
+ * those cards appear in: the biggest story of the moment is the first card, and
+ * it is rendered exactly like the eleven behind it.
+ *
+ * The old split also biased the lead toward stories that shipped a photograph.
+ * Nothing needs that bias now — every card generates topic-coloured cover art
+ * when a feed ships no picture, so a photo-less story costs the page nothing.
  */
-export function selectHero(
-  items: NewsItem[],
-  sideCount: number,
-  now: number,
-): { lead: NewsItem | null; side: NewsItem[]; rest: NewsItem[] } {
-  if (items.length === 0) return { lead: null, side: [], rest: [] };
-
-  const ranked = [...items].sort(
-    (a, b) => scoreStory(b, now) - scoreStory(a, now),
-  );
-
-  const topScore = scoreStory(ranked[0], now);
-  const leadIndex = ranked.findIndex(
-    (item) => item.imageUrl && scoreStory(item, now) >= topScore * 0.62,
-  );
-
-  const lead = ranked[leadIndex >= 0 ? leadIndex : 0];
-  const remaining = ranked.filter((item) => item.id !== lead.id);
-
-  return {
-    lead,
-    side: remaining.slice(0, sideCount),
-    rest: remaining.slice(sideCount),
-  };
+export function rankStories(items: NewsItem[], now: number): NewsItem[] {
+  return [...items].sort((a, b) => scoreStory(b, now) - scoreStory(a, now));
 }
 
 /**
- * Stories for the trending rail, ranked by the same score but excluding
- * anything already shown in the hero so the rail adds information.
+ * Stories for the trending rail, ranked by the same score, with the option to
+ * exclude anything already shown elsewhere so the rail adds information.
  *
  * Capped at two per outlet. Publishers push in bursts, so an uncapped rail
  * reliably fills with six consecutive stories from whichever newsroom posted

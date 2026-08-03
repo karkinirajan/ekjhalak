@@ -3,8 +3,9 @@
  *
  * Rendered before the client ThemeProvider exists, so it uses only the CSS
  * custom properties set by the head script — meaning it is already in the
- * reader's chosen theme. Mirrors the real layout (ticker, masthead, nav, hero,
- * grid) so hydration doesn't shift anything.
+ * reader's chosen theme. Mirrors the real layout (ticker, masthead, nav, then
+ * one uniform card grid beside the trending rail) so hydration doesn't shift
+ * anything.
  */
 export default function Loading() {
   return (
@@ -44,42 +45,22 @@ export default function Loading() {
         </div>
       </div>
 
-      {/* Hero + grid */}
-      <div className="mx-auto w-full max-w-[1400px] space-y-12 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="h-[26rem] animate-pulse rounded-lg bg-raised sm:h-[32rem] lg:col-span-2" />
-          <div className="flex flex-col gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex gap-4 border-b border-rule pb-4">
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 w-16 animate-pulse rounded bg-raised" />
-                  <div className="h-4 w-full animate-pulse rounded bg-raised" />
-                  <div className="h-4 w-4/5 animate-pulse rounded bg-raised" />
-                </div>
-                <div className="h-20 w-20 shrink-0 animate-pulse rounded-md bg-raised sm:h-24 sm:w-24" />
-              </div>
-            ))}
-          </div>
-        </div>
-
+      {/* Card grid + trending rail */}
+      <div className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="grid gap-6 sm:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="overflow-hidden rounded-lg border border-rule bg-surface"
-              >
-                <div className="aspect-[16/10] animate-pulse bg-raised" />
-                <div className="space-y-3 p-5">
-                  <div className="h-5 w-11/12 animate-pulse rounded bg-raised" />
-                  <div className="h-4 w-full animate-pulse rounded bg-raised" />
-                  <div className="h-4 w-3/5 animate-pulse rounded bg-raised" />
-                </div>
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-y-3">
+                <div className="aspect-[16/10] w-full animate-pulse rounded-[0.25rem] bg-raised" />
+                <div className="h-3 w-16 animate-pulse rounded bg-raised" />
+                <div className="h-5 w-11/12 animate-pulse rounded bg-raised" />
+                <div className="h-4 w-full animate-pulse rounded bg-raised" />
+                <div className="h-4 w-3/5 animate-pulse rounded bg-raised" />
               </div>
             ))}
           </div>
 
-          <div className="hidden h-96 animate-pulse rounded-lg bg-raised lg:block" />
+          <div className="hidden h-96 animate-pulse rounded-[1.15rem] bg-raised lg:block" />
         </div>
       </div>
 

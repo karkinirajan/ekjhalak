@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { diversifyBySource, scoreStory, selectHero, selectTicker, selectTrending } from "./ranking";
+import { diversifyBySource, rankStories, scoreStory, selectTicker, selectTrending } from "./ranking";
 import type { NewsItem } from "./news-pipeline";
 
 const makeItem = (overrides: Partial<NewsItem> = {}): NewsItem => ({
@@ -28,17 +28,26 @@ test("scoreStory rewards coverage and breaking status", () => {
     assert.ok(scoreStory(b, 1_700_000_000_000) > scoreStory(a, 1_700_000_000_000));
 });
 
-test("selectHero prefers a photo-backed lead and returns supporting stories", () => {
+test("rankStories orders by score without dropping anything", () => {
     const items = [
-        makeItem({ id: "lead", imageUrl: "https://example.com/lead.jpg", title: "Lead story", coverageCount: 4, credibility: 8 }),
-        makeItem({ id: "support-1", title: "Support one", coverageCount: 2, credibility: 6 }),
-        makeItem({ id: "support-2", title: "Support two", coverageCount: 2, credibility: 6 }),
+        makeItem({ id: "minor", title: "Minor story", coverageCount: 1, credibility: 5 }),
+        makeItem({ id: "biggest", title: "Biggest story", coverageCount: 4, credibility: 8 }),
+        makeItem({ id: "middling", title: "Middling story", coverageCount: 2, credibility: 6 }),
     ];
 
-    const result = selectHero(items, 2, 1_700_000_000_000);
-    if (!result.lead) throw new Error("Expected a lead story");
-    assert.equal(result.lead.id, "lead");
-    assert.equal(result.side.length, 2);
+    const result = rankStories(items, 1_700_000_000_000);
+    assert.deepEqual(result.map((item) => item.id), ["biggest", "middling", "minor"]);
+    assert.equal(result.length, items.length);
+});
+
+test("rankStories does not mutate its input", () => {
+    const items = [
+        makeItem({ id: "minor", coverageCount: 1 }),
+        makeItem({ id: "biggest", coverageCount: 4 }),
+    ];
+
+    rankStories(items, 1_700_000_000_000);
+    assert.deepEqual(items.map((item) => item.id), ["minor", "biggest"]);
 });
 
 test("diversifyBySource swaps repeated outlets locally", () => {

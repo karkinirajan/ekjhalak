@@ -306,12 +306,6 @@
     outline-offset: 2px;
   }
 
-  .card-focus:focus-visible {
-    outline: 2px solid var(--red);
-    outline-offset: 3px;
-    border-radius: 0.75rem;
-  }
-
   @media (prefers-reduced-motion: reduce) {
     html {
       scroll-behavior: auto;
@@ -444,22 +438,37 @@
     opacity: 0.5;
   }
 
-  /* ── Focus ─────────────────────────────────────────────────────────────────
-     Each story's headline button stretches an ::after overlay across its whole
-     article, so the card is the hit target. That overlay is therefore also
-     where the focus ring belongs: an outline on the button itself traces the
-     wrapped headline text, not the card the reader is actually selecting.
+  /* ── Whole-card hit target ─────────────────────────────────────────────────
+     A story card is one control, not a headline surrounded by dead space. The
+     headline button stretches an ::after overlay across its positioned
+     ancestor — the <article> — so a click anywhere on the card opens the brief
+     while the accessible name stays the headline itself. That means one button
+     per story rather than a nested link, photo and headline all competing for
+     the same tab stop.
 
-     Previously these buttons carried `focus-visible:outline-none` with nothing
-     replacing it, which left all 22 story controls on the page with no visible
-     focus at all. */
+     The overlay is therefore also where the focus ring belongs: an outline on
+     the button traces the wrapped headline text, not the card the reader has
+     actually selected.
+
+     This rule set previously declared the outline but never `content`, so the
+     pseudo-element was never generated — the cards had no card-wide hit area
+     and every story control on the page focused invisibly.
+
+     The cost is that copy inside a card can no longer be selected with the
+     mouse. That is the accepted trade for a card that behaves like one target,
+     and the full text is a click away in the reader panel. */
+  .card-focus::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 0.5rem;
+  }
   .card-focus:focus-visible {
     outline: none;
   }
   .card-focus:focus-visible::after {
     outline: 2px solid var(--red);
     outline-offset: 3px;
-    border-radius: var(--radius);
   }
 
   /* Diagonal hatch over hero photography so white headlines stay legible
