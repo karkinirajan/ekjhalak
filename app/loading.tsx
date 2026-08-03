@@ -48,20 +48,20 @@ export default function Loading() {
       {/* Card grid + trending rail */}
       <div className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          {/* Mirrors the card's own shape: text column left, picture right. */}
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          {/* Mirrors the card's own shape: picture above, text below. */}
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="flex items-start gap-4 rounded-sm border border-rule bg-surface p-4"
+                className="overflow-hidden rounded-md border border-rule bg-surface"
               >
-                <div className="min-w-0 flex-1 space-y-2.5">
+                <div className="aspect-16/10 w-full animate-pulse bg-raised" />
+                <div className="space-y-2.5 p-5">
                   <div className="h-3 w-16 animate-pulse rounded-sm bg-raised" />
                   <div className="h-4 w-11/12 animate-pulse rounded-sm bg-raised" />
                   <div className="h-3 w-full animate-pulse rounded-sm bg-raised" />
                   <div className="h-3 w-3/5 animate-pulse rounded-sm bg-raised" />
                 </div>
-                <div className="aspect-4/3 w-24 shrink-0 animate-pulse rounded-sm bg-raised sm:w-28 lg:w-32" />
               </div>
             ))}
           </div>

@@ -83,21 +83,21 @@ function ReadingProgress() {
 function GridSkeleton() {
   return (
     <div
-      className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+      className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
       aria-hidden="true"
     >
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="flex overflow-hidden rounded-md border border-rule bg-surface"
+          className="overflow-hidden rounded-md border border-rule bg-surface"
         >
-          <div className="min-w-0 flex-1 space-y-2.5 p-4">
+          <div className="aspect-16/10 w-full animate-pulse bg-raised" />
+          <div className="space-y-2.5 p-5">
             <div className="h-3 w-20 animate-pulse rounded-sm bg-raised" />
             <div className="h-4 w-11/12 animate-pulse rounded-sm bg-raised" />
             <div className="h-3 w-full animate-pulse rounded-sm bg-raised" />
             <div className="h-3 w-4/5 animate-pulse rounded-sm bg-raised" />
           </div>
-          <div className="w-28 shrink-0 animate-pulse self-stretch bg-raised sm:w-36 xl:w-40" />
         </div>
       ))}
     </div>
@@ -422,16 +422,14 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
                       </span>
                     </div>
 
-                    {/* One column until there is room for two.
-                        The card is a row — text column, then picture — and a row
-                        needs width. Three columns inside this container left the
-                        text 136px wide once the picture and the padding were
-                        taken out, which wrapped ordinary headlines to six lines
-                        and left the cards half empty below them. The grid area
-                        runs 608px at lg and 984px at full width, so one card per
-                        row below xl and two above it keeps every headline at a
-                        readable measure. */}
-                    <div className="grid gap-5 xl:grid-cols-2">
+                    {/* Three across at full width.
+                        A card is a column now — picture above, text below — so
+                        its whole width is the headline's measure and 312px is a
+                        comfortable one. That was not true of the horizontal card
+                        this replaced: with a picture beside the text, three
+                        columns left the headline 136px and wrapped it to six
+                        lines, which is why that layout could only run two up. */}
+                    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                       {pagedItems.map((item, index) => (
                         <Reveal
                           key={item.id}

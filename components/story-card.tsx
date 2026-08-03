@@ -26,7 +26,8 @@ interface StoryCardProps {
   priority?: boolean;
 }
 
-const GRID_SUMMARY_CHARS = 190;
+/** Sized to a three-line clamp at the card's ~312px measure. */
+const GRID_SUMMARY_CHARS = 155;
 
 /**
  * The rail thumbnail's frame.
@@ -147,29 +148,36 @@ export function StoryCard({
     GRID_SUMMARY_CHARS,
   );
 
-  // Text left, picture right, and the picture is a full-height column rather
-  // than a thumbnail floating in the padding.
+  // Picture across the top, text beneath it.
   //
-  // The <article> is itself the row — there is no inner wrapper — so the picture
-  // is a flex child of the card and `self-stretch` gives it the card's whole
-  // height. It runs flush to the top, right and bottom edges; `overflow-hidden`
-  // on the card is what rounds its two outer corners, so the frame needs no
-  // radius of its own and nothing has to know which corners to round.
-  //
-  // `h-full` plus `mt-auto` on the footer: grid items stretch to the tallest
+  // `h-full` plus `mt-auto` on the meta block: grid items stretch to the tallest
   // card in their row, so without this the source line floats wherever the
-  // headline happens to end and the row reads as ragged. It is also what makes
-  // every picture in a row the same height.
+  // headline happens to end and the row reads as ragged.
+  //
+  // The picture is full-bleed — no padding around it, no frame of its own. The
+  // card's `overflow-hidden` is what rounds its top two corners, so nothing has
+  // to know which corners to round, and `aspect-16/10` is what makes every
+  // picture in the grid exactly the same size whatever the publisher shipped.
   return (
     <article
       data-topic={item.topic}
       className={cn(
-        "group relative flex h-full overflow-hidden rounded-md bg-surface transition-colors duration-200 hover:bg-raised/40",
+        "group relative flex h-full flex-col overflow-hidden rounded-md bg-surface transition-colors duration-200 hover:bg-raised/40",
         CARD_BORDER,
       )}
     >
-      <div className="flex min-w-0 flex-1 flex-col p-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="aspect-16/10 w-full shrink-0 overflow-hidden bg-raised/60">
+        <StoryImage
+          src={item.imageUrl}
+          alt={title}
+          topic={item.topic}
+          priority={priority}
+          className="h-full w-full"
+        />
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <TopicPill topic={item.topic} lang={language} tone="quiet" />
           <span className="eyebrow text-ink-muted">{relative}</span>
         </div>
@@ -177,8 +185,8 @@ export function StoryCard({
         <h3
           lang={langAttr(text.lang)}
           className={cn(
-            "mt-2.5 text-[1.06rem] leading-[1.3] font-semibold tracking-[-0.015em] text-ink transition-colors group-hover:text-(--topic)",
-            isNp ? "font-np leading-[1.45]" : "font-display",
+            "mt-3 text-[1.08rem] leading-[1.32] font-semibold tracking-[-0.015em] text-ink transition-colors group-hover:text-(--topic)",
+            isNp ? "font-np leading-[1.5]" : "font-display",
           )}
         >
           <button
@@ -194,48 +202,41 @@ export function StoryCard({
           <p
             lang={langAttr(text.lang)}
             className={cn(
-              "clamp-3 mt-2 text-[0.9rem] leading-[1.65] text-ink-soft",
-              isNp && "font-np leading-[1.75]",
+              "clamp-3 mt-2.5 text-[0.9rem] leading-[1.7] text-ink-soft",
+              isNp && "font-np leading-[1.8]",
             )}
           >
             {summary}
           </p>
         )}
 
-        <div className="eyebrow mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-1.5 pt-3 text-ink-muted">
-          <SourceMark name={item.sourceName} className="min-w-0" />
-          <span aria-hidden="true" className="h-3 w-px shrink-0 bg-rule" />
-          <time
-            dateTime={new Date(item.publishedTimestamp).toISOString()}
-            className="tabular-nums"
-          >
-            {item.publishedAt}
-          </time>
-          {item.coverageCount > 1 && (
-            <>
-              <span aria-hidden="true" className="h-3 w-px shrink-0 bg-rule" />
-              <span className="inline-flex items-center gap-1.5 text-(--topic)">
-                <Newspaper className="h-3 w-3" aria-hidden="true" />
-                {item.coverageCount} {t.outletsMany}
-              </span>
-            </>
-          )}
+        {/* The wrapper carries `mt-auto` rather than the meta row itself.
+            `mt-auto` resolves to zero once the copy above fills the card, which
+            would leave the hairline sitting directly against the last line of
+            the summary on exactly the tallest card in each row — the one most
+            in need of the breathing room. Padding on a wrapper is a floor the
+            auto margin cannot eat. */}
+        <div className="mt-auto pt-5">
+          <div className="eyebrow flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-t border-rule/60 pt-3.5 text-ink-muted">
+            <SourceMark name={item.sourceName} className="min-w-0" />
+            <span aria-hidden="true" className="h-3 w-px shrink-0 bg-rule" />
+            <time
+              dateTime={new Date(item.publishedTimestamp).toISOString()}
+              className="tabular-nums"
+            >
+              {item.publishedAt}
+            </time>
+            {item.coverageCount > 1 && (
+              <>
+                <span aria-hidden="true" className="h-3 w-px shrink-0 bg-rule" />
+                <span className="inline-flex items-center gap-1.5 text-(--topic)">
+                  <Newspaper className="h-3 w-3" aria-hidden="true" />
+                  {item.coverageCount} {t.outletsMany}
+                </span>
+              </>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Fixed width, full height. The width steps up between the one-column and
-          two-column layouts so the picture keeps its proportion on a card that
-          roughly doubles in width; the height is whatever the card is, which the
-          grid has already equalised across the row. `object-cover` on the image
-          means a tall card crops the photograph rather than distorting it. */}
-      <div className="w-28 shrink-0 self-stretch overflow-hidden bg-raised/60 sm:w-36 xl:w-40">
-        <StoryImage
-          src={item.imageUrl}
-          alt={title}
-          topic={item.topic}
-          priority={priority}
-          className="h-full w-full"
-        />
       </div>
     </article>
   );
