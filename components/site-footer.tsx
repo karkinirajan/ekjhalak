@@ -4,12 +4,7 @@ import Link from "next/link";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import { STANDING_PAGES } from "@/lib/site-nav";
-import {
-  OWNER_NAME,
-  OWNER_TITLE_EN,
-  OWNER_TITLE_NP,
-  OWNER_URL,
-} from "@/lib/site-pages";
+import { OWNER_DISPLAY_NAME, OWNER_URL } from "@/lib/site-pages";
 import { TOPIC_ORDER, topicLabel, type TopicId } from "@/lib/taxonomy";
 
 interface SiteFooterProps {
@@ -140,11 +135,8 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
                 rel="noopener noreferrer"
                 className="font-medium text-ink-soft underline decoration-rule-strong underline-offset-4 transition-colors hover:text-ink hover:decoration-red"
               >
-                {OWNER_NAME}
+                {OWNER_DISPLAY_NAME}
               </a>
-              <span className="block text-xs text-ink-muted">
-                {isNp ? OWNER_TITLE_NP : OWNER_TITLE_EN}
-              </span>
             </p>
           </div>
         </div>

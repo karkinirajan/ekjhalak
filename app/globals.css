@@ -81,14 +81,14 @@
      component could ask for a small corner without writing a literal.
 
      The steps are now absolute and close together: 3px on the small things,
-     8px at the top. Anything that genuinely wants to be a circle asks for
+     12px at the top. Anything that genuinely wants to be a circle asks for
      `rounded-full`, which is unaffected by this scale.                     */
-  --radius-sm: 2px;
-  --radius-md: 3px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
   --radius-lg: var(--radius);
-  --radius-xl: 6px;
-  --radius-2xl: 8px;
-  --radius-3xl: 10px;
+  --radius-xl: 8px;
+  --radius-2xl: 10px;
+  --radius-3xl: 12px;
 }
 
 /* ── Shared ────────────────────────────────────────────────────────────────
@@ -116,8 +116,8 @@
   --input: var(--rule-strong);
   --ring: var(--red);
   /* The base step every shadcn primitive reaches for by default. See the
-     corner scale in @theme inline above for why this is 4px and not 9999px. */
-  --radius: 4px;
+     corner scale in @theme inline above for why this is 6px and not 9999px. */
+  --radius: 6px;
 }
 
 /* ── Dark: Press Night ─────────────────────────────────────────────────────

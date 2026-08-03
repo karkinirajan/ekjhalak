@@ -41,21 +41,37 @@ const TOPIC_PALETTES: Record<TopicId, { background: string; accent: string }> = 
   opinion: { background: "#f7f2ea", accent: "#7a4b2f" },
 };
 
+/**
+ * Cover art for a story whose feed shipped no photograph.
+ *
+ * Square, and composed from the centre outward. That is the whole design
+ * constraint: this one image is cropped by `object-cover` into three different
+ * shapes — a tall card column, a 16:10 rail thumbnail, and a wide reader-panel
+ * header — and a crop only ever keeps the middle. The previous version was a
+ * 3:2 landscape with its label set flush left at x=120, so the card column
+ * sliced the label down to its last two letters and the page filled with cards
+ * captioned "ss" and "cs".
+ *
+ * Nothing sits outside the central band any more, and the label is anchored
+ * `middle` rather than positioned, so every crop keeps the topic legible.
+ */
 export function buildTopicFallbackImageDataUrl(topic: TopicId): string {
   const meta = TOPICS[topic];
   const palette = TOPIC_PALETTES[topic];
   const label = escapeXml(meta.en);
   const glyph = escapeXml(meta.glyph);
+  // System stacks only. A data-URI SVG rendered through <img> is an isolated
+  // document — it cannot reach the page's webfonts, so naming one just yields
+  // whatever the platform substitutes.
+  const font = "ui-sans-serif, system-ui, -apple-system, Segoe UI, Arial, sans-serif";
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
-      <rect width="1200" height="800" rx="48" fill="${palette.background}" />
-      <rect x="80" y="80" width="1040" height="640" rx="40" fill="${palette.accent}" opacity="0.14" />
-      <circle cx="965" cy="240" r="180" fill="${palette.accent}" opacity="0.16" />
-      <rect x="120" y="560" width="420" height="16" rx="8" fill="${palette.accent}" opacity="0.26" />
-      <rect x="120" y="600" width="300" height="12" rx="6" fill="${palette.accent}" opacity="0.2" />
-      <text x="120" y="310" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="700" fill="${palette.accent}">${label}</text>
-      <text x="120" y="420" font-family="Inter, Arial, sans-serif" font-size="180" font-weight="700" fill="${palette.accent}" opacity="0.92">${glyph}</text>
-      <text x="120" y="700" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="600" fill="#111111" opacity="0.78">EkJhalak</text>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+      <rect width="800" height="800" fill="${palette.background}" />
+      <circle cx="400" cy="400" r="330" fill="${palette.accent}" opacity="0.10" />
+      <circle cx="400" cy="400" r="230" fill="${palette.accent}" opacity="0.10" />
+      <text x="400" y="392" text-anchor="middle" font-family="${font}" font-size="230" font-weight="700" fill="${palette.accent}" opacity="0.92">${glyph}</text>
+      <text x="400" y="520" text-anchor="middle" font-family="${font}" font-size="62" font-weight="700" letter-spacing="2" fill="${palette.accent}">${label}</text>
+      <rect x="310" y="566" width="180" height="6" rx="3" fill="${palette.accent}" opacity="0.32" />
     </svg>
   `;
 

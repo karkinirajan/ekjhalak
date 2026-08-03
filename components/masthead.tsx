@@ -168,6 +168,13 @@ export function Masthead({
           <BrandBanner className="hidden lg:block" />
 
           <div className="text-center">
+            {/* The name, once.
+                A second line carried the same name in the other script — an
+                English nameplate reading "EkJhalak" over "एक झलक", a Nepali one
+                reading "एक झलक" over "EkJhalak". Printing a paper's own name
+                twice, one above the other, reads as a mistake rather than as a
+                device; the language toggle already decides which script the
+                reader wants. */}
             <h1 className="leading-[0.9]">
               <span
                 className={cn(
@@ -176,14 +183,6 @@ export function Masthead({
                 )}
               >
                 {t.wordmark}
-              </span>
-              <span
-                className={cn(
-                  "mt-1 block text-[clamp(0.85rem,2.4vw,1rem)] font-semibold tracking-[0.16em] text-red uppercase",
-                  isNp ? "font-display" : "font-np",
-                )}
-              >
-                {t.wordmarkNp}
               </span>
             </h1>
 
@@ -211,7 +210,12 @@ export function Masthead({
               event.preventDefault();
               applySearch();
             }}
-            className="w-full lg:max-w-64 lg:justify-self-end"
+            /* The field tracks the width it is given rather than sitting at one
+               fixed size. It is full-bleed on the small screens where it drops
+               below the nameplate, and on large ones it grows with the masthead
+               instead of staying pinned at 16rem — which is where a placeholder
+               longer than about twenty characters used to be clipped mid-word. */
+            className="w-full lg:max-w-[min(20rem,26vw)] lg:min-w-44 lg:justify-self-end"
           >
             <div className="relative">
               <Search
@@ -219,12 +223,13 @@ export function Masthead({
                 className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-ink-muted"
               />
               <Input
+                type="search"
                 value={searchDraft}
                 onChange={(event) => setSearchDraft(event.target.value)}
                 placeholder={t.searchPlaceholder}
-                aria-label={t.searchPlaceholder}
+                aria-label={t.searchLabel}
                 className={cn(
-                  "h-9 rounded-sm border-rule-strong bg-surface pl-9 text-sm placeholder:text-ink-muted",
+                  "h-9 w-full min-w-0 rounded-sm border-rule-strong bg-surface pl-9 text-sm placeholder:text-ink-muted",
                   isNp && "font-np",
                 )}
               />

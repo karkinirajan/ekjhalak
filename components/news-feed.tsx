@@ -89,15 +89,15 @@ function GridSkeleton() {
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="flex items-start gap-4 rounded-sm border border-rule bg-surface p-4"
+          className="flex overflow-hidden rounded-md border border-rule bg-surface"
         >
-          <div className="min-w-0 flex-1 space-y-2.5">
+          <div className="min-w-0 flex-1 space-y-2.5 p-4">
             <div className="h-3 w-20 animate-pulse rounded-sm bg-raised" />
             <div className="h-4 w-11/12 animate-pulse rounded-sm bg-raised" />
             <div className="h-3 w-full animate-pulse rounded-sm bg-raised" />
             <div className="h-3 w-4/5 animate-pulse rounded-sm bg-raised" />
           </div>
-          <div className="aspect-4/3 w-24 shrink-0 animate-pulse rounded-sm bg-raised sm:w-28 lg:w-32" />
+          <div className="w-28 shrink-0 animate-pulse self-stretch bg-raised sm:w-36 xl:w-40" />
         </div>
       ))}
     </div>

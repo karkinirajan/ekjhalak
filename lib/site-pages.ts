@@ -41,10 +41,10 @@ export type PageSlug =
  */
 export const POLICY_UPDATED = "2026-08-03";
 
+/** The byline: the person's own name, linked to their site. */
+export const OWNER_DISPLAY_NAME = "Nirajan Karki";
 export const OWNER_NAME = "kneeraazon";
 export const OWNER_URL = "https://kneeraazon.com";
-export const OWNER_TITLE_EN = "Founder & Editor";
-export const OWNER_TITLE_NP = "संस्थापक तथा सम्पादक";
 export const SOURCE_COUNT = 40;
 
 const about: Record<Lang, PageContent> = {
@@ -72,7 +72,7 @@ const about: Record<Lang, PageContent> = {
       {
         heading: "Who runs it",
         body: [
-          `EkJhalak is built and operated by ${OWNER_NAME} (${OWNER_TITLE_EN}), an independent developer. It is a personal project rather than a company, and it is not funded by, affiliated with or editorially directed by any of the newsrooms it links to.`,
+          `EkJhalak is built and operated by ${OWNER_DISPLAY_NAME}, an independent developer. It is a personal project rather than a company, and it is not funded by, affiliated with or editorially directed by any of the newsrooms it links to.`,
           `Work, contact details and other projects are at ${OWNER_URL}.`,
         ],
       },
@@ -108,7 +108,7 @@ const about: Record<Lang, PageContent> = {
       {
         heading: "कसले चलाउँछ",
         body: [
-          `एक झलक स्वतन्त्र डेभलपर ${OWNER_NAME} (${OWNER_TITLE_NP}) ले बनाएका र सञ्चालन गरेका हुन्। यो कुनै कम्पनी नभई व्यक्तिगत परियोजना हो, र यसले जोड्ने कुनै पनि सञ्चारगृहबाट यसलाई आर्थिक सहयोग, सम्बद्धता वा सम्पादकीय निर्देशन प्राप्त हुँदैन।`,
+          `एक झलक स्वतन्त्र डेभलपर ${OWNER_DISPLAY_NAME} ले बनाएका र सञ्चालन गरेका हुन्। यो कुनै कम्पनी नभई व्यक्तिगत परियोजना हो, र यसले जोड्ने कुनै पनि सञ्चारगृहबाट यसलाई आर्थिक सहयोग, सम्बद्धता वा सम्पादकीय निर्देशन प्राप्त हुँदैन।`,
           `काम, सम्पर्क विवरण र अन्य परियोजनाहरू ${OWNER_URL} मा हेर्न सकिन्छ।`,
         ],
       },
@@ -391,7 +391,7 @@ const contact: Record<Lang, PageContent> = {
         heading: "Everything else",
         body: [
           "Bugs, accessibility problems, a source worth adding, or anything about how the site works.",
-          `${OWNER_NAME} — ${OWNER_TITLE_EN} · ${OWNER_URL}`,
+          `${OWNER_DISPLAY_NAME} · ${OWNER_URL}`,
         ],
       },
     ],
@@ -419,7 +419,7 @@ const contact: Record<Lang, PageContent> = {
         heading: "अरू सबै कुरा",
         body: [
           "त्रुटि, पहुँचसम्बन्धी समस्या, थप्न लायक कुनै स्रोत, वा साइट कसरी चल्छ भन्ने बारेका जिज्ञासा।",
-          `${OWNER_NAME} — ${OWNER_TITLE_NP} · ${OWNER_URL}`,
+          `${OWNER_DISPLAY_NAME} · ${OWNER_URL}`,
         ],
       },
     ],
