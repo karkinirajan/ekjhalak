@@ -3,9 +3,9 @@
 // No translation is performed here or anywhere else in the pipeline — the
 // article's language is preserved from source through to display.
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL =
-  process.env.GROQ_MODEL ?? "llama-3.1-8b-instant";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL =
+  process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
 const GROQ_COOLDOWN_MS = 2 * 60 * 1_000;
 
 let groqBlockedUntil = 0;
@@ -101,11 +101,11 @@ async function callGroq(
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${GROQ_API_KEY}`,
+      Authorization: `Bearer ${GEMINI_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: GROQ_MODEL,
+      model: GEMINI_MODEL,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -138,7 +138,7 @@ export async function summarize(
   const source = normalizeText(text);
   if (!source) return "";
 
-  if (!GROQ_API_KEY || isGroqCoolingDown()) {
+  if (!GEMINI_API_KEY || isGroqCoolingDown()) {
     return isSummaryAcceptable(source) ? source : "";
   }
 
