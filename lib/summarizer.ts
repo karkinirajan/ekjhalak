@@ -1,21 +1,17 @@
-// lib/summarizer.ts
-// Single-responsibility: produce a concise, original-language news summary via Groq.
-// No translation is performed here or anywhere else in the pipeline — the
-// article's language is preserved from source through to display.
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL =
-  process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
-const GROQ_COOLDOWN_MS = 2 * 60 * 1_000;
+  process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+const GEMINI_COOLDOWN_MS = 2 * 60 * 1_000;
 
-let groqBlockedUntil = 0;
+let geminiBlockedUntil = 0;
 
-function isGroqCoolingDown() {
-  return groqBlockedUntil > Date.now();
+function isGeminiCoolingDown() {
+  return geminiBlockedUntil > Date.now();
 }
 
-function blockGroq() {
-  groqBlockedUntil = Date.now() + GROQ_COOLDOWN_MS;
+function blockGemini() {
+  geminiBlockedUntil = Date.now() + GEMINI_COOLDOWN_MS;
 }
 
 export const SUMMARY_MAX_CHARS = 480;
@@ -29,14 +25,7 @@ function normalizeText(text: string): string {
     .replace(/[ \t]{2,}/g, " ");
 }
 
-/**
- * Publisher chrome that survives into a length-valid summary.
- *
- * `feed-normalizer` strips the common cases at ingestion, but a length check
- * alone will happily wave through 400 characters of subscription pitch — which
- * is exactly what used to happen for 26 of 475 live stories. Treating these as
- * unacceptable routes them to the model for a real rewrite instead.
- */
+
 const BOILERPLATE = /unlock these with subscription|subscription benefits|already a subscriber|to continue reading|sign up (?:to|for) (?:our|the)|all rights reserved/i;
 
 export function looksLikeBoilerplate(text: string): boolean {
@@ -51,12 +40,7 @@ export function isSummaryAcceptable(text: string): boolean {
   );
 }
 
-/**
- * Hard cap a summary to `max` chars, snapping to the nearest sentence
- * terminator (. ! ? or Devanagari ।) when one is reasonably close to the
- * cut, otherwise breaking on a word boundary and appending an ellipsis.
- * Used as the last-line-of-defense when the LLM cannot satisfy the bound.
- */
+
 export function hardTruncateSummary(
   text: string,
   max: number = SUMMARY_MAX_CHARS,
@@ -88,7 +72,7 @@ const SYSTEM_NP =
   `को, के, कहिले, कहाँ र के भयो — मुख्य तथ्य, मिति, आंकडा समावेश गर्नुहोस्। स्रोतमा नभएको कुरा कहिल्यै नलेख्नुहोस्। ` +
   `प्रत्येक वाक्य पूर्ण हुनुपर्छ, कहीँ पनि बीचमा नकाट्नुहोस्। तटस्थ समाचार शैली। एउटा अनुच्छेद। शीर्षक, क्रम वा markdown नराख्नुहोस्।`;
 
-async function callGroq(
+async function callGemini(
   text: string,
   lang: "en" | "np",
   retryHint?: string,
@@ -98,39 +82,44 @@ async function callGroq(
     ? `Rewrite so the final output is strictly between ${SUMMARY_MIN_CHARS} and ${SUMMARY_MAX_CHARS} characters with complete sentences:\n\n${retryHint}`
     : text;
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${GEMINI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: GEMINI_MODEL,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      temperature: 0.15,
-      max_tokens: lang === "np" ? 700 : 380,
-    }),
-    signal: AbortSignal.timeout(20_000),
-  });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        system_instruction: {
+          parts: [{ text: system }],
+        },
+        contents: [
+          {
+            parts: [{ text: user }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.15,
+          maxOutputTokens: lang === "np" ? 700 : 380,
+        },
+      }),
+      signal: AbortSignal.timeout(20_000),
+    }
+  );
 
   if (res.status === 429) {
-    blockGroq();
+    blockGemini();
     return "";
   }
   if (!res.ok) return "";
 
   const data = await res.json();
-  return normalizeText(data?.choices?.[0]?.message?.content?.trim() ?? "");
+  return normalizeText(
+    data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? ""
+  );
 }
 
-/**
- * Produce a short brief in the article's original language.
- * Returns "" when the model cannot satisfy the length bound — callers fall back
- * to the raw source summary rather than showing a malformed brief.
- */
+
 export async function summarize(
   text: string,
   lang: "en" | "np" = "en",
@@ -138,15 +127,15 @@ export async function summarize(
   const source = normalizeText(text);
   if (!source) return "";
 
-  if (!GEMINI_API_KEY || isGroqCoolingDown()) {
+  if (!GEMINI_API_KEY || isGeminiCoolingDown()) {
     return isSummaryAcceptable(source) ? source : "";
   }
 
-  let candidate = await callGroq(source, lang);
+  let candidate = await callGemini(source, lang);
   if (isSummaryAcceptable(candidate)) return candidate;
 
   for (let i = 0; i < 2; i++) {
-    candidate = await callGroq(source, lang, candidate || source);
+    candidate = await callGemini(source, lang, candidate || source);
     if (isSummaryAcceptable(candidate)) return candidate;
   }
 
