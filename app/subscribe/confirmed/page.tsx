@@ -55,7 +55,7 @@ export default async function SubscribeConfirmedPage({
 
         <div
           aria-hidden="true"
-          className={`mx-auto mt-8 h-1 w-14 rounded-sm ${good ? "bg-green" : "bg-red"}`}
+          className={`mx-auto mt-8 h-1 w-14 rounded-md ${good ? "bg-green" : "bg-red"}`}
         />
 
         <h1
@@ -75,7 +75,7 @@ export default async function SubscribeConfirmedPage({
 
         <Link
           href="/"
-          className={`mt-9 inline-flex items-center gap-2 rounded-sm bg-ink px-5 py-3 text-sm font-semibold text-canvas transition-opacity hover:opacity-85 ${isNp ? "font-np" : ""}`}
+          className={`mt-9 inline-flex items-center gap-2 rounded-md bg-ink px-5 py-3 text-sm font-semibold text-canvas transition-opacity hover:opacity-85 ${isNp ? "font-np" : ""}`}
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           {copy.back}

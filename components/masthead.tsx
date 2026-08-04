@@ -115,7 +115,7 @@ export function Masthead({
               size="icon-sm"
               onClick={toggleTheme}
               aria-label={themeMode === "dark" ? t.themeLight : t.themeDark}
-              className="rounded-sm text-ink-muted hover:text-ink"
+              className="rounded-md text-ink-muted hover:text-ink"
             >
               {themeMode === "dark" ? (
                 <Sun className="h-3.5 w-3.5" aria-hidden="true" />
@@ -130,7 +130,7 @@ export function Masthead({
               onClick={toggleLanguage}
               aria-label={t.langToggleLabel}
               className={cn(
-                "h-8 gap-1.5 rounded-sm px-2.5 text-xs text-ink-muted hover:text-ink",
+                "h-8 gap-1.5 rounded-md px-2.5 text-xs text-ink-muted hover:text-ink",
                 !isNp && "font-np",
               )}
             >
@@ -144,7 +144,7 @@ export function Masthead({
               size="sm"
               onClick={onSubscribe}
               className={cn(
-                "h-8 rounded-sm bg-red-solid px-3.5 text-xs font-semibold text-white hover:bg-red-solid/90",
+                "h-8 rounded-md bg-red-solid px-3.5 text-xs font-semibold text-white hover:bg-red-solid/90",
                 isNp && "font-np",
               )}
             >
@@ -229,7 +229,7 @@ export function Masthead({
                 placeholder={t.searchPlaceholder}
                 aria-label={t.searchLabel}
                 className={cn(
-                  "h-9 w-full min-w-0 rounded-sm border-rule-strong bg-surface pl-9 text-sm placeholder:text-ink-muted",
+                  "h-9 w-full min-w-0 rounded-md border-rule-strong bg-surface pl-9 text-sm placeholder:text-ink-muted",
                   isNp && "font-np",
                 )}
               />

@@ -75,7 +75,7 @@ export function StandingPage({ slug }: { slug: PageSlug }) {
         <p
           lang={isNp ? "ne" : "en"}
           className={cn(
-            "copy mt-6 border-l-2 border-red pl-5 text-[1.08rem] leading-[1.75] text-ink-soft",
+            "copy mt-6 border-l border-red pl-5 text-[1.08rem] leading-[1.75] text-ink-soft",
             isNp && "font-np leading-[1.9]",
           )}
         >

@@ -19,9 +19,9 @@ export default function Loading() {
           <div className="flex items-center justify-between border-b border-rule/60 py-2.5">
             <div className="h-3 w-44 animate-pulse rounded bg-raised" />
             <div className="flex gap-1.5">
-              <div className="h-8 w-28 animate-pulse rounded-sm bg-raised" />
-              <div className="h-8 w-8 animate-pulse rounded-sm bg-raised" />
-              <div className="h-8 w-20 animate-pulse rounded-sm bg-raised" />
+              <div className="h-8 w-28 animate-pulse rounded-md bg-raised" />
+              <div className="h-8 w-8 animate-pulse rounded-md bg-raised" />
+              <div className="h-8 w-20 animate-pulse rounded-md bg-raised" />
             </div>
           </div>
 
@@ -39,7 +39,7 @@ export default function Loading() {
           {Array.from({ length: 7 }).map((_, i) => (
             <div
               key={i}
-              className="h-7 w-20 shrink-0 animate-pulse rounded-sm bg-raised"
+              className="h-7 w-20 shrink-0 animate-pulse rounded-md bg-raised"
             />
           ))}
         </div>
@@ -57,16 +57,16 @@ export default function Loading() {
               >
                 <div className="aspect-16/10 w-full animate-pulse bg-raised" />
                 <div className="space-y-2.5 p-5">
-                  <div className="h-3 w-16 animate-pulse rounded-sm bg-raised" />
-                  <div className="h-4 w-11/12 animate-pulse rounded-sm bg-raised" />
-                  <div className="h-3 w-full animate-pulse rounded-sm bg-raised" />
-                  <div className="h-3 w-3/5 animate-pulse rounded-sm bg-raised" />
+                  <div className="h-3 w-16 animate-pulse rounded-md bg-raised" />
+                  <div className="h-4 w-11/12 animate-pulse rounded-md bg-raised" />
+                  <div className="h-3 w-full animate-pulse rounded-md bg-raised" />
+                  <div className="h-3 w-3/5 animate-pulse rounded-md bg-raised" />
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="hidden h-96 animate-pulse rounded-sm bg-raised lg:block" />
+          <div className="hidden h-96 animate-pulse rounded-md bg-raised lg:block" />
         </div>
       </div>
 

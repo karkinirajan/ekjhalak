@@ -100,7 +100,7 @@ export function NewsletterCta() {
   return (
     <section
       aria-label={t.newsletterTitle}
-      className="relative isolate overflow-hidden border border-rule bg-surface px-6 py-12 sm:px-10 sm:py-14"
+      className="relative isolate overflow-hidden rounded-md border border-rule bg-surface px-6 py-12 sm:px-10 sm:py-14"
     >
       {/* Ambient wash — red in one corner, green in the other. The only place
           the two accents meet, which is what marks this band as the offer. */}
@@ -114,7 +114,7 @@ export function NewsletterCta() {
       />
 
       <div className="relative mx-auto max-w-2xl text-center">
-        <span className="eyebrow inline-flex items-center gap-2 rounded-sm border border-rule-strong bg-raised px-3 py-1.5 text-ink">
+        <span className="eyebrow inline-flex items-center gap-2 rounded-md border border-rule-strong bg-raised px-3 py-1.5 text-ink">
           <Mail className="h-3 w-3" aria-hidden="true" />
           {t.newsletterKicker}
         </span>
@@ -141,7 +141,7 @@ export function NewsletterCta() {
           <p
             role="status"
             className={cn(
-              "mt-8 inline-flex items-start gap-2.5 rounded-sm border border-green/40 bg-green-soft px-5 py-3 text-left text-sm font-medium text-ink",
+              "mt-8 inline-flex items-start gap-2.5 rounded-md border border-green/40 bg-green-soft px-5 py-3 text-left text-sm font-medium text-ink",
               isNp && "font-np",
             )}
           >
@@ -186,13 +186,13 @@ export function NewsletterCta() {
                 placeholder={t.newsletterPlaceholder}
                 aria-invalid={state === "invalid"}
                 aria-describedby={message ? "newsletter-message" : undefined}
-                className="h-12 flex-1 rounded-sm border-rule-strong bg-surface px-5 text-base text-ink placeholder:text-ink-muted focus-visible:border-red focus-visible:ring-red/30"
+                className="h-12 flex-1 rounded-md border-rule-strong bg-surface px-5 text-base text-ink placeholder:text-ink-muted focus-visible:border-red focus-visible:ring-red/30"
               />
               <button
                 type="submit"
                 disabled={state === "sending"}
                 className={cn(
-                  "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-sm bg-red-solid px-6 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-100 disabled:opacity-60",
+                  "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-red-solid px-6 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-100 disabled:opacity-60",
                   isNp && "font-np",
                 )}
               >

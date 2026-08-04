@@ -52,7 +52,7 @@ export function PaginationBar({
   if (safeTotal <= 1) return null;
 
   const arrowClass =
-    "flex h-9 w-9 items-center justify-center rounded-sm border border-rule text-ink-muted transition-colors hover:border-rule-strong hover:text-ink disabled:pointer-events-none disabled:opacity-35";
+    "flex h-9 w-9 items-center justify-center rounded-md border border-rule text-ink-muted transition-colors hover:border-rule-strong hover:text-ink disabled:pointer-events-none disabled:opacity-35";
 
   return (
     <nav
@@ -97,7 +97,7 @@ export function PaginationBar({
               aria-label={`${t.pagePre} ${entry}`}
               aria-current={entry === page ? "page" : undefined}
               className={cn(
-                "flex h-9 min-w-9 items-center justify-center rounded-sm px-2 text-sm font-semibold tabular-nums transition-colors",
+                "flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm font-semibold tabular-nums transition-colors",
                 entry === page
                   ? "bg-ink text-canvas"
                   : "text-ink-muted hover:bg-raised hover:text-ink",

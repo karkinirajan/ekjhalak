@@ -93,10 +93,10 @@ function GridSkeleton() {
         >
           <div className="aspect-16/10 w-full animate-pulse bg-raised" />
           <div className="space-y-2.5 p-5">
-            <div className="h-3 w-20 animate-pulse rounded-sm bg-raised" />
-            <div className="h-4 w-11/12 animate-pulse rounded-sm bg-raised" />
-            <div className="h-3 w-full animate-pulse rounded-sm bg-raised" />
-            <div className="h-3 w-4/5 animate-pulse rounded-sm bg-raised" />
+            <div className="h-3 w-20 animate-pulse rounded-md bg-raised" />
+            <div className="h-4 w-11/12 animate-pulse rounded-md bg-raised" />
+            <div className="h-3 w-full animate-pulse rounded-md bg-raised" />
+            <div className="h-3 w-4/5 animate-pulse rounded-md bg-raised" />
           </div>
         </div>
       ))}
@@ -360,7 +360,7 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
           {!hasData && loadState === "error" && (
             <div
               role="alert"
-              className="rounded-lg border border-dashed border-rule-strong bg-surface px-6 py-16 text-center"
+              className="rounded-md border border-dashed border-rule-strong bg-surface px-6 py-16 text-center"
             >
               <p className={cn("text-ink-soft", isNp && "font-np")}>
                 {t.errorFeed}
@@ -369,7 +369,7 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
                 type="button"
                 onClick={() => fetchFeed(false)}
                 className={cn(
-                  "mt-5 rounded-sm bg-ink px-5 py-2.5 text-sm font-semibold text-canvas transition-opacity hover:opacity-85",
+                  "mt-5 rounded-md bg-ink px-5 py-2.5 text-sm font-semibold text-canvas transition-opacity hover:opacity-85",
                   isNp && "font-np",
                 )}
               >
@@ -383,7 +383,7 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
               {showEmpty && (
                 <div
                   role="status"
-                  className="rounded-lg border border-dashed border-rule-strong bg-surface px-6 py-16 text-center"
+                  className="rounded-md border border-dashed border-rule-strong bg-surface px-6 py-16 text-center"
                 >
                   <p className={cn("text-ink-soft", isNp && "font-np")}>
                     {t.noStories}
@@ -392,7 +392,7 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
                     type="button"
                     onClick={resetFilters}
                     className={cn(
-                      "mt-5 rounded-sm border border-rule-strong px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-raised",
+                      "mt-5 rounded-md border border-rule-strong px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-raised",
                       isNp && "font-np",
                     )}
                   >

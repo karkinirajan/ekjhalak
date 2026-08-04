@@ -71,24 +71,29 @@
   --color-card: var(--card);
 
   /* ── Corners ────────────────────────────────────────────────────────────
-     A flat, near-square scale rather than a multiplied one.
+     One corner, used everywhere.
 
-     `--radius` used to be 9999px so the shadcn buttons would render as pills,
-     and because the whole derived scale is computed from it, every `rounded-sm`
-     through `rounded-3xl` in the codebase became a stadium too. Cards, inputs,
-     panels and pills all ended up on the same fully-round corner, which is the
-     opposite of the crisp broadsheet this is meant to be — and it meant no
-     component could ask for a small corner without writing a literal.
+     `--radius` was originally 9999px so the shadcn buttons would render as
+     pills, and because the whole derived scale is computed from it, every step
+     from `rounded-sm` to `rounded-3xl` became a stadium too — cards, inputs and
+     panels all fully round, which is the opposite of the crisp broadsheet this
+     is meant to be.
 
-     The steps are now absolute and close together: 3px on the small things,
-     12px at the top. Anything that genuinely wants to be a circle asks for
-     `rounded-full`, which is unaffected by this scale.                     */
-  --radius-sm: 3px;
-  --radius-md: 6px;
-  --radius-lg: var(--radius);
-  --radius-xl: 8px;
-  --radius-2xl: 10px;
-  --radius-3xl: 12px;
+     It is now 6px and every bordered thing on the site asks for `rounded-md`:
+     cards, panels, inputs, buttons, pills, the reader, the standing pages. A
+     mixed scale is how an interface starts to look assembled rather than
+     designed, and nothing here is big enough to need a different corner from
+     anything else.
+
+     The other steps are kept, close together, so a component that genuinely
+     needs to differ has somewhere to go without writing a literal. Anything
+     that must be a circle asks for `rounded-full`, which this does not touch. */
+  --radius-sm: 4px;
+  --radius-md: var(--radius);
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-3xl: 14px;
 }
 
 /* ── Shared ────────────────────────────────────────────────────────────────
@@ -137,8 +142,13 @@
   --ink: #f5f5f5;
   --ink-soft: #c8c8c8;
   --ink-muted: #8f8f8f;
-  --rule: #2a2a2a;
-  --rule-strong: #373737;
+  /* Rules sit one step closer to the stock than they did — #2a2a2a to #212121,
+     #373737 to #2c2c2c. A border's job is to say where one thing stops and the
+     next begins, and it has done that job the moment you can see it; anything
+     past that competes with the type it is supposed to be framing. Both are
+     still a clear step above --surface (#121212), so nothing disappears. */
+  --rule: #212121;
+  --rule-strong: #2c2c2c;
   --red: #f87171;
   --red-solid: #dc2626;
   --red-soft: #3b1818;
@@ -193,8 +203,11 @@
   --ink: #111111;
   --ink-soft: #525252;
   --ink-muted: #737373;
-  --rule: #e5e5e5;
-  --rule-strong: #d6d6d6;
+  /* Mirror of the dark theme's step: #e5e5e5 to #ededed, #d6d6d6 to #e0e0e0.
+     Paper needs the lighter touch of the two — a grey line on white reads
+     heavier than the same distance from black does. */
+  --rule: #ededed;
+  --rule-strong: #e0e0e0;
   --red: #dc2626;
   --red-solid: #dc2626;
   --red-soft: #fef2f2;

@@ -38,21 +38,22 @@ const GRID_SUMMARY_CHARS = 155;
  * the two. The colour now runs around the whole card, so a card is one
  * categorised object and the photograph is simply part of it.
  */
-const THUMB_FRAME = "overflow-hidden rounded-sm bg-raised/60 border border-rule/60";
+const THUMB_FRAME =
+  "overflow-hidden rounded-md bg-raised/60 border border-rule/50";
 
 /**
  * The card's border, at rest and on hover.
  *
  * Mixed into `--rule` rather than used neat. A full-strength topic hairline
  * around every card turned a page of eleven categories into a colour chart and
- * shouted louder than the headlines it framed. At 22% the colour is a tint on
- * the ordinary rule — present enough to categorise a card once you look for it,
- * quiet enough to disappear while you read. Hover resolves it most of the way
- * toward the real colour, which is where a category badge belongs: on the card
- * you are actually pointing at.
+ * shouted louder than the headlines it framed. At 15% the colour is barely a
+ * tint on the ordinary rule — enough to categorise a card once you look for it,
+ * gone while you read. Hover resolves it most of the way toward the real
+ * colour, which is where a category cue belongs: on the card you are pointing
+ * at, not on all twelve at once.
  */
 const CARD_BORDER =
-  "border border-[color-mix(in_oklab,var(--topic)_22%,var(--rule))] hover:border-[color-mix(in_oklab,var(--topic)_70%,var(--rule))]";
+  "border border-[color-mix(in_oklab,var(--topic)_15%,var(--rule))] hover:border-[color-mix(in_oklab,var(--topic)_65%,var(--rule))]";
 
 /**
  * One story, in two editorial weights.

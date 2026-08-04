@@ -22,7 +22,7 @@ export default function NotFound() {
 
       <Link
         href="/"
-        className="inline-flex items-center gap-2 rounded-sm bg-ink px-6 py-3 text-sm font-semibold text-canvas transition-opacity hover:opacity-85"
+        className="inline-flex items-center gap-2 rounded-md bg-ink px-6 py-3 text-sm font-semibold text-canvas transition-opacity hover:opacity-85"
       >
         <span aria-hidden="true">←</span>
         Back to <span className="font-np">एक झलक</span>

@@ -27,7 +27,7 @@ export function TopicPill({
     <span
       data-topic={topic}
       className={cn(
-        "eyebrow inline-flex shrink-0 items-center gap-1.5 rounded-sm px-2 py-1 leading-none",
+        "eyebrow inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 leading-none",
         // `text-topic-ink`, not `text-white`: on the dark stock every topic is a
         // bright tint, and white on it ran between 1.73:1 (culture) and 4.09:1
         // (world) — all eleven below the 4.5:1 this 11px type needs. The token
