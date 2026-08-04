@@ -1,59 +1,134 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkEmail } from "@/lib/email-address";
+import {
+  addSubscriber,
+  canSendMail,
+  isNewsletterConfigured,
+  sendConfirmation,
+} from "@/lib/newsletter";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
+import {
+  createConfirmationToken,
+  isTokenSigningConfigured,
+} from "@/lib/subscribe-token";
 
 /**
- * Newsletter signup.
+ * Newsletter signup — the first half of a double opt-in.
  *
- * There is no mailing list infrastructure in this repo, so rather than show a
- * confirmation the site cannot honour, this route forwards to whatever provider
- * is configured via NEWSLETTER_WEBHOOK_URL (Buttondown, ConvertKit, Formspree,
- * a Zapier hook — anything that accepts `{ email }` as JSON).
+ * Nothing is added to the list here. A signed confirmation link is emailed to
+ * the address, and only clicking it subscribes anyone. That is what stops the
+ * form being a way to sign up somebody else's inbox, and it is what makes the
+ * consent claim on /privacy true rather than aspirational.
  *
- * With no provider configured it returns 503 and the form tells the reader
- * signups aren't open yet, which is true. It never claims a subscription that
- * was not actually recorded somewhere.
+ * Where confirmation mail cannot be sent — a deployment using the generic
+ * webhook rather than Resend, which is a list endpoint and not a mail transport
+ * — it falls back to single opt-in and says so in the response, rather than
+ * silently doing something weaker than the privacy page describes.
  */
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/**
+ * Two limits, because there are two costs here and they are not the same.
+ *
+ * A malformed submission costs a JSON parse. A valid one costs an outbound email
+ * and a provider call, and is the thing worth abusing. Metering both against one
+ * counter meant a reader who mistyped their address five times was locked out
+ * for ten minutes — punishing the clumsy to deter the malicious.
+ *
+ * So the burst limit is wide and guards the endpoint against flooding, while the
+ * send limit is tight and guards the mailbox. Only submissions that get as far
+ * as sending something consume the tight one.
+ */
+const BURST_LIMIT = 30;
+const SEND_LIMIT = 5;
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+
+function siteUrl(request: NextRequest): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured) return configured.replace(/\/$/, "");
+  return request.nextUrl.origin;
+}
+
+function tooMany(retryAfter: number) {
+  return NextResponse.json(
+    { error: "rate_limited" },
+    { status: 429, headers: { "retry-after": String(retryAfter) } },
+  );
+}
 
 export async function POST(request: NextRequest) {
-  let email: unknown;
+  const client = clientKey(request.headers);
 
+  // Flood guard, checked before anything is parsed so a burst costs a header
+  // read rather than a provider round-trip.
+  const burst = rateLimit(`subscribe:burst:${client}`, BURST_LIMIT, RATE_WINDOW_MS);
+  if (!burst.allowed) return tooMany(burst.retryAfter);
+
+  let body: unknown;
   try {
-    ({ email } = await request.json());
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  if (typeof email !== "string" || !EMAIL_PATTERN.test(email.trim())) {
-    return NextResponse.json({ error: "invalid_email" }, { status: 400 });
+  const payload = (body ?? {}) as {
+    email?: unknown;
+    lang?: unknown;
+    company?: unknown;
+  };
+
+  // Honeypot. The field is present in the form, hidden from people and from
+  // assistive tech, and left empty by anyone who is not filling the page in
+  // programmatically. A bot that completes every input completes this one too.
+  // Answered 200 rather than 400 so the bot has nothing to tune against.
+  if (typeof payload.company === "string" && payload.company.trim() !== "") {
+    return NextResponse.json({ ok: true, status: "confirm_sent" });
   }
 
-  const endpoint = process.env.NEWSLETTER_WEBHOOK_URL;
-  if (!endpoint) {
+  const checked = checkEmail(payload.email);
+  if (!checked.ok) {
+    return NextResponse.json(
+      { error: "invalid_email", problem: checked.problem },
+      { status: 400 },
+    );
+  }
+
+  const lang = payload.lang === "np" ? "np" : "en";
+
+  if (!isNewsletterConfigured()) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
 
-  try {
-    const upstream = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(process.env.NEWSLETTER_API_KEY
-          ? { Authorization: `Bearer ${process.env.NEWSLETTER_API_KEY}` }
-          : {}),
-      },
-      body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      signal: AbortSignal.timeout(8000),
-    });
+  // Past here the request costs an email and a provider call, so it draws on
+  // the tight budget. A mistyped address never reaches this line.
+  const send = rateLimit(`subscribe:send:${client}`, SEND_LIMIT, RATE_WINDOW_MS);
+  if (!send.allowed) return tooMany(send.retryAfter);
 
-    if (!upstream.ok) {
-      console.error("[api/subscribe] provider rejected:", upstream.status);
-      return NextResponse.json({ error: "provider_error" }, { status: 502 });
+  // ── Single opt-in path ────────────────────────────────────────────────────
+  // No mail transport, or no signing key to build a tamper-proof link with.
+  // Subscribing directly is weaker, and the response says which happened so the
+  // UI can word the confirmation accurately.
+  if (!canSendMail() || !isTokenSigningConfigured()) {
+    const added = await addSubscriber(checked.email);
+    if (!added.ok) {
+      return NextResponse.json(
+        { error: added.reason === "not-configured" ? "not_configured" : "provider_error" },
+        { status: added.reason === "not-configured" ? 503 : 502 },
+      );
     }
+    return NextResponse.json({ ok: true, status: "subscribed" });
+  }
 
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("[api/subscribe] request failed:", err);
+  // ── Double opt-in ─────────────────────────────────────────────────────────
+  const token = createConfirmationToken(checked.email);
+  if (!token) {
+    return NextResponse.json({ error: "not_configured" }, { status: 503 });
+  }
+
+  const confirmUrl = `${siteUrl(request)}/api/subscribe/confirm?token=${encodeURIComponent(token)}&lang=${lang}`;
+  const sent = await sendConfirmation(checked.email, confirmUrl, lang);
+  if (!sent.ok) {
     return NextResponse.json({ error: "provider_error" }, { status: 502 });
   }
+
+  return NextResponse.json({ ok: true, status: "confirm_sent" });
 }

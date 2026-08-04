@@ -263,6 +263,11 @@ A translation that comes back in the wrong script is discarded rather than shown
 | `GEMINI_BUDGET_MS`     | No          | `25000`                     | Wall-clock one regeneration may spend        |
 | `EXTRACT_BUDGET_MS`    | No          | `15000`                     | Wall-clock for the article-page pass         |
 | `REVALIDATE_SECRET`    | Production  | —                           | Protects POST /api/revalidate                |
+| `NEWSLETTER_SECRET`    | For opt-in  | —                           | Signs confirmation links (16+ chars)         |
+| `RESEND_API_KEY`       | For email   | —                           | Set by the Resend Marketplace integration    |
+| `NEWSLETTER_FROM`      | No          | `brief@ekjhalak.news`       | From address; domain must be Resend-verified |
+| `RESEND_AUDIENCE_ID`   | No          | found/created by name       | Pins a specific Resend audience              |
+| `NEWSLETTER_WEBHOOK_URL` | No        | —                           | Fallback list endpoint (single opt-in)       |
 
 See `.env.example` for full documentation.
 

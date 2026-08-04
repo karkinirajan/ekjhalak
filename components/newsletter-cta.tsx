@@ -1,17 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Check, Mail } from "lucide-react";
+import { ArrowRight, Check, Loader2, Mail, MailCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/theme-provider";
+import { checkEmail } from "@/lib/email-address";
 import { cn } from "@/lib/utils";
 
 type SubmitState =
   | "idle"
   | "sending"
+  /** Confirmation link sent — the address is not on the list yet. */
+  | "check-inbox"
+  /** Subscribed outright, on deployments with no mail transport to confirm with. */
   | "done"
   | "invalid"
+  | "throwaway"
   | "closed"
+  | "busy"
   | "failed";
 
 /**
@@ -29,24 +35,34 @@ type SubmitState =
 export function NewsletterCta() {
   const { t, language } = useTheme();
   const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
   const [state, setState] = useState<SubmitState>("idle");
   const isNp = language === "np";
 
   const message =
     state === "invalid"
       ? t.newsletterInvalid
-      : state === "closed"
-        ? t.newsletterUnavailable
-        : state === "failed"
-          ? t.newsletterFailed
-          : null;
+      : state === "throwaway"
+        ? t.newsletterThrowaway
+        : state === "closed"
+          ? t.newsletterUnavailable
+          : state === "busy"
+            ? t.newsletterBusy
+            : state === "failed"
+              ? t.newsletterFailed
+              : null;
+
+  const settled = state === "check-inbox" || state === "done";
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const value = email.trim().toLowerCase();
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) {
-      setState("invalid");
+    // Client-side validation is a courtesy, not a gate: the same check runs in
+    // lib/email-address.ts on the server, which is the one that decides.
+    const check = checkEmail(value);
+    if (!check.ok) {
+      setState(check.problem === "disposable" ? "throwaway" : "invalid");
       return;
     }
 
@@ -55,16 +71,24 @@ export function NewsletterCta() {
       const response = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: value }),
+        body: JSON.stringify({ email: check.email, lang: language, company }),
       });
 
+      const body = await response.json().catch(() => null);
+
       if (response.ok) {
-        setState("done");
+        // The server says which half of the flow it completed. A confirmation
+        // link was sent, or — with no mail transport configured — the address
+        // went straight onto the list. These are different promises and the
+        // reader is told which one they got.
+        setState(body?.status === "subscribed" ? "done" : "check-inbox");
         setEmail("");
+      } else if (response.status === 429) {
+        setState("busy");
       } else if (response.status === 503) {
         setState("closed");
       } else if (response.status === 400) {
-        setState("invalid");
+        setState(body?.problem === "disposable" ? "throwaway" : "invalid");
       } else {
         setState("failed");
       }
@@ -113,19 +137,38 @@ export function NewsletterCta() {
           {t.newsletterDesc}
         </p>
 
-        {state === "done" ? (
+        {settled ? (
           <p
             role="status"
             className={cn(
-              "mt-8 inline-flex items-center gap-2.5 rounded-sm border border-green/40 bg-green-soft px-5 py-3 text-sm font-medium text-ink",
+              "mt-8 inline-flex items-start gap-2.5 rounded-sm border border-green/40 bg-green-soft px-5 py-3 text-left text-sm font-medium text-ink",
               isNp && "font-np",
             )}
           >
-            <Check className="h-4 w-4 text-green" aria-hidden="true" />
-            {t.newsletterSuccess}
+            {state === "check-inbox" ? (
+              <MailCheck
+                className="mt-0.5 h-4 w-4 shrink-0 text-green"
+                aria-hidden="true"
+              />
+            ) : (
+              <Check
+                className="mt-0.5 h-4 w-4 shrink-0 text-green"
+                aria-hidden="true"
+              />
+            )}
+            {state === "check-inbox"
+              ? t.newsletterCheckInbox
+              : t.newsletterSuccess}
           </p>
         ) : (
-          <form onSubmit={handleSubmit} className="mt-8">
+          // `noValidate` hands validation to this component rather than the
+          // browser. `type="email"` still earns the right mobile keyboard, but
+          // its native constraint was rejecting the submit before onSubmit ran,
+          // so a typo produced Chrome's own bubble — untranslated, unstyled, and
+          // in English no matter which language the reader chose. checkEmail()
+          // runs here and again on the server, so nothing is lost by silencing
+          // the browser's version.
+          <form onSubmit={handleSubmit} noValidate className="relative mt-8">
             <div className="mx-auto flex max-w-md flex-col gap-2.5 sm:flex-row">
               <label htmlFor="newsletter-email" className="sr-only">
                 {t.newsletterPlaceholder}
@@ -153,9 +196,36 @@ export function NewsletterCta() {
                   isNp && "font-np",
                 )}
               >
-                {t.newsletterCta}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                {state === "sending" ? t.newsletterSending : t.newsletterCta}
+                {state === "sending" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                )}
               </button>
+            </div>
+
+            {/* Honeypot. Hidden from people and from assistive tech, left empty
+                by anyone filling this form by hand, and filled in by the sort of
+                bot that completes every input it finds. `tabIndex={-1}` keeps it
+                out of the keyboard path and `aria-hidden` keeps it out of the
+                accessibility tree, so no real reader can reach it by accident.
+                Positioned off-screen rather than `display:none`, which the
+                cruder bots specifically check for. */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-[9999px] h-px w-px overflow-hidden"
+            >
+              <label htmlFor="newsletter-company">Company</label>
+              <input
+                id="newsletter-company"
+                name="company"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={company}
+                onChange={(event) => setCompany(event.target.value)}
+              />
             </div>
 
             {message && (

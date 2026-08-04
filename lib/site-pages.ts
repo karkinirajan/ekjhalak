@@ -225,7 +225,8 @@ const privacy: Record<Lang, PageContent> = {
       {
         heading: "The newsletter",
         body: [
-          "If you submit an email address it is forwarded to the mailing-list provider configured for the site and is not stored here. If no provider is configured the form tells you signups are not open and the address is discarded.",
+          "Submitting the form does not subscribe you. It sends one email to the address you gave, containing a link; you are added to the list only when you click it, and the link stops working after two days. Nothing is recorded in between — the pending signup travels inside the link itself rather than sitting in a table here.",
+          "Once confirmed, the address is held by the mailing-list provider the site is configured with, not on this server. If no provider is configured the form tells you signups are not open and the address is discarded.",
           "That address is used for the daily briefing and for nothing else. It is never sold, rented or shared. Every email carries an unsubscribe link.",
         ],
       },
@@ -269,7 +270,8 @@ const privacy: Record<Lang, PageContent> = {
       {
         heading: "न्यूजलेटर",
         body: [
-          "तपाईंले इमेल ठेगाना पठाउनुभयो भने त्यो साइटका लागि तय गरिएको मेलिङ-लिस्ट सेवामा पठाइन्छ, यहाँ भण्डारण गरिँदैन। कुनै सेवा तय नभएको अवस्थामा फारमले दर्ता खुला नभएको जानकारी दिन्छ र ठेगाना फालिन्छ।",
+          "फारम पठाउनुले मात्र तपाईंलाई सदस्य बनाउँदैन। तपाईंले दिनुभएको ठेगानामा एउटा लिंकसहितको इमेल जान्छ; त्यो लिंक थिचेपछि मात्र तपाईं सूचीमा थपिनुहुन्छ, र लिंक दुई दिनपछि निष्क्रिय हुन्छ। बीचमा केही पनि रेकर्ड हुँदैन — पर्खिरहेको दर्ता कुनै तालिकामा नभई लिंकभित्रै हुन्छ।",
+          "पुष्टि भएपछि ठेगाना साइटका लागि तय गरिएको मेलिङ-लिस्ट सेवासँग रहन्छ, यो सर्भरमा होइन। कुनै सेवा तय नभएको अवस्थामा फारमले दर्ता खुला नभएको जानकारी दिन्छ र ठेगाना फालिन्छ।",
           "त्यो ठेगाना दैनिक ब्रिफिङका लागि मात्र प्रयोग हुन्छ, अरू केहीका लागि होइन। कहिल्यै बेचिँदैन, भाडामा दिइँदैन वा साझा गरिँदैन। हरेक इमेलमा सदस्यता हटाउने लिंक हुन्छ।",
         ],
       },

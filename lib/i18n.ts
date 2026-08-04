@@ -57,8 +57,14 @@ const en = {
     "A short digest of what mattered in Nepal and the world, in your inbox before your first cup of tea.",
   newsletterPlaceholder: "you@example.com",
   newsletterCta: "Subscribe",
+  newsletterSending: "Sending",
+  newsletterCheckInbox:
+    "Check your inbox — we've sent a link to confirm. You're not on the list until you click it, and the link lasts two days.",
   newsletterSuccess: "You're on the list. Watch your inbox tomorrow morning.",
   newsletterInvalid: "Please enter a valid email address.",
+  newsletterThrowaway:
+    "That looks like a disposable address. Please use one you'll still read tomorrow.",
+  newsletterBusy: "Too many attempts. Please try again in a few minutes.",
   newsletterUnavailable:
     "Signups aren't open yet — the briefing list is still being set up.",
   newsletterFailed: "Something went wrong. Please try again in a moment.",
@@ -150,8 +156,14 @@ const np: I18nDict = {
     "नेपाल र विश्वमा के महत्त्वपूर्ण भयो — छोटो सारांश, बिहानको चिया अघि नै तपाईंको इनबक्समा।",
   newsletterPlaceholder: "you@example.com",
   newsletterCta: "सदस्यता लिनुहोस्",
+  newsletterSending: "पठाउँदै",
+  newsletterCheckInbox:
+    "इनबक्स हेर्नुहोस् — पुष्टि गर्ने लिंक पठाइएको छ। त्यो नथिचेसम्म तपाईं सूचीमा पर्नुहुन्न, र लिंक दुई दिनसम्म चल्छ।",
   newsletterSuccess: "धन्यवाद! भोलि बिहान इनबक्स हेर्नुहोला।",
   newsletterInvalid: "कृपया मान्य इमेल ठेगाना राख्नुहोस्।",
+  newsletterThrowaway:
+    "यो अस्थायी इमेल ठेगाना जस्तो देखिन्छ। कृपया भोलि पनि पढ्ने ठेगाना राख्नुहोस्।",
+  newsletterBusy: "धेरै पटक प्रयास भयो। केही मिनेटपछि पुनः प्रयास गर्नुहोस्।",
   newsletterUnavailable:
     "अहिले दर्ता खुला छैन — ब्रिफिङ सूची तयारीकै क्रममा छ।",
   newsletterFailed: "केही गडबड भयो। केही बेरपछि पुनः प्रयास गर्नुहोस्।",
