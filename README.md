@@ -57,7 +57,13 @@ Two independent cache layers run in series:
 
 A cache miss at the aggregation layer fetches all sources in parallel. A hit returns the stored `AggregatedFeed` immediately with no upstream I/O.
 
-On-demand invalidation: `POST /api/revalidate` calls `revalidateTag("news-feed", "max")` to bust the tag across all cache layers. A Vercel Cron running once per day keeps the cache warm within hobby-plan limits.
+On-demand invalidation: `POST /api/revalidate` calls `revalidateTag("news-feed", "max")` to bust the tag across all cache layers.
+
+**Production runs on Netlify**, not Vercel — the site builds from `github.com/karkinirajan/ekjhalak` on `main` via `@netlify/plugin-nextjs`, and `ekjhalak.news` resolves there. That matters for anything platform-shaped:
+
+- The daily cache-bust is `netlify/functions/revalidate-feed.mts`, a scheduled function that POSTs to `/api/revalidate` at 00:00 UTC — 05:45 in Kathmandu, just before the country wakes up to the stories filed overnight. Its schedule is declared in the function file rather than in `netlify.toml`, because the site's build settings live in the Netlify UI and introducing a `netlify.toml` would silently take those over too.
+- `vercel.json` still declares the same job as a Vercel Cron. Netlify does not read that file, so that entry has never run; it is kept only so a Vercel deploy would still be scheduled. **`vercel.json` is not what runs in production.**
+- Environment variables are set on the Netlify site, not in Vercel. A `.vercel/` directory in a working copy is a stale link and does not affect the deploy.
 
 ---
 
@@ -222,7 +228,9 @@ Returns all registered sources with live fetch status merged in.
 
 ### `POST /api/revalidate?secret=SECRET`
 
-On-demand cache invalidation. Busts the `"news-feed"` tag immediately — next request triggers a fresh aggregation. Use from a Vercel Cron job (once per day on hobby accounts) for periodic freshness.
+On-demand cache invalidation. Busts the `"news-feed"` tag immediately — next request triggers a fresh aggregation. Called nightly by the Netlify scheduled function in `netlify/functions/revalidate-feed.mts`.
+
+Both verbs fail closed: `GET` expects `Authorization: Bearer $CRON_SECRET`, `POST` expects `?secret=$REVALIDATE_SECRET`, and a missing secret is a 401 in production rather than an open cache-purge endpoint.
 
 Set `REVALIDATE_SECRET` in Vercel environment variables. Without it, the endpoint is open (fine for dev/staging).
 
