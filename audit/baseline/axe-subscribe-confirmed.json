@@ -1,0 +1,9 @@
+{
+  "url": "https://ekjhalak.news/subscribe/confirmed",
+  "testEngine": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  },
+  "timestamp": "2026-08-06T10:57:29.156Z",
+  "violations": []
+}

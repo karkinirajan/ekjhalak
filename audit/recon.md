@@ -222,6 +222,25 @@ warm   0.011s   HTTP=200
 overrun warnings logged: 0        (451/453 stories kept)
 ```
 
+And in production, on the first request after `4615baa` went ready — the same measurement that returned 502 after the previous deploy:
+
+```
+cold  16.498s   HTTP=200      (was 40.227s  HTTP=502)
+warm   0.681s   HTTP=200
+warm   0.685s   HTTP=200
+```
+
+The extra 1.5s over local is the 301 hop described in D2 plus transatlantic round-trips; the function region is `cmh`.
+
+Then sampled every 45 seconds for eight minutes, spanning two `revalidate: 300` boundaries — the window in which the pre-fix build handed one reader in every five minutes a 502:
+
+```
+16:38:18 → 16:45:10   10/10 HTTP=200
+median 0.68s · slowest 1.36s (16:43:38, a revalidation served stale while it refreshed)
+```
+
+No 502, and no reader paid a regeneration: `stale-while-revalidate=600` now has a regeneration short enough to finish inside it.
+
 Still worth doing, and unchanged by the above: move enrichment **off the request path** entirely. Once Phase 2's `articles` table exists, the scheduled function can do the expensive extraction/summarisation pass and write results, leaving `/api/news` to only ever read — at which point cold-start latency stops existing rather than merely being bounded. The 15s a reader can still pay is a bound, not a fix.
 
 ---

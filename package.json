@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "node --import tsx --test lib/*.test.ts",
     "check:contrast": "node scripts/check-contrast.mjs",
+    "check:a11y": "node scripts/axe-scan.mjs",
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run check:contrast && pnpm run build"
   },
   "dependencies": {

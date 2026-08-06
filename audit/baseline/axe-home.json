@@ -1,0 +1,57 @@
+{
+  "url": "https://ekjhalak.news/",
+  "testEngine": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  },
+  "timestamp": "2026-08-06T10:56:55.303Z",
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=axeAPI",
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ],
+      "nodes": 6,
+      "targets": [
+        ".opacity-90",
+        ".hover\\:bg-\\[color-mix\\(in_oklab\\,var\\(--topic\\)_12\\%\\,transparent\\)\\].hover\\:text-\\(--topic\\).py-1\\.5:nth-child(3) > .ml-1\\.5.opacity-55.tabular-nums",
+        ".hover\\:bg-\\[color-mix\\(in_oklab\\,var\\(--topic\\)_12\\%\\,transparent\\)\\].hover\\:text-\\(--topic\\).py-1\\.5:nth-child(4) > .ml-1\\.5.opacity-55.tabular-nums",
+        ".hover\\:bg-\\[color-mix\\(in_oklab\\,var\\(--topic\\)_12\\%\\,transparent\\)\\].hover\\:text-\\(--topic\\)[data-topic=\"business\"] > .ml-1\\.5.opacity-55.tabular-nums",
+        ".hover\\:bg-\\[color-mix\\(in_oklab\\,var\\(--topic\\)_12\\%\\,transparent\\)\\].hover\\:text-\\(--topic\\)[data-topic=\"society\"] > .ml-1\\.5.opacity-55.tabular-nums"
+      ],
+      "sample": [
+        "<span class=\"eyebrow hidden tabular-nums opacity-90 sm:inline\">16:41 NPT</span>",
+        "<span class=\"ml-1.5 opacity-55 tabular-nums\">124</span>"
+      ]
+    },
+    {
+      "id": "landmark-unique",
+      "impact": "moderate",
+      "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-unique?application=axeAPI",
+      "tags": [
+        "cat.semantics",
+        "best-practice"
+      ],
+      "nodes": 1,
+      "targets": [
+        ".sticky"
+      ],
+      "sample": [
+        "<nav aria-label=\"Sections\" class=\"sticky top-0 z-30 border-b border-rule glass\">"
+      ]
+    }
+  ]
+}
