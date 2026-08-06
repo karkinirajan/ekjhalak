@@ -262,7 +262,7 @@ export async function fetchRssFeed(
       signal: controller.signal,
       headers: {
         "User-Agent":
-          "EkJhalak-NewsAggregator/1.0 (+https://www.ekjhalak.news)",
+          "EkJhalak-NewsAggregator/1.0 (+https://ekjhalak.news)",
         Accept:
           "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
       },

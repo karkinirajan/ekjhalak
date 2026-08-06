@@ -1,9 +1,7 @@
 import type { MetadataRoute } from "next";
 import { STANDING_PAGES } from "@/lib/site-nav";
 import { listStories } from "@/lib/story-lookup";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekjhalak.news";
+import { SITE_URL, storyUrl } from "@/lib/site-url";
 
 /**
  * How many story URLs the sitemap carries.
@@ -47,7 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const storyPages: MetadataRoute.Sitemap = stories
     .slice(0, MAX_STORY_URLS)
     .map((item) => ({
-      url: `${SITE_URL}/story/${item.id}`,
+      url: storyUrl(item.id),
       lastModified: new Date(item.publishedTimestamp),
       // A published story's text does not change. What changes is its
       // translation arriving on a later enrichment pass, which is not a reason

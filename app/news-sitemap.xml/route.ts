@@ -17,10 +17,7 @@
 // longer part of the documented format.
 
 import { listStories } from "@/lib/story-lookup";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekjhalak.news";
-const SITE_NAME = "EkJhalak News";
+import { SITE_NAME, storyUrl } from "@/lib/site-url";
 
 const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
 const MAX_ENTRIES = 1_000;
@@ -58,7 +55,7 @@ export async function GET(): Promise<Response> {
       const language = item.originalLang === "np" ? "ne" : "en";
       return [
         "  <url>",
-        `    <loc>${escapeXml(`${SITE_URL}/story/${item.id}`)}</loc>`,
+        `    <loc>${escapeXml(storyUrl(item.id))}</loc>`,
         "    <news:news>",
         "      <news:publication>",
         `        <news:name>${escapeXml(SITE_NAME)}</news:name>`,

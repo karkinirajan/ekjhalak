@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SITE_NAME, SITE_URL } from "@/lib/site-url";
 
 // English UI and headlines use Space Grotesk for a crisp modern voice.
 const spaceGrotesk = Space_Grotesk({
@@ -79,9 +80,6 @@ const jetbrainsMono = JetBrains_Mono({
   preload: false,
 });
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekjhalak.news";
-const SITE_NAME = "EkJhalak News";
 const SITE_DESCRIPTION =
   "Calm bilingual news briefings for Nepal and the world. Clean, original-language summaries — no clutter, no noise.";
 const OG_IMAGE_URL = `${SITE_URL}/og-image.png`;

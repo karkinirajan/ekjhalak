@@ -11,11 +11,8 @@ import { langAttr } from "@/lib/story-text";
 import { getSourceById } from "@/lib/source-registry";
 import { topicLabel } from "@/lib/taxonomy";
 import { cn, sanitizeTextForDisplay, splitIntoParagraphs } from "@/lib/utils";
+import { SITE_NAME, SITE_URL, storyUrl } from "@/lib/site-url";
 import type { NewsItem } from "@/lib/news-pipeline";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekjhalak.news";
-const SITE_NAME = "EkJhalak News";
 
 // Rendered per request, not cached as a static page.
 //
@@ -76,7 +73,7 @@ export async function generateMetadata({
     sanitizeTextForDisplay(item.summary),
     200,
   );
-  const url = `${SITE_URL}/story/${item.id}`;
+  const url = storyUrl(item.id);
 
   return {
     title,
@@ -122,7 +119,7 @@ export default async function StoryPage({ params }: PageProps) {
   const translatedLang = isNp ? "en" : "ne";
 
   const published = new Date(item.publishedTimestamp);
-  const url = `${SITE_URL}/story/${item.id}`;
+  const url = storyUrl(item.id);
 
   // `author` is the originating newsroom, never EkJhalak. That is the accurate
   // claim and it is also the one that makes this schema safe to publish: the

@@ -6,7 +6,7 @@ Ek Jhalak (एक झलक — "a single glance") was built as an antidote to t
 
 It is bilingual by design. Native Nepali content from Setopati, Ratopati, and Nagarik News is shown in Devanagari. English-language stories are readable in English or translated to Nepali on demand. The interface adapts cleanly to both scripts. The goal is one reliable place where you can actually read the news — fast, honest, and clutter-free.
 
-Live: [www.ekjhalak.news](https://www.ekjhalak.news)
+Live: [ekjhalak.news](https://ekjhalak.news)
 
 ---
 
@@ -265,7 +265,7 @@ A translation that comes back in the wrong script is discarded rather than shown
 
 | Variable                   | Required    | Default                     | Purpose                               |
 | -------------------------- | ----------- | --------------------------- | ------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL` | Production  | `https://www.ekjhalak.news` | Metadata, sitemap, OG tags                   |
+| `NEXT_PUBLIC_SITE_URL` | No          | `https://ekjhalak.news`     | Metadata, sitemap, OG tags; apex, not www    |
 | `GEMINI_API_KEY`       | Recommended | —                           | Summarization + translation                  |
 | `GEMINI_MODEL`         | No          | built-in 5-model chain      | Pins a model, or a comma-separated list      |
 | `GEMINI_BATCH_SIZE`    | No          | `10`                        | Stories per request (1–40)                   |
@@ -338,7 +338,7 @@ Admin endpoints are protected by HMAC-SHA256. Set `INGEST_HMAC_SECRET`, then sig
 SECRET="your-secret"
 BODY='{"trigger":"manual"}'
 SIG=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | awk '{print $2}')
-curl -X POST https://www.ekjhalak.news/api/admin/ingest/run \
+curl -X POST https://ekjhalak.news/api/admin/ingest/run \
   -H "Content-Type: application/json" \
   -H "X-Hub-Signature-256: sha256=$SIG" \
   -d "$BODY"
