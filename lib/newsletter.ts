@@ -15,6 +15,10 @@
 // was not recorded anywhere, and telling the reader it was would be a lie the
 // site could not act on.
 
+// Build-time guard: importing this from a client component is a build
+// error rather than a shipped bundle. Reads RESEND_API_KEY.
+import "server-only";
+
 const RESEND_API = "https://api.resend.com";
 const REQUEST_TIMEOUT_MS = 10_000;
 

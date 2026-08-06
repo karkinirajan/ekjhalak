@@ -19,6 +19,10 @@
 // connection lifecycle to a module that needs none of them. The rest of this
 // codebase parses RSS and extracts article bodies by hand for the same reason.
 
+// Build-time guard: importing this from a client component is a build
+// error rather than a shipped bundle. Reads SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS.
+import "server-only";
+
 import type { NewsItem } from "./news-pipeline";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;

@@ -15,6 +15,10 @@
 // module's body — not the pages that call it — is all that Phase 2 going live
 // should require.
 
+// Build-time guard: importing this from a client component is a build
+// error rather than a shipped bundle. Calls getCachedFeed, which is the whole server pipeline.
+import "server-only";
+
 import { getCachedFeed } from "./aggregator";
 import type { NewsItem } from "./news-pipeline";
 

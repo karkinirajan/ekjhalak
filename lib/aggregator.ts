@@ -3,6 +3,10 @@
 // Output is cached with Next.js unstable_cache (5-minute revalidation).
 // Server-only.
 
+// Build-time guard: importing this from a client component is a build
+// error rather than a shipped bundle. Reads GEMINI_API_KEY and SUPABASE_SERVICE_ROLE_KEY through its callees.
+import "server-only";
+
 import { unstable_cache } from "next/cache";
 import { ACTIVE_SOURCES } from "./source-registry";
 import { fetchRssFeed } from "./rss-adapter";

@@ -26,6 +26,10 @@
  * so the extra length costs nothing there; it is the reader panel, where the
  * whole brief is on screen, that gets the benefit.
  */
+// Build-time guard: importing this from a client component is a build
+// error rather than a shipped bundle. Holds the model prompts and reads GEMINI_API_KEY.
+import "server-only";
+
 export const SUMMARY_MAX_CHARS = 1_760;
 export const SUMMARY_MIN_CHARS = 300;
 

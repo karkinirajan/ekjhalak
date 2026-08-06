@@ -11,6 +11,10 @@
 // Measured on the four offenders: every one has an og:description between 2,000
 // and 2,300 characters — the whole article, not a teaser.
 
+// Build-time guard: importing this from a client component is a build
+// error rather than a shipped bundle. Fetches other people's pages with a spoofed UA.
+import "server-only";
+
 import { decodeEntities, htmlToText } from "./html-entities";
 
 /** A real browser UA. Several Nepali CMSes return a stub page to anything else. */

@@ -2,6 +2,10 @@
 // Fetches and parses RSS 2.0 and Atom 1.0 feeds.
 // Server-only: uses fetch() with Next.js Data Cache revalidation.
 
+// Build-time guard: importing this from a client component is a build
+// error rather than a shipped bundle. Fetches and parses feeds; pulls in fast-xml-parser.
+import "server-only";
+
 import { XMLParser } from "fast-xml-parser";
 import { htmlToText } from "./html-entities";
 
