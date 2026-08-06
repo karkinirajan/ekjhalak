@@ -9,6 +9,18 @@ interface RevealProps {
   /** Stagger delay in ms — use the index within a grid for a cascade */
   delay?: number;
   as?: "div" | "section" | "article" | "li";
+  /**
+   * Render already revealed, with no observer and no transition.
+   *
+   * For content that is above the fold on arrival. There is nothing to reveal
+   * on scroll for something the reader is already looking at, and the cost of
+   * pretending otherwise is severe: `.reveal` sets `opacity: 0` in the
+   * server-rendered HTML, so an above-the-fold card stays invisible until the
+   * bundle has downloaded, hydrated, run the observer and finished a 600ms
+   * transition. Measured on production: the lead card's image finished
+   * downloading at 1.4s and Largest Contentful Paint was recorded at 6.0s.
+   */
+  immediate?: boolean;
 }
 
 /**
@@ -23,15 +35,17 @@ export function Reveal({
   className,
   delay = 0,
   as = "div",
+  immediate = false,
 }: RevealProps) {
   // The union of tag names gives `ref` an unsatisfiable intersection type
   // (HTMLDivElement & HTMLLIElement & …). All we need from the node is
   // observe/disconnect, which every element supports, so narrow to one tag.
   const Tag = as as "div";
   const ref = useRef<HTMLDivElement>(null);
-  const [revealed, setRevealed] = useState(false);
+  const [revealed, setRevealed] = useState(immediate);
 
   useEffect(() => {
+    if (immediate) return;
     const node = ref.current;
     if (!node) return;
 
@@ -53,14 +67,16 @@ export function Reveal({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [immediate]);
 
   return (
     <Tag
       ref={ref}
       className={cn("reveal", className)}
       data-revealed={revealed}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      // No stagger on immediate content either. The delay only exists to make a
+      // scroll-in cascade read as one motion, and there is no cascade here.
+      style={delay && !immediate ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}
     </Tag>

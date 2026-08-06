@@ -488,6 +488,11 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
                           key={item.id}
                           delay={Math.min(index, 5) * 60}
                           className="h-full"
+                          // The same cards that get their image preloaded are
+                          // the ones already on screen when the page arrives —
+                          // so they must not be waiting on hydration to become
+                          // visible. This is what LCP measures.
+                          immediate={safePage === 1 && index < EAGER_CARDS}
                         >
                           <StoryCard
                             item={item}
