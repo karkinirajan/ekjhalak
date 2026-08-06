@@ -34,25 +34,49 @@ It is not visible to the Supabase MCP connection used here, which sees only
 not have permission" for this ref. So the migration could not be applied from
 here, and the two remaining steps are the operator's.
 
-### Step 1 — apply the migration
+### Step 1 — apply both migrations, in order
 
-Supabase Dashboard → SQL Editor → paste
-`supabase/migrations/20260806000000_articles.sql` → Run.
+Supabase Dashboard → SQL Editor → paste and Run, in this order:
 
-Safe to run more than once: every statement is `create … if not exists` or
-`comment on`, and the one `alter table` enables RLS, which is idempotent.
+1. `supabase/migrations/20260806000000_articles.sql` — the table.
+2. `supabase/migrations/20260806010000_articles_retention.sql` — the retention
+   and storage functions.
 
-### Step 2 — set two environment variables on Netlify
+Both are safe to run more than once: every statement is `create … if not
+exists`, `create or replace`, `comment on`, `revoke`, or the one idempotent
+`alter table … enable row level security`.
 
-Site configuration → Environment variables:
+### Step 2 — fix `SUPABASE_URL`
+
+**This was set wrong on the first attempt and is the reason nothing was written.**
+The value in production ends in `…postgres` — it is the Postgres connection
+string, not the REST origin. `fetch` throws
+`TypeError: Request cannot be constructed from a URL that includes credentials`
+on every batch, the writer swallows it by design, and the feed keeps returning
+200 while the archive stays empty.
+
+Netlify → Site configuration → Environment variables:
 
 ```
 SUPABASE_URL               https://wfmurwsagrosxgcihbgw.supabase.co
 SUPABASE_SERVICE_ROLE_KEY  Dashboard → Project Settings → API → service_role
 ```
 
+`SUPABASE_SERVICE_ROLE_KEY` is already set and cannot be checked from here — the
+API only returns it masked. If the archive still writes nothing after the URL is
+corrected, that key is the next thing to re-copy.
+
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` is also set and nothing reads it. Harmless — the
+anon key is designed to be public — but it is dead config and can go.
+
 Then redeploy. `isStoreConfigured()` flips on and the aggregator starts writing;
 nothing else changes.
+
+Since this mistake is easy to make and was invisible when made,
+`lib/article-store.ts` now validates the URL at module load: a non-HTTP scheme
+logs one line naming the correct value and disables the archive, so the pass
+stops reserving three seconds out of the model stage for a write that cannot
+succeed.
 
 **The service-role key bypasses RLS.** It is a server-only secret — never
 `NEXT_PUBLIC_`, never read from a client component. `lib/article-store.ts`
@@ -93,7 +117,35 @@ curl -X POST "https://ekjhalak.news/api/revalidate?secret=$REVALIDATE_SECRET"
 #    cannot be recovered from anywhere else, and the writer omits it from the
 #    upsert payload precisely so merge-duplicates cannot overwrite it.
 select id, first_seen_at, last_seen_at from articles order by first_seen_at limit 5;
+
+# 4. What the table costs, before deciding whether it needs pruning at all.
+select * from article_storage();
 ```
+
+### Retention
+
+`articles` only grows — roughly 1,500 new stories a day survive dedup, each
+carrying up to two summaries. Left alone it reaches the free tier's 500 MB in
+months, and the failure mode is writes beginning to fail silently.
+
+Retention and the archive's purpose pull against each other: the table exists so
+a permalink outlives the feed window, and deleting rows re-breaks that. So the
+default tool is not deletion.
+
+| Function | What it does |
+| --- | --- |
+| `article_storage()` | Size, age range, row count. Read this first. |
+| `prune_article_bodies(days default 180)` | Blanks the summary columns on rows not seen for N days. **The row survives, so `/story/{id}` still resolves** — headline, outlet, date, photograph and the outbound link, which is what a reader needs. Reclaims most of the bytes. |
+| `delete_articles_older_than(days default 730)` | Actually deletes, skipping any row that is another row's canonical. **This breaks permalinks.** Second option, named so nobody runs it by accident. |
+
+Neither prune runs on a schedule. How long this site keeps its history is an
+editorial decision, not a default — call them from the SQL editor, or wire one
+into the existing `netlify/functions/revalidate-feed.mts` pattern if it should
+be automatic.
+
+All three are `security invoker` and revoked from `anon` and `authenticated`, so
+they are not reachable through PostgREST's RPC endpoint. A function that empties
+columns should not be one HTTP request away from the public internet.
 
 The Phase 2 gate is `select count(*) from articles` growing monotonically across
 three aggregation runs spaced 10+ minutes apart, with `/api/news` unchanged in

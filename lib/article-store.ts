@@ -40,8 +40,56 @@ const BATCH_SIZE = 500;
 /** Ceiling on the whole write, however much of the pass is left. */
 const WRITE_TIMEOUT_MS = 5_000;
 
+/**
+ * The REST origin, or null with a reason logged.
+ *
+ * `SUPABASE_URL` has to be the project's HTTPS origin —
+ * `https://<ref>.supabase.co` — because every write here is
+ * `${SUPABASE_URL}/rest/v1/articles`. Supabase's dashboard puts a Postgres
+ * connection string next to it under a similar name, and that is what was
+ * actually set in production on the first attempt: `fetch` then threw
+ * `TypeError: Request cannot be constructed from a URL that includes
+ * credentials` on every batch, the catch below swallowed it as designed, and the
+ * feed carried on looking healthy while nothing was ever written.
+ *
+ * Validated once at module load rather than discovered per batch, for two
+ * reasons. It makes the mistake loud — one clear line saying what to use instead
+ * — and it makes `isStoreConfigured()` answer false, so the aggregator stops
+ * reserving three seconds out of the model stage for a write that cannot
+ * succeed. Silently costing every reader three seconds of enrichment is a worse
+ * failure than not writing.
+ */
+const REST_ORIGIN: string | null = (() => {
+  if (!SUPABASE_URL) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(SUPABASE_URL);
+  } catch {
+    console.error(
+      `[article-store] SUPABASE_URL is not a URL (${SUPABASE_URL.slice(0, 12)}…). ` +
+        "Expected the project's REST origin, e.g. https://<ref>.supabase.co",
+    );
+    return null;
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    console.error(
+      `[article-store] SUPABASE_URL is a ${parsed.protocol.replace(":", "")} ` +
+        "connection string, not the REST origin. This module speaks PostgREST " +
+        "over HTTPS, not the Postgres wire protocol — set it to " +
+        "https://<project-ref>.supabase.co (Dashboard → Project Settings → " +
+        "Data API → Project URL). The archive is disabled until then.",
+    );
+    return null;
+  }
+
+  // Trailing slash would produce `…//rest/v1/articles`, which PostgREST 404s.
+  return parsed.origin;
+})();
+
 export function isStoreConfigured(): boolean {
-  return Boolean(SUPABASE_URL && SERVICE_KEY);
+  return Boolean(REST_ORIGIN && SERVICE_KEY);
 }
 
 /** The table's shape. Snake case here, camel case in the app, converted once. */
@@ -103,7 +151,7 @@ function toRow(item: NewsItem, seenAt: string): ArticleRow {
  */
 async function writeBatch(rows: ArticleRow[], timeoutMs: number): Promise<void> {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/articles?on_conflict=id`,
+    `${REST_ORIGIN}/rest/v1/articles?on_conflict=id`,
     {
       method: "POST",
       signal: AbortSignal.timeout(timeoutMs),
