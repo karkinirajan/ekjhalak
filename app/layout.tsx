@@ -48,11 +48,21 @@ const merriweather = Merriweather({
 // on every visit, and Devanagari has no safe system fallback to swap from — the
 // chain below it ends in a generic sans that renders the matras wrong.
 //
-// 300 dropped; nothing sets a light weight on Devanagari.
+// 300 dropped; nothing sets a light weight on Devanagari. 500 dropped too, for a
+// narrower reason: it is reached only by `.eyebrow`, which is nav pills and
+// timestamps, and CSS weight matching resolves a missing 500 down to 400 rather
+// than synthesizing anything. That is a barely visible change to secondary text
+// in exchange for 65 KiB off a preload block that competes with the lead image
+// for a throttled connection's first second — Devanagari weights are the four
+// heaviest files on the page at roughly 65 KiB each.
+//
+// 600 and 700 both stay: headlines are font-semibold, and the trending rail and
+// newsletter headings are font-bold in Nepali. Synthesized bold breaks Devanagari
+// conjuncts apart, which is exactly the failure Mukta was chosen to avoid.
 const mukta = Mukta({
   variable: "--font-devanagari",
   subsets: ["devanagari", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600", "700"],
   display: "swap",
 });
 
