@@ -69,7 +69,12 @@ export function CategoryNav({
 
   return (
     <nav
-      aria-label={t.footerSections}
+      // Its own label, not the footer's. Both landmarks were announced as
+      // "Sections", which is the moderate axe `landmark-unique` violation from
+      // the Phase 1 baseline: a screen-reader user listing landmarks got two
+      // identical entries and no way to tell the sticky topic bar from the
+      // footer's link list.
+      aria-label={t.topicNav}
       className="sticky top-0 z-30 border-b border-rule glass"
     > 
       <div className="mx-auto w-full max-w-350 px-4 sm:px-6 lg:px-8">

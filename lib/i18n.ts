@@ -85,6 +85,7 @@ const en = {
   footerAboutText:
     "EkJhalak aggregates trusted Nepali and international newsrooms into one calm, ad-free briefing. Summaries stay in the language they were published in.",
   footerSections: "Sections",
+  topicNav: "Topics",
   footerSources: "Sources",
   footerSourcesText: "Reading from",
   footerNewsrooms: "newsrooms",
@@ -184,6 +185,7 @@ const np: I18nDict = {
   footerAboutText:
     "एक झलकले भरपर्दा नेपाली र अन्तर्राष्ट्रिय सञ्चारगृहका समाचार एकै ठाउँमा, विज्ञापनरहित रूपमा प्रस्तुत गर्छ। सारांश प्रकाशित भएकै भाषामा राखिन्छ।",
   footerSections: "विषय",
+  topicNav: "विषयहरू",
   footerSources: "स्रोत",
   footerSourcesText: "हाल",
   footerNewsrooms: "सञ्चारगृहबाट",

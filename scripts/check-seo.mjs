@@ -33,10 +33,15 @@ async function text(path, init) {
 const sitemap = await text("/sitemap.xml");
 const urlCount = (sitemap.body.match(/<url>/g) ?? []).length;
 gate("sitemap.xml lists story URLs", urlCount > 6, `${urlCount} <url>`, "> 6");
+// Only the <loc> values. A bare `includes("//www.")` matches the sitemap's own
+// XML namespace, `http://www.sitemaps.org/schemas/sitemap/0.9`, which is
+// required and correct — the first version of this check failed on that.
+const locs = [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+const wwwLocs = locs.filter((u) => u.includes("//www."));
 gate(
   "sitemap.xml uses the canonical host",
-  !sitemap.body.includes("//www."),
-  sitemap.body.includes("//www.") ? "points at www" : "apex",
+  wwwLocs.length === 0,
+  wwwLocs.length ? `${wwwLocs.length} of ${locs.length} point at www` : `${locs.length} on apex`,
   "apex",
 );
 
