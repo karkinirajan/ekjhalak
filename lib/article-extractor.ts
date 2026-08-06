@@ -343,20 +343,20 @@ export async function extractArticleText(
 export async function extractMany(
   urls: string[],
   deadline: number,
-  // 8, raised from 4, and the ceiling is politeness rather than throughput.
+  // 4, and it was 8 for exactly one deploy.
   //
-  // This stage is what turns a two-line teaser into a brief and what recovers a
-  // photograph for the ten sources whose RSS carries none — verified: Kathmandu
-  // Post, DW and Al Jazeera ship no media field of any kind, so the article page
-  // is the only route. It is bounded by wall-clock, not by items, so the number
-  // of stories it reaches is directly how many fetches fit in its slice. From
-  // Netlify's region those origins are slow enough that 4 workers covered 60% of
-  // the feed where the same code covers 79% from a machine in Nepal.
+  // Raising it to recover more photographs put the cold pass at 30.9s and
+  // returned 502 — over Netlify's limit, the same outage this project already
+  // fixed once. The reason is the bug class from audit/recon.md D3 wearing a new
+  // coat: `extractMany` checks the deadline before *starting* an item, and the
+  // network call it starts is clamped to the deadline, but `bestCandidate` then
+  // runs unbounded regex work over up to 1.2 MB of HTML. That is synchronous, it
+  // blocks the event loop, and no deadline check covers it — so doubling the
+  // workers doubled the CPU the stage could pile up past its slice.
   //
-  // Eight concurrent fetches spread across twenty-odd hosts is well under one
-  // per origin at a time. The URLs arrive ranked, so if the budget runs out it
-  // runs out on the tail rather than on the front page.
-  concurrency = 8,
+  // Coverage is worth having. It is not worth a 502, and buying it needs the
+  // parse bounded, not the fan-out widened.
+  concurrency = 4,
 ): Promise<Map<string, ExtractionResult>> {
   const out = new Map<string, ExtractionResult>();
   const pending = urls.filter((url) => {
