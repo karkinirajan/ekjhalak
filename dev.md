@@ -13,8 +13,8 @@ Status legend: **done** · **partial** · **blocked** · **not started**
 | 2 | Content persistence layer | **partial** — code merged, inert | no — not provisioned |
 | 3 | Story pages + SEO remediation | **done** | yes |
 | 4 | Performance remediation | **partial** | CLS yes, LCP target no |
-| 5 | Accessibility remediation | **not started** | — |
-| 6 | Best practices remediation | **partial** — score already passes | score yes, items no |
+| 5 | Accessibility remediation | **done** | yes |
+| 6 | Best practices remediation | **done** | yes |
 | 7 | Auth + personalization | **blocked** on Phase 2 | — |
 | 8 | Monetization infrastructure | **blocked** on Phase 7 | — |
 | 9 | Full re-verification | **not started** | — |
@@ -197,31 +197,60 @@ Item 4 (bundle analysis) is not done.
 
 ---
 
-## Phase 5 — Accessibility remediation — **not started**
+## Phase 5 — Accessibility remediation — **done**
 
-Skip link, full keyboard pass, contrast audit on both themes, and verifying the
-Phase 3 `lang` fix with an actual screen reader.
+**Gate met.** axe-core 4.12.1 against the Phase 1 URL set — `/`, `/about`,
+`/editorial-standards`, `/privacy`, `/terms`, `/contact` — reports **zero
+violations at any severity**, not merely zero critical/serious.
 
-Known from baseline: `color-contrast` (serious, 6 nodes — every one an `opacity-*`
-utility on a pair that passes at full opacity) and `landmark-unique` (moderate, 1
-node). A skip link already exists in `app/layout.tsx`, contrary to the audit note
-in the brief.
+The baseline's two findings are both closed:
 
-**Gate:** zero critical/serious axe violations across the Phase 1 URL set, plus a
-keyboard-only pass through homepage → story page → back with no dead ends.
+- `color-contrast` (serious, 6 nodes) — every instance was an `opacity-*` utility
+  multiplying a colour that passed contrast as an authored token. Opacity
+  multiplies the resolved colour, which is why `scripts/check-contrast.mjs` could
+  never see it: that script reads token pairs, and the failure only exists after
+  render. Fixed by removing both dimmers and lifting `--ink-muted` in each theme.
+- `landmark-unique` (moderate, 1 node) — the sticky topic bar and the footer's
+  link list were both announced as "Sections", so listing landmarks gave two
+  identical entries. Now Topics / Pagination / Sections.
+
+**Keyboard pass, done in a real browser** rather than asserted. 163 focusable
+stops, no positive `tabindex`, skip link present and targeting a real
+`#main-content`. Every input carries an accessible name — the first audit script
+flagged four, which was the script failing to check `<label for>` rather than a
+defect.
+
+The focus indicator took three wrong measurements before it was read correctly,
+which is worth recording: `.card-focus` sets `outline: none` on the element and
+paints the ring on a `::after` positioned against the card, so reading
+`getComputedStyle(el)` reports no outline and looks like a WCAG 2.4.7 failure.
+Reading `getComputedStyle(el, '::after')` after a real Tab press shows
+`solid 2px var(--red)` around the whole card, and a screenshot confirms it. Nearly
+"fixed" something that was already correct.
 
 `pnpm check:a11y <url>` runs the scan and exits non-zero on critical/serious.
 
 ---
 
-## Phase 6 — Best practices remediation — **partial**
+## Phase 6 — Best practices remediation — **done**
 
-**Gate:** Lighthouse Best Practices ≥ 95 on both. **Already met — 100/100** as a
-side effect of Phase 4 (removing the 404-ing `@vercel/speed-insights` script).
+**Gate met** — Lighthouse Best Practices **100 on both** mobile and desktop,
+against a required 95.
 
-Still outstanding: tighten CSP (`'unsafe-eval'` out of `script-src`, nonce-based
-replacement for `'unsafe-inline'` if Next.js hydration allows), and add
-`<meta name="theme-color">` for both themes.
+1. CSP tightened: `'unsafe-eval'` is gone from `script-src` in production. Next.js
+   needs it for dev-mode stack reconstruction and HMR, not for the production
+   bundle — the comment above it already said so while shipping it anyway.
+   Verified the built site runs under the tightened header.
+   `'unsafe-inline'` stays, with a reason rather than a dated TODO: replacing it
+   needs a per-request nonce, which needs dynamic rendering, and this homepage is
+   ISR specifically so readers get static HTML. Not a trade worth making on a page
+   with no third-party script and no user-generated HTML, where both inline
+   scripts are ours.
+2. `theme-color` added for both themes.
+3. The score reached 100 partly by deleting `@vercel/speed-insights`, whose script
+   404s on this deployment and whose beacon `connect-src 'self'` would block
+   regardless — a failed request on every page load for telemetry Vercel could
+   never receive.
 
 ---
 
