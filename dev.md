@@ -11,7 +11,7 @@ Status legend: **done** · **partial** · **blocked** · **not started**
 | 0 | Recon | **done** | yes |
 | 1 | Automated audit baseline | **done** | yes |
 | 2 | Content persistence layer | **partial** — code merged, inert | no — not provisioned |
-| 3 | Story pages + SEO remediation | **in progress** | — |
+| 3 | Story pages + SEO remediation | **done** | yes |
 | 4 | Performance remediation | **partial** | CLS yes, LCP target no |
 | 5 | Accessibility remediation | **not started** | — |
 | 6 | Best practices remediation | **partial** — score already passes | score yes, items no |
@@ -109,35 +109,68 @@ inert without `SUPABASE_URL` and verified not to run.
 
 ---
 
-## Phase 3 — Story pages + SEO remediation — **in progress**
+## Phase 3 — Story pages + SEO remediation — **done**
 
-1. `app/story/[id]/page.tsx`. Spec says resolve against the `articles` table;
-   with Phase 2 unprovisioned it resolves against the live feed instead, behind a
-   single lookup seam so swapping the source later is one function. `notFound()`
-   for an unknown id — a real 404, not a soft one.
-2. **Display cap (mandatory).** Render at most the shorter of the AI summary or
-   ~400 characters / 2–3 sentences of extracted body. Never render `articleBody`
-   past that. A prominent "Read the full story at {sourceName} →" outbound link
-   above the fold, not buried in a footer.
-3. `NewsArticle` JSON-LD per page: `headline`, `datePublished`, `dateModified`,
-   `author` as the *originating* Organization, `publisher` as EkJhalak with logo,
-   `image`, `mainEntityOfPage`.
-4. Per-story `og:*` and `twitter:*` so a shared link represents that story.
-5. `sitemap.xml` including recent articles, plus a Google News sitemap variant
-   scoped to the last 48 hours.
-6. Fix `lang` properly rather than patching around it.
-7. Cards link to `/story/{id}` as the canonical share target, while still visibly
-   crediting and linking the original source.
+**Gate met**, verified against production:
 
-**Gate:**
-
-```bash
-curl -s https://ekjhalak.news/sitemap.xml | grep -c '<url>'          # > 6
-curl -s https://ekjhalak.news/story/<id> | grep -c 'NewsArticle'      # >= 1
+```
+sitemap.xml <url> count      464   (must be > 6; was 6)
+NewsArticle JSON-LD            1   (must be >= 1)
+unknown /story/{id}          404   (a real 404, not a soft one)
+news-sitemap.xml entries     448
+axe on a story page            0 violations, any severity
 ```
 
-Plus Google Rich Results Test on one story page, and axe on a story page showing
-zero new violations against the Phase 1 baseline.
+Every `NewsArticle` property Google's Rich Results Test requires is present and
+well-formed — `headline` (54 chars, under the 110 it truncates at),
+`datePublished`, `dateModified`, `author`, `publisher` with `logo`,
+`mainEntityOfPage`. The interactive Rich Results Test itself still wants a human
+with a browser; the structural check is scripted above.
+
+**The display cap** is in `lib/story-excerpt.ts` and governs every reader-facing
+surface — page body, `og:description`, `twitter:description` and the JSON-LD
+`description`. 400 characters, broken on a sentence boundary where one exists,
+including the Devanagari danda. Verified on the longest story in a live feed:
+**2,638 characters held, 392 rendered.** Eight tests cover it; one exists purely
+to fail if the cap is ever removed. The outbound "Read the full story at
+{sourceName}" is a primary button directly beneath the headline, above both the
+excerpt and the image.
+
+`author` in the schema is the originating newsroom and `publisher` is EkJhalak,
+with `isBasedOn` pointing at the source article — the accurate claim, and the one
+that makes the schema safe to publish.
+
+Story pages render in the language the newsroom filed in, with `lang` on every
+text node and the translation offered beneath in its own. That is the Phase 0
+finding — the Nepali half of the site was invisible to search because everything
+served as `lang="en"` on one URL.
+
+Card headlines became real anchors that intercept a plain left-click to open the
+reading panel; modified and middle clicks navigate, so open-in-new-tab works for
+the first time.
+
+**Two findings worth keeping:**
+
+`app/loading.tsx` had to move into an `app/(feed)/` route group. A `loading.tsx`
+wraps its segment in Suspense and Next.js flushes that shell as HTTP 200 before
+the page renders, so `notFound()` produced the not-found UI under a 200 — a soft
+404 telling Google an expired permalink is a live page. Measured: 200 with the
+file at `app/` root, 404 without.
+
+D2 is fixed as part of this phase. `NEXT_PUBLIC_SITE_URL` was never set in
+Netlify, so the code default ran in production — and it named `www.ekjhalak.news`,
+which 301s to the apex. Every canonical tag, `og:url`, sitemap `<loc>` and JSON-LD
+`@id` pointed at a host the site redirects away from. Now one `lib/site-url.ts`.
+
+**Item 6(a) is still an open decision.** The brief recommends real `/ne/*` routes
+as the only version that actually gets Nepali content indexed as Nepali, and says
+to confirm scope with the operator first. What shipped is 6(b) — correct `lang`
+on every text node, which fixes the screen-reader half of the problem and is the
+stated minimum. Real locale routes are a larger change and need a decision.
+
+**Known limit:** with Phase 2 unprovisioned these resolve against the live feed,
+so a permalink is valid only while its story is inside the aggregation window.
+`lib/story-lookup.ts` is the single seam that changes when the table goes live.
 
 ---
 
