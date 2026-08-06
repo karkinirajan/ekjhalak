@@ -40,3 +40,35 @@ test("deduplicate merges near-duplicates and records coverage counts", () => {
     assert.equal(result[0].coverageCount, 2);
     assert.equal(result[1].id, "c");
 });
+
+test("deduplicate records which outlets carried a story, not just how many", () => {
+    const items = [
+        makeItem({ id: "a", title: "Nepal votes in historic election", sourceId: "src-a", publishedTimestamp: 1_700_000_000_000 }),
+        makeItem({ id: "b", title: "Historic election in Nepal", sourceId: "src-b", publishedTimestamp: 1_700_000_000_100 }),
+        makeItem({ id: "c", title: "Nepal holds historic election", sourceId: "src-c", publishedTimestamp: 1_700_000_000_200 }),
+    ];
+
+    const [survivor] = deduplicate(items);
+
+    assert.equal(survivor.coverageCount, 3);
+    assert.deepEqual(survivor.alternateSourceIds, ["src-b", "src-c"]);
+});
+
+test("deduplicate counts an outlet once when it republishes its own story", () => {
+    const items = [
+        makeItem({ id: "a", title: "Nepal votes in historic election", sourceId: "src-a", publishedTimestamp: 1_700_000_000_000 }),
+        makeItem({ id: "b", title: "Historic election in Nepal", sourceId: "src-a", publishedTimestamp: 1_700_000_000_100 }),
+    ];
+
+    const [survivor] = deduplicate(items);
+
+    assert.equal(survivor.coverageCount, 1);
+    assert.equal(survivor.alternateSourceIds, undefined);
+});
+
+test("a story no other outlet carried lists no alternates", () => {
+    const [survivor] = deduplicate([makeItem({ id: "a", title: "A story nobody else ran" })]);
+
+    assert.equal(survivor.coverageCount, 1);
+    assert.equal(survivor.alternateSourceIds, undefined);
+});

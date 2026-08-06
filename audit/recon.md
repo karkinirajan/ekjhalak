@@ -235,7 +235,7 @@ The extra 1.5s over local is the 301 hop described in D2 plus transatlantic roun
 Then sampled every 45 seconds for eight minutes, spanning two `revalidate: 300` boundaries — the window in which the pre-fix build handed one reader in every five minutes a 502:
 
 ```
-16:38:18 → 16:45:10   10/10 HTTP=200
+16:38:18 → 16:45:56   11/11 HTTP=200
 median 0.68s · slowest 1.36s (16:43:38, a revalidation served stale while it refreshed)
 ```
 

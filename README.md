@@ -20,15 +20,15 @@ app/page.tsx  — client component, manages source filter + loading state
   │  fetch /api/news?range=day|week|month
   ▼
 app/api/news/route.ts  — Route Handler
-  │  getCachedFeed()  [unstable_cache, 10-min TTL, tag: "news-feed"]
+  │  getCachedFeed()  [unstable_cache, 5-min TTL, tag: "news-feed"]
   ▼
 lib/aggregator.ts  — parallel ingestion
   │  Promise.allSettled over all active sources
   │  per-source errors isolated — one bad source does not affect others
   ▼
 lib/rss-adapter.ts  — fetch + parse
-  │  AbortController (10s timeout per source)
-  │  next: { revalidate: 600 }  [Next.js Data Cache, per-URL]
+  │  AbortController (10s per source, clamped to the pass deadline)
+  │  next: { revalidate: 300 }  [Next.js Data Cache, per-URL]
   │  fast-xml-parser  (RSS 2.0, Atom 1.0, RDF/RSS 1.0)
   ▼
 lib/feed-normalizer.ts  — raw → NewsItem
@@ -38,7 +38,7 @@ lib/feed-normalizer.ts  — raw → NewsItem
   ▼
 lib/deduplicator.ts  — two-pass dedup
   │  Pass 1: exact URL fingerprint match
-  │  Pass 2: Jaccard title similarity ≥ 0.65 within 2-hour window
+  │  Pass 2: Jaccard title similarity ≥ 0.45 within 2-hour window
   ▼
 AggregatedFeed  { items: NewsItem[], sourceStatuses, fetchedAt }
 ```
@@ -123,11 +123,13 @@ interface Source {
 
 Items arrive sorted by priority descending (high-priority source version wins).
 
-**Pass 1 — URL fingerprint:** SHA-256 of the canonical URL (tracking params stripped), first 12 hex chars as `id`. Exact collisions are dropped; the canonical item records the alternate `sourceId` in `alternateSourceIds[]`.
+**Pass 1 — URL fingerprint:** SHA-256 of the canonical URL (tracking params stripped), first 12 hex chars as `id`. Exact collisions are dropped and nothing is recorded about them: an identical URL means the same outlet ran the same page twice, which is not co-coverage.
 
-**Pass 2 — Title similarity:** For each unpruned item, compare against all already-kept items published within a 2-hour window. Tokenize titles (lowercase, strip punctuation, 3+ char words), compute Jaccard similarity. If ≥ 0.65 → duplicate, drop; canonical item records `alternateSourceIds` and `duplicateCount`.
+**Pass 2 — Title similarity:** For each surviving item, compare against all already-kept items published within a 2-hour window. Tokenize titles (lowercase, strip punctuation, 3+ character words, Unicode-aware so Devanagari survives), compute Jaccard similarity. At **≥ 0.45** the candidate is a duplicate and is dropped, and the survivor records both `coverageCount` — how many distinct outlets carried the story — and `alternateSourceIds[]` — which ones.
 
-**UI surface:** The NewsCard shows "also reported by N sources" when `alternateSourceIds.length > 0`, and the reading sheet lists those source names.
+The threshold is 0.45 rather than something stricter for a measured reason: across every cross-source pair inside the 2-hour window in a live 475-story feed, the closest two real headlines scored 0.50. At 0.65 nothing ever merged and `coverageCount` was 1 on every story ever served. Different newsrooms rewrite headlines from scratch and agree on the proper nouns and little else.
+
+**UI surface:** `coverageCount` drives the trending rail's ranking and the "N outlets covering" badge. `alternateSourceIds` is currently server-side only — stripped in `lib/feed-payload.ts`, written to the archive, and not yet shown to readers. It is captured inside `deduplicate` because that is the only moment it exists; the duplicate rows are discarded immediately afterwards.
 
 This removes cross-source reposts while preserving source diversity and attribution.
 
@@ -271,6 +273,8 @@ A translation that comes back in the wrong script is discarded rather than shown
 | `AGGREGATE_BUDGET_MS`  | No          | `15000`                     | Ceiling on one whole regeneration            |
 | `GEMINI_BUDGET_MS`     | No          | `25000`                     | Cap on the model pass, within the above      |
 | `EXTRACT_BUDGET_MS`    | No          | `15000`                     | Cap on the article-page pass, within the above |
+| `SUPABASE_URL`         | No          | —                           | Archive; unset disables it entirely          |
+| `SUPABASE_SERVICE_ROLE_KEY` | No     | —                           | Server-only secret; bypasses RLS             |
 | `REVALIDATE_SECRET`    | Production  | —                           | Protects POST /api/revalidate                |
 | `NEWSLETTER_SECRET`    | For opt-in  | —                           | Signs confirmation links (16+ chars)         |
 | `RESEND_API_KEY`       | For email   | —                           | Set by the Resend Marketplace integration    |
@@ -297,7 +301,8 @@ Corners are a flat, near-square scale: `--radius` is 6px and the derived `--radi
 ## Production Notes
 
 - **Cold start:** The feed cache revalidates every 5 minutes and Next.js resolves that on the request path, so whichever reader arrives first after it goes stale pays for the whole regeneration — RSS, article extraction and the model pass. `AGGREGATE_BUDGET_MS` (15s) bounds that so it cannot cross Netlify's 30-second request limit; measured at 15.0s cold, 0.01s warm. Every network call inside the pass clamps its own timeout to the time remaining, which is what makes the bound hold.
-- **Image optimization:** `next/image` is configured with `remotePatterns` for all active source domains. Unknown image hosts fall back gracefully (no image shown).
+- **Archive:** When `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set, each regeneration upserts its stories into `public.articles` — schema in `supabase/migrations/20260806000000_articles.sql`. Nothing on the request path reads it; the feed is still built from RSS, and the site behaves identically with it unset. The write takes a 3-second reserve out of the model stage rather than adding to the pass, so `AGGREGATE_BUDGET_MS` stays the ceiling. `first_seen_at` is set on insert and deliberately never sent on update — it is the one timestamp here that cannot be recovered from anywhere else.
+- **Image optimization:** `next/image` is configured with `remotePatterns` for all active source domains. Unknown image hosts fall back gracefully (no image shown). Note that the lead card currently paints a raw publisher URL rather than a `next/image` — measured at 2.4 MB for a 378×236 slot, and the single largest cost on the page. See `audit/baseline/summary.md`.
 - **Error isolation:** A source that times out, returns HTTP 4xx/5xx, or emits malformed XML produces a `SourceStatusMeta` with `ok: false`. The rest of the feed is unaffected.
 - **Cache invalidation:** To force an immediate refresh (e.g. after adding a source), delete `.next/cache` and restart the server, or call `revalidateTag("news-feed")` from a protected admin route.
 - **Reuters:** Blocked from server-side fetches on shared-IP hosting (Vercel, Render, etc.). Re-enable with a dedicated egress IP or a proxy.

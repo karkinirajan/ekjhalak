@@ -25,6 +25,7 @@ import {
   readEnrichment,
   writeEnrichment,
 } from "./enrichment-cache";
+import { recordArticles, isStoreConfigured } from "./article-store";
 import type { NewsItem, SourceStatusMeta } from "./news-pipeline";
 import type { Source } from "./source-registry";
 
@@ -125,8 +126,22 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
 
   const rssMs = Date.now() - fetchedAt;
 
-  const items = await enrichFeed(deduped, fetchedAt, deadline);
+  // Enrichment stops early enough to leave the archive its slice. Taken out of
+  // the model stage rather than added on the end, so AGGREGATE_BUDGET_MS stays
+  // the ceiling on the whole pass and not a number the pass exceeds by design —
+  // and only reserved when there is somewhere to write, so a deployment without
+  // a database spends every millisecond on the feed.
+  const storeReserve = isStoreConfigured() ? STORE_RESERVE_MS : 0;
+  const items = await enrichFeed(deduped, fetchedAt, deadline - storeReserve);
   annotateDescriptionCoverage(sourceStatuses, items);
+
+  // Awaited, despite nothing depending on the result. A genuinely un-awaited
+  // promise is not fire-and-forget on a serverless platform, it is fire-and-
+  // maybe: the function can be frozen the moment the response is sent, and the
+  // write would land or not depending on how quickly the reader's request
+  // finished. Bounded at STORE_RESERVE_MS and swallowing its own failures, so
+  // waiting for it cannot cost the reader more than its slice or fail the feed.
+  await recordArticles(items, deadline);
 
   // Reported per stage, not as one number. "The pass took 40s" is not
   // actionable — every stage has its own timeout and its own remedy, and the
@@ -215,6 +230,17 @@ const AGGREGATE_BUDGET_MS = Number.parseInt(
  * teach whoever reads these logs to ignore them.
  */
 const BUDGET_GRACE_MS = 2_000;
+
+/**
+ * The tail of the pass held back for writing to the archive.
+ *
+ * Only claimed when a database is configured. Three seconds is generous for one
+ * upsert of a few hundred rows and small enough that the model stage, which is
+ * what it comes out of, loses at most a batch — and a batch the model does not
+ * reach this pass is enriched by the next one, whereas a row not written is a
+ * day of history that never existed.
+ */
+const STORE_RESERVE_MS = 3_000;
 
 /**
  * The share of the pass that RSS ingestion may take.

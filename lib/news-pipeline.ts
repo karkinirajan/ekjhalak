@@ -57,6 +57,17 @@ export interface NewsItem {
    * behind the trending rail — no synthetic engagement metrics.
    */
   coverageCount: number;
+  /**
+   * The other outlets that ran this story, in the order they were merged into
+   * it. Absent when no outlet did — `coverageCount` is 1 and there is nothing
+   * to list.
+   *
+   * Server-side only; stripped in lib/feed-payload.ts. It exists because
+   * `coverageCount` can say *how many* newsrooms carried a story but not
+   * *which*, and the duplicate rows that hold that answer are discarded inside
+   * `deduplicate`. Captured there or not at all.
+   */
+  alternateSourceIds?: string[];
 }
 
 export interface SourceStatusMeta {

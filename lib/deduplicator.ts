@@ -97,10 +97,19 @@ export function deduplicate(items: NewsItem[]): NewsItem[] {
 
     // The duplicate is discarded, but the fact that another outlet ran the same
     // story is real signal — it is how many newsrooms judged it worth covering.
+    //
+    // Which newsrooms, not merely how many. `coverageCount` alone cannot answer
+    // "who else carried this", and the duplicate row is about to be dropped, so
+    // this is the only moment the answer exists. Recording it here costs one
+    // array push; recovering it later would mean re-fetching every feed.
     const outlets = outletsPerStory.get(duplicateOf.id);
     if (outlets && !outlets.has(candidate.sourceId)) {
       outlets.add(candidate.sourceId);
       duplicateOf.coverageCount = outlets.size;
+      duplicateOf.alternateSourceIds = [
+        ...(duplicateOf.alternateSourceIds ?? []),
+        candidate.sourceId,
+      ];
     }
 
     // A higher-priority outlet won the dedup tie but may have shipped no photo.
