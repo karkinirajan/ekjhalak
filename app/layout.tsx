@@ -7,7 +7,6 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // English UI and headlines use Space Grotesk for a crisp modern voice.
 const spaceGrotesk = Space_Grotesk({
@@ -18,11 +17,22 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 // English body copy uses Merriweather for long-form readability.
+//
+// 400 for prose and 700 for emphasis inside it. 300 and 900 were declared and
+// never reached: nothing in the app sets a light weight, and every `font-black`
+// in the codebase sits on a `font-display` element, so Merriweather 900 was two
+// files downloaded to render nothing.
+//
+// Not preloaded. It sets body copy, which is below the headline in every layout
+// here, and Georgia — the first fallback — is close enough in metrics that the
+// swap does not move text around. Preloading it made four font files compete
+// with the lead image for a throttled connection's first bytes.
 const merriweather = Merriweather({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["300", "400", "700", "900"],
+  weight: ["400", "700"],
   display: "swap",
+  preload: false,
 });
 
 // Nepali content is set in Mukta — the face Kantipur uses.
@@ -33,19 +43,30 @@ const merriweather = Merriweather({
 // Devanagari first rather than extended into it, which is why its matras and
 // conjuncts hold together at body sizes where a Latin-first family with a
 // Devanagari range starts to look grafted on.
+//
+// Preloaded, and one of only two that are: a Nepali headline is above the fold
+// on every visit, and Devanagari has no safe system fallback to swap from — the
+// chain below it ends in a generic sans that renders the matras wrong.
+//
+// 300 dropped; nothing sets a light weight on Devanagari.
 const mukta = Mukta({
   variable: "--font-devanagari",
   subsets: ["devanagari", "latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
 // Metadata voice — kickers, timestamps, source names, counters.
+//
+// Not preloaded. Every one of those is small, secondary text; a monospace swap
+// is the least noticeable one on the page, and none of it is what a reader is
+// waiting for.
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono-custom",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   display: "swap",
+  preload: false,
 });
 
 const SITE_URL =
@@ -180,7 +201,6 @@ export default function RootLayout({
         <ThemeProvider>
           <main id="main-content">{children}</main>
         </ThemeProvider>
-        <SpeedInsights />
       </body>
     </html>
   );

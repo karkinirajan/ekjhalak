@@ -1,6 +1,10 @@
 import { getCachedFeed } from "@/lib/aggregator";
 import { NewsFeed } from "@/components/news-feed";
-import { FEED_PAGE_LIMIT, toClientItems } from "@/lib/feed-payload";
+import {
+  FEED_PAGE_LIMIT,
+  FEED_SSR_LIMIT,
+  toClientItems,
+} from "@/lib/feed-payload";
 import type { NewsFeedResponse } from "@/lib/news-pipeline";
 
 // ISR: serve static HTML, regenerate in the background every 5 minutes.
@@ -21,7 +25,11 @@ export default async function Page() {
   // the RSC flight payload for hydration on top of being rendered as HTML. The
   // unbounded feed made that 477 stories — a 697KB document and a 587KB payload
   // — to paint roughly 30 cards. See lib/feed-payload.ts for what gets cut.
-  const items = toClientItems(feed.items);
+  //
+  // The first response carries FEED_SSR_LIMIT, not the whole pool. NewsFeed
+  // fills in the rest on mount, so the reader still filters over everything —
+  // they just do not wait for it before seeing a page.
+  const items = toClientItems(feed.items, FEED_SSR_LIMIT);
 
   const initialData: NewsFeedResponse = {
     items,

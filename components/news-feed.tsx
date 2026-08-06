@@ -160,8 +160,23 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
       startTransition(() => {
         void fetchFeed(false);
       });
+      return;
     }
-  }, [fetchFeed, initialData.items.length]);
+
+    // The server sent enough to paint a complete page, not the whole pool —
+    // FEED_SSR_LIMIT, not FEED_PAGE_LIMIT. Fetch the rest now so the range and
+    // topic filters have everything to work over.
+    //
+    // Background, not `refreshing`: there is already a full page on screen and
+    // flashing a loading state over it would be a lie about what is happening.
+    // Safe to swap `items` wholesale here in a way it is not later — this runs
+    // on mount, before the reader has opened anything or scrolled anywhere.
+    if (initialData.items.length < limit) {
+      startTransition(() => {
+        void fetchFeed(true);
+      });
+    }
+  }, [fetchFeed, initialData.items.length, limit]);
 
   // Background refresh, with two things it deliberately will not do.
   //

@@ -61,6 +61,8 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
             alt={title}
             topic={item.topic}
             priority
+            // The panel is full-width on mobile and capped at max-w-2xl above.
+            sizes="(min-width: 640px) 672px, 100vw"
             className="h-full w-full"
           />
           <div className="photo-scrim absolute inset-0" />

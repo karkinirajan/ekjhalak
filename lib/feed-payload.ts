@@ -35,6 +35,24 @@ import type { NewsItem } from "./news-pipeline";
 export const FEED_PAGE_LIMIT = 1500;
 
 /**
+ * How many stories the *first response* carries.
+ *
+ * Distinct from FEED_PAGE_LIMIT, which is the size of the pool the client ends
+ * up holding. Cut 2 above argued for one number doing both jobs and lost: 180
+ * covers the deepest filter combination only if the reader never reaches for
+ * one before the page has finished loading, and whoever raised the constant to
+ * 1500 was fixing a real thin-results bug, not being careless.
+ *
+ * So the two jobs are separated instead. The server renders enough to paint a
+ * complete page — 1 hero, 3 side, 6 trending and the grid's first page of 12 is
+ * 22 cards, and 60 leaves room for the range and topic pills to do something
+ * sensible in the moment before hydration — and the client pulls the full pool
+ * in the background as soon as it mounts. Nothing is lost, and the document
+ * stops carrying 450 stories in order to show 30.
+ */
+export const FEED_SSR_LIMIT = 60;
+
+/**
  * Fields nothing on the client reads, stripped before serialization.
  *
  * Both are optional on NewsItem, so the result still satisfies the interface

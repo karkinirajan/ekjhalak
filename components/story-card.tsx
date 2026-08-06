@@ -101,6 +101,8 @@ export function StoryCard({
             src={item.imageUrl}
             alt={title}
             topic={item.topic}
+            // Fixed 80px frame at every breakpoint — see the note above.
+            sizes="80px"
             className="h-full w-full"
           />
         </div>
@@ -173,6 +175,11 @@ export function StoryCard({
           alt={title}
           topic={item.topic}
           priority={priority}
+          // The grid is 1 column, then 2 at sm, then 2 within a main column that
+          // gives up 20rem to the sidebar at lg, then 3 at xl. At a 1440px
+          // viewport the xl card paints about 350px, so 400px is the ceiling
+          // rather than a guess.
+          sizes="(min-width: 1280px) 400px, (min-width: 1024px) 45vw, (min-width: 640px) 50vw, 100vw"
           className="h-full w-full"
         />
       </div>
