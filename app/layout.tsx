@@ -187,6 +187,20 @@ export default function RootLayout({
         {/* Lets the browser paint form controls and scrollbars to match
             whichever theme the script below settles on. */}
         <meta name="color-scheme" content="light dark" />
+        {/* Browser chrome matches the page instead of defaulting to white, which
+            on mobile is the difference between the app looking like it ends at
+            the viewport and looking like it was pasted into the browser. Both
+            values are --canvas, per theme. */}
+        <meta
+          name="theme-color"
+          content="#fdfcf9"
+          media="(prefers-color-scheme: light)"
+        />
+        <meta
+          name="theme-color"
+          content="#0a0a0a"
+          media="(prefers-color-scheme: dark)"
+        />
         {/* Runs before first paint so the correct theme is painted once.
             Falls back to the OS preference when the reader has no saved choice. */}
         <script

@@ -25,8 +25,36 @@ export type DeliveryOutcome =
   | { ok: true; alreadySubscribed?: boolean }
   | { ok: false; reason: "not-configured" | "provider-error" };
 
+/**
+ * The Resend key, under either spelling.
+ *
+ * `RESENT_API_KEY` is a typo, and it is the name the production key has actually
+ * been stored under — so `RESEND_API_KEY` was undefined, `isConfigured()`
+ * returned false, and every signup since the newsletter shipped has been quietly
+ * answered with "the list is not open yet". The form worked; nothing was ever
+ * sent. See D1 in audit/recon.md.
+ *
+ * Accepting the typo is a migration shim, not a feature. It warns once per
+ * process so the fix does not become invisible, and it should be deleted the
+ * moment the variable is renamed in the Netlify UI. Reading both is still better
+ * than the alternative, which is a signup form that silently discards addresses
+ * until someone notices.
+ */
+let warnedAboutKeyName = false;
+
 function resendKey(): string | undefined {
-  return process.env.RESEND_API_KEY;
+  const correct = process.env.RESEND_API_KEY;
+  if (correct) return correct;
+
+  const misspelled = process.env.RESENT_API_KEY;
+  if (misspelled && !warnedAboutKeyName) {
+    warnedAboutKeyName = true;
+    console.warn(
+      "[newsletter] using RESENT_API_KEY — rename it to RESEND_API_KEY in the " +
+        "Netlify environment and remove this fallback",
+    );
+  }
+  return misspelled;
 }
 
 function webhookUrl(): string | undefined {

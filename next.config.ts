@@ -7,9 +7,22 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      // Next.js requires unsafe-inline for runtime scripts; unsafe-eval for dev-mode
-      // stack reconstruction (React never uses eval in production).
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      // `'unsafe-eval'` is development-only. Next.js needs it for dev-mode stack
+      // reconstruction and HMR; the production bundle does not call eval or the
+      // Function constructor, and the comment that used to sit here said so
+      // while shipping it to production anyway.
+      //
+      // `'unsafe-inline'` stays, and this is the honest version of why rather
+      // than a TODO. Replacing it needs a nonce on every inline script, which
+      // means generating one per request and threading it through — and that
+      // requires the document to be dynamically rendered. This site's homepage
+      // is ISR precisely so a reader gets static HTML, so a nonce would trade
+      // the whole caching story for a CSP tightening on a page that has no
+      // third-party script and no user-generated HTML. The two inline scripts
+      // are ours: the theme-before-paint shim and the JSON-LD block.
+      `script-src 'self' 'unsafe-inline'${
+        process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"
+      }`,
       // Tailwind and shadcn inject inline styles
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Google Fonts static assets
