@@ -194,6 +194,34 @@ overrun warnings logged: 0        (451/452 stories kept)
 
 **44.6s → 15.0s**, pinned to the deadline, with 15s of headroom under Netlify's 30s limit. `pnpm lint`, `typecheck` and 38/38 tests pass.
 
+#### D3b — the same bug, twice more, and only production could see it
+
+Shipping the above (`f33df2e`) did **not** clear the outage. Production still 502'd on the first cold pass after the deploy, then behaved once warm:
+
+```
+cold  /api/news?range=day&limit=100   HTTP=502  total=40.227s
+warm  /api/news?range=day&limit=100   HTTP=200  total= 1.011s / 0.494s / 0.507s
+```
+
+Local was pinned at 15.0s across cold passes, so whatever was overrunning sat **outside** the deadline the fix had established — which, at that point, covered extraction and the model stage but not RSS ingestion. Two more instances of the same bug class were in the RSS path:
+
+- `lib/rss-adapter.ts` — `fetchRssFeed`'s `clearTimeout` sat in a `finally` attached to `fetch()` alone, so it fired when the *headers* arrived and left `await response.text()` with no timeout at all. A source that answered promptly and then dribbled its body held the fan-out open indefinitely; because every source is awaited together, one such outlet set the cost of the whole stage. The abort now survives until the body is read, and `fetchRssFeed` takes the pass deadline.
+- `lib/rss-adapter.ts` — `enrichShortDescriptions`, called at the end of every `fetchRssFeed`, scraped the article page of every story whose description ran short: batches of four, `ENRICH_TIMEOUT_MS = 5_000` each, walked **sequentially** over as many as thirty stories. Worst case ⌈30/4⌉ × 5s = **40s for a single source**, with no deadline check anywhere in it — which is the 40.2s measured above almost exactly.
+
+The second one was also **redundant**. `lib/article-extractor.ts` does the same job later in the same pass, in ranked order, against the deadline, with a better ladder (JSON-LD `articleBody` → `og:description` → paragraphs), and `enrichFeed` already overwrites the summary wherever the page has more to say than the feed did. Keeping both meant fetching every article page twice per regeneration, and the copy in the RSS adapter was the unbounded one. It was deleted rather than bounded — 194 lines, including the now-unreachable `scrapeArticleDescription`, `findArticleBody` and `countParagraphs`.
+
+Why local never showed it: those scrapes hit Nepali origin servers, which answer this machine quickly and Netlify's US region slowly. Locally the batches returned well inside their 5s timeout and the pass still landed on its budget; from the function region enough of them hit the timeout to walk the full 40s. A bound that only holds on the fast network is not a bound.
+
+Third part of the fix: `RSS_SHARE = 0.5` gives RSS ingestion half the pass, so the stage that runs *first* can no longer spend the budget the stages that make the feed readable depend on. A source that misses its slice is simply absent from this pass and present in the next — the fan-out is `allSettled`, and the feed renders whatever arrived.
+
+Verified locally on a genuinely cold pass, `.next/cache` deleted after build:
+
+```
+cold  15.044s   HTTP=200
+warm   0.011s   HTTP=200
+overrun warnings logged: 0        (451/453 stories kept)
+```
+
 Still worth doing, and unchanged by the above: move enrichment **off the request path** entirely. Once Phase 2's `articles` table exists, the scheduled function can do the expensive extraction/summarisation pass and write results, leaving `/api/news` to only ever read — at which point cold-start latency stops existing rather than merely being bounded. The 15s a reader can still pay is a bound, not a fix.
 
 ---

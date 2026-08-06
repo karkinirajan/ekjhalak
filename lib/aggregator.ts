@@ -40,7 +40,10 @@ interface SourceResult {
   status: SourceStatusMeta;
 }
 
-async function fetchOneSource(source: Source): Promise<SourceResult> {
+async function fetchOneSource(
+  source: Source,
+  deadline: number,
+): Promise<SourceResult> {
   const start = Date.now();
 
   if (!source.rssUrl) {
@@ -59,7 +62,7 @@ async function fetchOneSource(source: Source): Promise<SourceResult> {
   }
 
   try {
-    const rawStories = await fetchRssFeed(source.rssUrl);
+    const rawStories = await fetchRssFeed(source.rssUrl, deadline);
     const filtered = source.urlPrefix
       ? rawStories.filter((raw) => raw.url.startsWith(source.urlPrefix!))
       : rawStories;
@@ -102,8 +105,9 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
     (a, b) => b.priority - a.priority,
   );
 
+  const rssDeadline = Date.now() + slice(deadline, AGGREGATE_BUDGET_MS, RSS_SHARE);
   const results = await Promise.allSettled(
-    sourcesToFetch.map((source) => fetchOneSource(source)),
+    sourcesToFetch.map((source) => fetchOneSource(source, rssDeadline)),
   );
 
   const allItems: NewsItem[] = [];
@@ -211,6 +215,22 @@ const AGGREGATE_BUDGET_MS = Number.parseInt(
  * teach whoever reads these logs to ignore them.
  */
 const BUDGET_GRACE_MS = 2_000;
+
+/**
+ * The share of the pass that RSS ingestion may take.
+ *
+ * Every source is fetched at once and awaited together, so the stage costs
+ * whatever the *slowest single* source costs — one outlet that answers its
+ * headers promptly and then dribbles the body sets the price for all two dozen.
+ * Half the pass is generous for what is, per source, one small XML document; the
+ * bound exists so that when a source misbehaves the cost lands on it rather than
+ * on the stages downstream, which are the ones that make the feed readable.
+ *
+ * A source that does not answer in time is simply absent from this pass. Its
+ * stories are still in the next one, and the feed already renders whatever
+ * arrived — `Promise.allSettled`, not `Promise.all`.
+ */
+const RSS_SHARE = 0.5;
 
 /**
  * The share of whatever time is left after RSS that page extraction may take.

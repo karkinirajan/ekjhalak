@@ -227,25 +227,38 @@ function parseAtomEntries(feed: Record<string, unknown>): RawStory[] {
 // ── Main fetch function ───────────────────────────────────────────────────────
 
 const FETCH_TIMEOUT_MS = 10_000;
-const ENRICH_TIMEOUT_MS = 5_000;
 const MAX_DESCRIPTION_LENGTH = 2200;
-/** Descriptions shorter than this trigger article-page enrichment */
-const SHORT_DESCRIPTION_THRESHOLD = 200;
-/** Max concurrent article-page fetches for enrichment */
-const ENRICH_CONCURRENCY = 4;
 
 /**
  * Fetch and parse an RSS or Atom feed.
  * Uses Next.js Data Cache with a 10-minute revalidation.
  * Returns up to 30 stories per source; on failure throws.
+ *
+ * `deadline`, when given, is the wall-clock the whole regeneration has left.
+ * The per-source timeout is clamped to it so a slow outlet cannot spend budget
+ * the pass does not have — the sources are fetched in parallel, so the stage
+ * costs whatever the slowest single source costs.
  */
-export async function fetchRssFeed(url: string): Promise<RawStory[]> {
+export async function fetchRssFeed(
+  url: string,
+  deadline?: number,
+): Promise<RawStory[]> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const budget =
+    deadline === undefined
+      ? FETCH_TIMEOUT_MS
+      : Math.max(1, Math.min(FETCH_TIMEOUT_MS, deadline - Date.now()));
+  const timeout = setTimeout(() => controller.abort(), budget);
 
-  let response: Response;
+  // The abort has to survive until the body is read, not just until the headers
+  // land. Clearing it the moment `fetch` resolved left `response.text()` with no
+  // timeout at all, so a source that answered promptly and then dribbled its
+  // body held the whole parallel fan-out open for as long as it liked — and
+  // because every source is awaited together, one such outlet set the cost of
+  // the entire stage.
+  let xml: string;
   try {
-    response = await fetch(url, {
+    const response = await fetch(url, {
       signal: controller.signal,
       headers: {
         "User-Agent":
@@ -256,15 +269,16 @@ export async function fetchRssFeed(url: string): Promise<RawStory[]> {
       // Next.js Data Cache: revalidate every 5 minutes per source URL
       next: { revalidate: 300 },
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} for ${url}`);
+    }
+
+    xml = await response.text();
   } finally {
     clearTimeout(timeout);
   }
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for ${url}`);
-  }
-
-  const xml = await response.text();
   if (!xml || xml.length < 50) {
     throw new Error(`Empty or invalid response from ${url}`);
   }
@@ -309,182 +323,18 @@ export async function fetchRssFeed(url: string): Promise<RawStory[]> {
     }))
     .slice(0, 30);
 
-  // Enrich stories that have short descriptions by scraping article pages
-  await enrichShortDescriptions(filtered);
-
+  // This used to be the point where every story with a short description had its
+  // article page scraped for a longer one. That work now lives in
+  // lib/article-extractor.ts, which does the same job later in the pass, in
+  // ranked order, against the regeneration's deadline, and with a better ladder
+  // (JSON-LD articleBody, then og:description, then paragraphs).
+  //
+  // Keeping both meant fetching every article page twice per pass, and the copy
+  // that lived here was the unbounded one: batches of four, five seconds each,
+  // walked sequentially over as many as thirty stories — up to forty seconds for
+  // a single source, inside a stage every other source is awaited alongside. On
+  // a cold deploy, with nothing in the fetch cache, that is the whole request
+  // budget spent before the model stage is even reached.
   return filtered;
 }
 
-// ── Article page enrichment ───────────────────────────────────────────────────
-
-/** Detect navigation/boilerplate text (e.g. "Home News Sport Business ...") */
-function looksLikeBoilerplate(text: string): boolean {
-  // Many short capitalized words in sequence = likely nav menu
-  const words = text.split(/\s+/);
-  if (words.length > 8) {
-    const shortCapWords = words.filter(
-      (w) => w.length <= 12 && /^[A-Z]/.test(w),
-    );
-    if (shortCapWords.length / words.length > 0.6) return true;
-  }
-  // Common boilerplate patterns
-  if (
-    /^(Home|News|Sport|Menu|Navigation|Copyright|Follow us|Share|Subscribe|Sign up|Cookie|Accept|Related)/i.test(
-      text,
-    )
-  )
-    return true;
-  return false;
-}
-
-/** Count meaningful <p> tags in an HTML fragment */
-function countParagraphs(fragment: string): number {
-  let count = 0;
-  const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = pRegex.exec(fragment)) !== null) {
-    const text = stripHtml(m[1]);
-    if (text.length > 50 && !looksLikeBoilerplate(text)) count++;
-  }
-  return count;
-}
-
-/**
- * Find the best content container in HTML. Tries common article container
- * patterns and picks the one with the most paragraph content.
- * Falls back to full HTML with nav/header/footer stripped.
- */
-function findArticleBody(html: string): string {
-  const patterns = [
-    /<article[^>]*class="[^"]*(?:story|article|post|content)[^"]*"[^>]*>([\s\S]+)<\/article>/i,
-    /<section[^>]*class="[^"]*(?:story|article|content)[^"]*"[^>]*>([\s\S]+)<\/section>/i,
-    /<div[^>]*class="[^"]*(?:article-body|story-body|post-content|entry-content|story-section)[^"]*"[^>]*>([\s\S]+?)<\/div>/i,
-  ];
-
-  let best = "";
-  let bestScore = 0;
-
-  for (const pattern of patterns) {
-    const m = html.match(pattern);
-    if (m && m[1].length > 200) {
-      const score = countParagraphs(m[1]);
-      if (score > bestScore) {
-        bestScore = score;
-        best = m[1];
-      }
-    }
-  }
-
-  if (bestScore > 0) return best;
-
-  // Remove <header>, <footer>, <nav>, <aside> sections to reduce noise
-  return html
-    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "")
-    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "")
-    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "")
-    .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, "");
-}
-
-/**
- * Extract body text from an article page by pulling `<p>` tag content.
- * Falls back to og:description / meta description if body extraction fails.
- */
-async function scrapeArticleDescription(articleUrl: string): Promise<string> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), ENRICH_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(articleUrl, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "EkJhalak-NewsAggregator/1.0 (+https://www.ekjhalak.news)",
-        Accept: "text/html",
-      },
-      next: { revalidate: 300 },
-    });
-
-    if (!response.ok) return "";
-
-    const html = await response.text();
-    const searchHtml = findArticleBody(html);
-
-    // 1. Try extracting <p> tags from the article body (best quality)
-    const paragraphs: string[] = [];
-    const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
-    let match: RegExpExecArray | null;
-    while ((match = pRegex.exec(searchHtml)) !== null) {
-      const text = stripHtml(match[1]);
-      // Skip short paragraphs (captions, bylines) and boilerplate
-      if (text.length > 50 && !looksLikeBoilerplate(text)) {
-        paragraphs.push(text);
-      }
-    }
-
-    if (paragraphs.length > 0) {
-      // Take enough paragraphs to build a substantial description
-      let combined = "";
-      for (const p of paragraphs) {
-        if (combined.length >= MAX_DESCRIPTION_LENGTH) break;
-        combined += (combined ? " " : "") + p;
-      }
-      return combined.slice(0, MAX_DESCRIPTION_LENGTH);
-    }
-
-    // 2. Fallback: og:description or meta description
-    const ogMatch =
-      html.match(
-        /<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i,
-      ) ??
-      html.match(
-        /<meta\s+content=["']([^"']+)["']\s+(?:property|name)=["']og:description["']/i,
-      );
-    if (ogMatch && ogMatch[1].length > 50) return stripHtml(ogMatch[1]);
-
-    const metaMatch =
-      html.match(
-        /<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i,
-      ) ??
-      html.match(
-        /<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i,
-      );
-    if (metaMatch && metaMatch[1].length > 50) return stripHtml(metaMatch[1]);
-
-    return "";
-  } catch {
-    return "";
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-/**
- * Enrich stories in-place: for any story whose description is shorter than
- * SHORT_DESCRIPTION_THRESHOLD, attempt to scrape a better description from
- * the article page. Runs with limited concurrency to avoid overwhelming sources.
- */
-async function enrichShortDescriptions(stories: RawStory[]): Promise<void> {
-  const toEnrich = stories.filter(
-    (s) => s.description.length < SHORT_DESCRIPTION_THRESHOLD && s.url,
-  );
-
-  if (toEnrich.length === 0) return;
-
-  // Process in batches to limit concurrency
-  for (let i = 0; i < toEnrich.length; i += ENRICH_CONCURRENCY) {
-    const batch = toEnrich.slice(i, i + ENRICH_CONCURRENCY);
-    const results = await Promise.allSettled(
-      batch.map((s) => scrapeArticleDescription(s.url)),
-    );
-
-    for (let j = 0; j < batch.length; j++) {
-      const result = results[j];
-      if (
-        result.status === "fulfilled" &&
-        result.value.length > batch[j].description.length
-      ) {
-        batch[j].description = result.value.slice(0, MAX_DESCRIPTION_LENGTH);
-      }
-    }
-  }
-}
