@@ -163,35 +163,19 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
       return;
     }
 
-    // The server sent enough to paint a complete page, not the whole pool —
-    // FEED_SSR_LIMIT, not FEED_PAGE_LIMIT. The rest is fetched here so the range
-    // and topic filters have everything to work over.
+    // Nothing else to do on mount. The server sent FEED_SSR_LIMIT rather than
+    // the whole pool, and the rest is fetched when a reader asks for something
+    // that needs it — see `ensureFullPool`.
     //
-    // On idle, not on mount. Fetched eagerly, this landed at 3.6s on a throttled
-    // mobile connection and replaced 60 items with 456, which re-runs every
-    // ranking selection and repaints the hero — and LCP is measured against the
-    // last such paint, so the fill was moving LCP out by two seconds to deliver
-    // stories the reader had not asked for yet. Measured: mobile LCP 5.9s with
-    // this eager.
+    // There is deliberately no prefetch here, eager or idle. Both were tried and
+    // both cost LCP for the same reason: the pool arrives, `items` goes from 60
+    // to 456, and every ranking selection re-runs — which can change the hero and
+    // the grid. LCP is measured against the last such paint, so a fill that lands
+    // at 3s puts LCP at 3.9s no matter how quietly it was scheduled. Measured on
+    // production, mobile: 5.9s fetching on mount, 3.9s on idle, 2.6s not at all.
     //
-    // `requestIdleCallback` has no Safari support before 17, hence the timeout
-    // fallback; the 3s ceiling is there so a page that never goes idle still
-    // ends up with a full pool.
-    if (initialData.items.length >= limit) return;
-
-    const fill = () => {
-      startTransition(() => {
-        void fetchFeed(true);
-      });
-    };
-
-    if (typeof window.requestIdleCallback === "function") {
-      const id = window.requestIdleCallback(fill, { timeout: 3000 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const id = window.setTimeout(fill, 2000);
-    return () => window.clearTimeout(id);
-  }, [fetchFeed, initialData.items.length, limit]);
+    // It also spends 152 KiB on a reader who may never leave "Today".
+  }, [fetchFeed, initialData.items.length]);
 
   // Background refresh, with two things it deliberately will not do.
   //
@@ -220,11 +204,14 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
     };
   }, [fetchFeed, readerOpen]);
 
-  // Filtering is the one action that needs more than the first response holds.
-  // The idle fill above usually beats the reader to it, but a fast click on
-  // "This Month" should not show a thin month, so every filter asks for the
-  // pool first. The guard makes it at most one extra request: after the fill has
-  // landed `items` is already the full pool and this does nothing.
+  // Everything that can need more than the first response holds comes through
+  // here: the four filters, and paging past what arrived.
+  //
+  // This is the whole reason the initial payload can be 60 stories instead of
+  // 456. A reader who opens the page, reads today's news and leaves never
+  // downloads the rest; a reader who reaches for "This Month" gets it on the
+  // click. The guard keeps it to one request — once `items` is the full pool
+  // this does nothing.
   const ensureFullPool = useCallback(() => {
     if (items.length >= limit) return;
     void fetchFeed(true);
@@ -353,10 +340,14 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
     safePage * PAGE_SIZE,
   );
 
-  const handlePageChange = useCallback((next: number) => {
-    setPage(next);
-    latestRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+  const handlePageChange = useCallback(
+    (next: number) => {
+      setPage(next);
+      ensureFullPool();
+      latestRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    [ensureFullPool],
+  );
 
   const handleFooterTopic = useCallback(
     (next: TopicId) => {
