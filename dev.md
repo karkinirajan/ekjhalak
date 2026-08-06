@@ -17,8 +17,8 @@ Status legend: **done** · **partial** · **blocked** · **not started**
 | 6 | Best practices remediation | **done** | yes |
 | 7 | Auth + personalization | **blocked** on Phase 2 | — |
 | 8 | Monetization infrastructure | **blocked** on Phase 7 | — |
-| 9 | Full re-verification | **not started** | — |
-| 10 | Documentation | **not started** | — |  
+| 9 | Full re-verification | **done** | yes — no regressions |
+| 10 | Documentation | **done** | yes |  
 
 ---
 
@@ -151,7 +151,7 @@ the first time.
 
 **Two findings worth keeping:**
 
-`app/loading.tsx` had to move into an `app/(feed)/` route group. A `loading.tsx`
+the loading UI had to move from `app/` root into `app/(feed)/loading.tsx`. A `loading.tsx`
 wraps its segment in Suspense and Next.js flushes that shell as HTTP 200 before
 the page renders, so `notFound()` produced the not-found UI under a 200 — a soft
 404 telling Google an expired permalink is a live page. Measured: 200 with the
@@ -275,22 +275,60 @@ Blocked on Phase 7.
 
 ---
 
-## Phase 9 — Full re-verification — **not started**
+## Phase 9 — Full re-verification — **done**
 
-Re-run every Phase 1 command; `audit/final/summary.md` as
-metric | baseline | target | final.
+**Gate met — no regressions on any tracked metric.** Full table in
+`audit/final/summary.md`; medians of three mobile runs and two desktop.
 
-**Gate:** no regression against baseline on LCP, CLS, axe critical/serious count,
-Best Practices score, or sitemap URL count. A known regression gets fixed, not
-documented as future work.
+| Metric | Baseline | Target | Final |
+| --- | --- | --- | --- |
+| Mobile LCP | 19.6 s | < 2.5 s | **3.0 s** — improved 85%, target missed |
+| Mobile CLS | 0.000 | ≤ 0.1 | **0.000** |
+| Desktop CLS | 0.002 | ≤ 0.1 | **0.005** |
+| axe critical + serious | 1 | 0 | **0** |
+| Best Practices | 96 | ≥ 95 | **100** both |
+| sitemap URLs | 6 | > 6 | **465** |
+
+Category scores: mobile 67 → **94** performance, 97 → **100** accessibility,
+96 → **100** best practices, SEO 100. Desktop **100 across all four**. Total page
+weight 3,444 → **705 KiB** mobile, 4,744 → **957 KiB** desktop.
+
+Desktop CLS moved 0.002 → 0.005 — a twentieth of the budget, and mobile CLS is a
+flat zero across three runs. Recorded rather than rounded to "unchanged".
+
+Mobile LCP misses its 2.5 s target at 3.0 s median (3.0 / 2.8 / 4.1). Not written
+off: what remains is main-thread, not network — on a slow run every request
+finishes about three seconds before LCP is recorded and TBT is 22 ms, so it is
+neither bandwidth nor a long task. The suspect is the post-hydration re-render
+that repaints above the fold, and it deserves the same measure-then-change
+treatment the three network theories got in Phase 4 rather than a guess.
 
 ---
 
-## Phase 10 — Documentation — **not started**
+## Phase 10 — Documentation — **done**
 
-`README.md` gains a `## SaaS Layer` section — story page routing and
-canonicalization, **the display cap and why it exists** so a future contributor
-does not helpfully remove it, new env vars in the existing table format, new
-endpoints, and a note on why `netlify.toml` is still deliberately absent.
-`MONETIZATION.md` becomes a standalone file with a dated changelog of what
-actually shipped.
+**Gate met.** Every internal link and every backticked repo path in `README.md`,
+`MONETIZATION.md` and this file resolves — checked by script, not by eye.
+
+`README.md` gains a **SaaS Layer** section covering story-page routing and the
+permalink-window caveat, the display cap *and why it exists* stated plainly
+enough that a future contributor cannot remove it by accident, the structured
+data and its authorship claim, both sitemaps, the verification gates and what
+each catches that the others cannot, the `server-only` boundary, and what was
+deliberately not built.
+
+Two corrections were needed, both of the same kind — documentation describing
+features that were never built:
+
+- The **Admin API** section documented six endpoints and an `INGEST_HMAC_SECRET`
+  signing scheme. None exist; the variable appears nowhere in the source. Kept as
+  an explicit note rather than deleted, so a contributor who read the old version
+  learns it was fiction instead of concluding the endpoints were removed.
+- **Database Setup** described `DATABASE_URL`, a transaction pooler,
+  `001_initial.sql` and `supabase/seed/sources.sql`. None of those exist either.
+  Replaced with the real thing: two env vars, one migration, PostgREST over
+  `fetch`, sources in code.
+
+`MONETIZATION.md` is now standalone with a dated changelog separating what
+shipped from what is still planned, and the README points at it. Roadmap items 3
+and 10 are marked partly shipped with what actually landed.

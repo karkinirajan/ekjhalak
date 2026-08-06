@@ -311,47 +311,144 @@ Corners are a flat, near-square scale: `--radius` is 6px and the derived `--radi
 
 ## Database Setup (Optional)
 
-By default the app runs entirely in-memory (no database needed). To enable persistent articles, translation queuing, and the subscribe feature:
+The app runs entirely without a database and is deployed that way today. The
+archive below is additive: unset the two variables and the site behaves exactly
+as it did before the table existed.
 
 1. Create a [Supabase](https://supabase.com) project.
-2. Run the migration in the SQL editor:
+2. Apply `supabase/migrations/20260806000000_articles.sql` — one table,
+   `public.articles`, with RLS enabled and no policies (a deliberate deny-all;
+   the writer uses the service role, which bypasses RLS, and nothing in the
+   browser reads it).
+3. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. The service-role key is a
+   server-only secret — never prefix it with `NEXT_PUBLIC_`.
 
-   ```sql
-   -- paste contents of supabase/migrations/001_initial.sql
-   ```
+There is no `DATABASE_URL`, no connection pooler and no `supabase/seed/`. Writes
+go over PostgREST with `fetch`, so there is no client library, no connection
+lifecycle, and no dependency added. Sources live in `lib/source-registry.ts`, in
+code, where they are reviewed like everything else.
 
-3. Seed sources:
+---
 
-   ```sql
-   -- paste contents of supabase/seed/sources.sql
-   ```
+## SaaS Layer
 
-4. Set `DATABASE_URL` to the **Transaction Pooler** URL (port `6543`) in your environment.
+### Story pages — `/story/[id]`
+
+Every story has an indexable, shareable permalink. `id` is the SHA-256
+fingerprint of the normalised article URL — the same identity the rest of the
+pipeline already means by "this story", not a second scheme.
+
+- **Resolution** goes through `lib/story-lookup.ts`, which is deliberately the
+  only seam. It reads the live cached feed today; when the archive is
+  provisioned, that one function changes and the pages do not.
+- **A permalink is currently only valid while its story is inside the
+  aggregation window.** Once a story ages out it 404s. That is exactly the
+  fragility the `articles` table exists to remove.
+- **404s are real 404s.** The loading UI sits at `app/(feed)/loading.tsx`, inside
+  a route group rather than at `app/` root, and that placement is load-bearing:
+  a `loading.tsx` wraps its segment in Suspense, Next.js flushes
+  that shell as HTTP 200 before the page renders, and `notFound()` underneath it
+  then produces the not-found UI under a 200 — a soft 404 that tells Google an
+  expired permalink is a live page. Measured: 200 with the file at `app/` root,
+  404 without. **Do not move it back.**
+- The page renders in the language the newsroom filed in, with `lang` on every
+  text node and the translation offered beneath it in its own.
+
+### The display cap — read this before changing it
+
+`lib/story-excerpt.ts` caps **every reader-facing surface** at 400 characters:
+page body, reading panel, `og:description`, `twitter:description` and the JSON-LD
+`description`. It breaks on a sentence boundary where one exists, including the
+Devanagari danda.
+
+**It is a copyright posture, not a design preference.** `lib/article-extractor.ts`
+deliberately keeps whichever is *longer* of the feed description and the article
+page's own body, because the model summarises better from more material — so this
+codebase sometimes holds something close to a full article. Holding it is fine.
+Rendering it is not, once pages are permalinked, indexed, and attached to a
+product. That is the exact fact pattern publishers litigate, and NYT, the
+Guardian and CNN are all in the active source list.
+
+Verified on the longest story in a live feed: **2,638 characters held, 392
+rendered.** Eight tests cover the module, one of which exists purely to fail if
+the cap is removed. A future contributor "helpfully" raising the number is
+trading a legal position for screen real estate on a page whose entire job is to
+send the reader to the publisher.
+
+The outbound **"Read the full story at {sourceName} →"** is a primary button
+directly beneath the headline, above both the excerpt and the image. It is not
+decoration and it does not belong in a footer.
+
+### Structured data
+
+`NewsArticle` JSON-LD per story page. `author` is the **originating newsroom**;
+EkJhalak is only `publisher`; `isBasedOn` points at the source article. That is
+both the accurate claim and the one that makes the schema safe to publish — it
+says in machine-readable form that someone else wrote this and we are pointing
+at it.
+
+### Sitemaps
+
+| Route | What it carries |
+| --- | --- |
+| `/sitemap.xml` | Static pages plus every story currently reachable (465 URLs; it was 6) |
+| `/news-sitemap.xml` | Google News extension — `news:publication`, `news:language`, `news:publication_date`, `news:title`; last 48 hours; capped at Google's 1,000 |
+
+`robots.txt` lists both. All `<loc>` values use the apex, `ekjhalak.news` —
+`www.` 301s to it, and publishing canonical URLs on a host you redirect away from
+is what `lib/site-url.ts` exists to prevent. That module is the single place the
+site's address is written down.
+
+### Verification gates
+
+The audit trail lives in `/audit`: `recon.md`, `baseline/`, `post-perf/`,
+`final/`. Each phase's gate is a command, not a claim.
+
+| Command | Checks |
+| --- | --- |
+| `pnpm verify` | lint → typecheck → 52 tests → contrast → build |
+| `pnpm check:feed [url]` | 19 checks on a live feed: markup and entity leakage, image coverage, summary lengths, the display cap, required fields, duplicate ids |
+| `pnpm check:seo [url]` | sitemaps, canonical host, `NewsArticle` completeness, real 404 on an expired permalink |
+| `pnpm check:a11y <url>` | axe-core over the hydrated page; exits non-zero on critical/serious |
+| `pnpm check:contrast` | WCAG AA on the authored token pairs |
+| `pnpm verify:live` | feed → a11y → SEO, in that order, against production |
+
+`check:contrast` and `check:a11y` are not redundant. The first reads token pairs
+as authored and cannot see a ratio broken at render time by an `opacity-*`
+utility; the second scans what the browser actually painted. That gap was a real
+six-node violation.
+
+### Server/client boundary
+
+Seven modules import `"server-only"` — the aggregator, summarizer, extractor, RSS
+adapter, article store, newsletter and story lookup. Importing any of them from a
+client component is a build error rather than a bundle that ships secret-reading
+code and model prompts to browsers.
+
+### Not built, deliberately
+
+- **No programmatic display ads.** They contradict the product's own identity and
+  its only real differentiation from every other Nepali aggregator.
+- **No `netlify.toml`.** The build config lives in the Netlify UI and a toml would
+  silently take it over. See the Netlify note under *Caching & Revalidation*.
+- **Auth, personalization and billing** are specified but unbuilt — both depend on
+  the archive being provisioned. See `dev.md`.
 
 ---
 
 ## Admin API
 
-Admin endpoints are protected by HMAC-SHA256. Set `INGEST_HMAC_SECRET`, then sign requests:
+**There is none.** Earlier revisions of this README documented
+`POST /api/admin/ingest/run`, `POST /api/admin/enrich/pump`, `GET /api/status`,
+`GET /api/feed`, `GET /api/story/[id]`, `GET /api/sources` and an
+`INGEST_HMAC_SECRET` signing scheme. None of them were ever built —
+`INGEST_HMAC_SECRET` appears nowhere in the source. The section is kept as this
+note rather than deleted outright, because a contributor who read the old version
+should find out it was fiction rather than conclude the endpoints were removed.
 
-```bash
-SECRET="your-secret"
-BODY='{"trigger":"manual"}'
-SIG=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | awk '{print $2}')
-curl -X POST https://ekjhalak.news/api/admin/ingest/run \
-  -H "Content-Type: application/json" \
-  -H "X-Hub-Signature-256: sha256=$SIG" \
-  -d "$BODY"
-```
-
-| Endpoint                      | Description                                  |
-| ----------------------------- | -------------------------------------------- |
-| `POST /api/admin/ingest/run`  | Trigger a manual ingest run                  |
-| `POST /api/admin/enrich/pump` | Process the translation queue                |
-| `GET /api/status`             | Health check (DB, last ingest, queue depth)  |
-| `GET /api/feed`               | Canonical public feed (replaces `/api/news`) |
-| `GET /api/story/[id]`         | Single article by UUID                       |
-| `GET /api/sources`            | Source list with live status                 |
+The real endpoints are in *API Endpoints* above. Cache invalidation is
+`POST /api/revalidate?secret=…`, called nightly by
+`netlify/functions/revalidate-feed.mts`.
 
 ---
 
@@ -367,14 +464,22 @@ GitHub Actions runs lint → type-check → build on every push to `main`:
 
 ## Next-Level Roadmap (10 Upgrades)
 
+Status as of 2026-08-06. Items 3 and 10 shipped in part during the phased
+hardening pass; see `dev.md` for what each phase's gate actually returned. The
+rest stand as written — they are legitimate future work, not backlog filler.
+
 1. Personal Briefing Profiles
 Users pick topics, regions, and reading depth (`60s`, `3m`, `deep read`) so the homepage feels intentional per user instead of one-size-fits-all.
 
 2. Morning/Evening Digest Delivery
 Ship polished digests to email, Telegram, and WhatsApp at user-selected times with timezone awareness and skip logic for low-news days.
 
-3. Trust Layer + Source Transparency
-Add visible source signals: source diversity score, first-published timestamp, correction notes, and direct-source prominence badges.
+3. Trust Layer + Source Transparency — **partly shipped**
+Every card shows its outlet and, where more than one newsroom carried the story,
+an "N outlets covering" count computed in the dedup pass. `alternateSourceIds[]`
+records *which* outlets, captured at the only moment that answer exists — it is
+server-side today and is the raw material for the coverage-comparison view.
+Still to do: diversity score, correction notes, direct-source badges.
 
 4. Story Clusters + Live Timelines
 Cluster related reports across sources into one evolving story timeline (first report, major updates, latest status).
@@ -394,110 +499,21 @@ Power users get advanced search, date/source filters, quote extraction, and expo
 9. Publisher + Institution Dashboard
 Offer a B2B dashboard for embassies, NGOs, media teams, and analysts with trend snapshots, media pulse, and briefing exports.
 
-10. Performance + Reliability Hardening
-Add uptime SLOs, feed quality dashboards, dead-source auto-quarantine, and synthetic checks for critical routes.
+10. Performance + Reliability Hardening — **partly shipped**
+`pnpm check:feed`, `check:seo`, `check:a11y` and `check:contrast` are the
+synthetic checks; a source that returns no usable text is flagged per-source in
+`/api/news` rather than silently vanishing. Mobile Lighthouse went 67 → 94 and
+desktop 77 → 100, with total page weight 3,444 → 705 KiB. Still to do: uptime
+SLOs, a dashboard, and automatic quarantine of a dead source.
 
 ---
 
-## Monetization Guide (Step-by-Step)
+## Monetization
 
-### Phase 1: Validate Demand (Weeks 1–3)
+See **[MONETIZATION.md](MONETIZATION.md)** — the plan, the pricing, the revenue
+mix, the KPIs and the 30-day checklist, plus a dated changelog of what has
+actually shipped against it.
 
-1. Define your paid value proposition
-`Save 30–60 minutes/day with clean, verified Nepal + world briefings.`
-
-2. Add a waitlist and interest capture
-Collect intent by user type: student, journalist, policy, business, diaspora.
-
-3. Run 20 short user interviews
-Focus on willingness-to-pay, not just feature requests.
-
-4. Pick one paid wedge
-Choose one entry product first: `Pro Alerts` or `Morning Digest Pro`.
-
-### Phase 2: Launch Revenue v1 (Weeks 4–8)
-
-1. Introduce 3 tiers
-`Free`: core feed
-`Pro Individual`: personalization, alerts, advanced filters
-`Pro Team`: shared dashboards, exports, scheduled reports
-
-2. Suggested starter pricing
-`Pro Individual`: $4.99–$7.99/month
-`Pro Team`: $29–$99/month depending on seats and report limits
-
-3. Add paywall boundaries
-Keep public trust features open; gate convenience and productivity features.
-
-4. Add Stripe checkout + billing portal
-Support monthly and annual plans (`2 months free` on annual).
-
-### Phase 3: Strengthen Retention (Months 3–4)
-
-1. Build habit loops
-Daily digest streaks, weekly recap, and save/read-later collections.
-
-2. Add usage-based nudges
-If user misses 3 days, send a lighter digest. If user is highly active, upsell Pro Team.
-
-3. Track activation metric
-Target: user reads at least 5 stories across 3 days in week 1.
-
-4. Reduce churn with exit-intent offers
-Offer pause plan, lower tier, or topic-only subscription before cancellation.
-
-### Phase 4: Expand B2B (Months 5+)
-
-1. Package institutional plans
-Policy desks, PR teams, NGOs, and research organizations.
-
-2. Add branded weekly intelligence reports
-White-label PDF/email reports with custom topic packs.
-
-3. Offer annual contracts
-Discount annual prepay to improve cash flow and retention.
-
-4. Build partner channels
-University journalism programs, think tanks, and diaspora associations.
-
----
-
-## Recommended Revenue Mix
-
-1. Subscriptions (primary)
-Individual and team recurring plans should drive most revenue.
-
-2. B2B intelligence reports (high margin)
-Recurring institutional briefings with SLA-backed delivery.
-
-3. Ethical sponsorships (secondary)
-Limited, clearly labeled sponsorship placements in digest emails only.
-
-4. Affiliate referrals (selective)
-Only for relevant tools and services with strict quality standards.
-
----
-
-## KPIs to Track Weekly
-
-1. Visitor → signup conversion
-2. Signup → activated user conversion
-3. Activated user → paid conversion
-4. Monthly churn rate
-5. ARPU (average revenue per user)
-6. LTV/CAC ratio
-7. Digest open and click-through rates
-8. Retention at day 7, 30, and 90
-
----
-
-## 30-Day Execution Checklist
-
-1. Add waitlist + pricing page
-2. Implement auth + Stripe billing
-3. Launch one premium feature (`Pro Digest` recommended)
-4. Add product analytics events (activation funnel)
-5. Run first 10 paid user pilots
-6. Publish one institutional plan page
-7. Ship weekly product update notes
-8. Review KPI dashboard every Monday
+It lives in its own file because it is a business document that changes on a
+different clock from this one, and because a README that a contributor reads to
+understand the code should not open onto a pricing table.
