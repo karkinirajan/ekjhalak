@@ -16,7 +16,7 @@ Status legend: **done** · **partial** · **blocked** · **not started**
 | --- | --- | --- | --- |
 | 0 | Recon | **done** | yes |
 | 1 | Automated audit baseline | **done** | yes |
-| 2 | Content persistence layer | **partial** — code merged, inert | no — not provisioned |
+| 2 | Content persistence layer | **partial** — project exists, 2 setup steps left | no — see development.md §1 |
 | 3 | Story pages + SEO remediation | **done** | yes |
 | 4 | Performance remediation | **partial** | CLS yes, LCP target no |
 | 5 | Accessibility remediation | **done** | yes |
@@ -110,10 +110,17 @@ recording `alternateSourceIds[]` — which outlets carried a story, not merely h
 many — captured at the only moment that answer exists.
 
 **Gate:** `SELECT count(*) FROM articles` grows monotonically across three
-aggregation runs 10+ minutes apart. **Not met, and cannot be run.** Supabase's
-free tier allows two active projects and both slots are occupied by unrelated
-projects; the operator chose to leave the archive off for now. Everything above is
-inert without `SUPABASE_URL` and verified not to run.
+aggregation runs 10+ minutes apart. **Not met yet — but no longer blocked.**
+
+A project now exists: `wfmurwsagrosxgcihbgw`, REST origin verified reachable. It
+is not visible to the Supabase MCP connection used here (different account), so
+the migration could not be applied from this side. Two operator steps remain —
+paste the migration into the SQL editor, set `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` on Netlify. Runbook and verification queries in
+`development.md` §1.
+
+Everything above stays inert until those two variables are set, and is verified
+not to run without them.
 
 **Unblocks:** Phase 3's permalink durability, Phase 7 entirely.
 
@@ -275,7 +282,8 @@ against a required 95.
 
 ## Phase 7 — Auth + personalization — **blocked**
 
-Blocked on one thing only: a free Supabase project slot. See `development.md` §1.
+Blocked on Phase 2 being wired up — the project exists, two setup steps remain.
+See `development.md` §1.
 
 Supabase Auth, followed sources/buckets, personalized homepage for logged-in
 users with the anonymous experience unchanged, reading history.
@@ -287,8 +295,8 @@ identity system.
 
 ## Phase 8 — Monetization infrastructure — **blocked**
 
-Blocked on Phase 7, which is blocked on Phase 2. One decision unblocks all three.
-See `development.md` §1 and `MONETIZATION.md`.
+Blocked on Phase 7, which is blocked on Phase 2 being wired up. See
+`development.md` §1 and `MONETIZATION.md`.
 
 Stripe Checkout + Billing Portal + signature-verified webhook, a paywall boundary
 at the story-page and digest level that never touches the free ad-free homepage

@@ -12,9 +12,9 @@ Ordered by what unblocks the most, not by effort.
 
 ## The short version
 
-Seven of eleven phases are done. Two are blocked on a single decision — a free
-Supabase project slot — and that one decision is worth more than everything else
-on this page combined. Two are partial for reasons recorded below.
+Seven of eleven phases are done. Two are partial for reasons recorded below, and
+two are waiting on the archive — for which a project now exists and two setup
+steps remain (§1). That is still the item worth more than everything else here.
 
 Nothing here is a known regression being parked as future work. Production is
 healthy: `/api/news` 200 at 16.4 s cold and 0.6 s warm, home 200 at 1.05 s, all
@@ -22,23 +22,84 @@ verification gates passing.
 
 ---
 
-## 1. Blocked on one decision — provision Supabase
+## 1. Archive — project provisioned, two steps left
 
-**This is the only item that unblocks other items.** Supabase's free tier allows
-two active projects; both slots are taken by unrelated projects (`finance-tracker`,
-`todos`). Pausing either is reversible and frees the slot.
+**Status changed 2026-08-06.** A Supabase project exists:
+`wfmurwsagrosxgcihbgw`, REST origin `https://wfmurwsagrosxgcihbgw.supabase.co`
+(verified reachable — `/rest/v1/` answers 401, which is what an unauthenticated
+request should get).
 
-Everything needed is already merged and inert:
+It is not visible to the Supabase MCP connection used here, which sees only
+`finance-tracker` and `todos` under org `pyzwffgwuelhcypzehhe` and returns "you do
+not have permission" for this ref. So the migration could not be applied from
+here, and the two remaining steps are the operator's.
 
-- `supabase/migrations/20260806000000_articles.sql` — one table, SHA-256
-  fingerprint as PK, `first_seen_at`, `last_seen_at`, nullable `canonical_id`
-  self-FK, RLS enabled with no policies as a deliberate deny-all.
-- `lib/article-store.ts` — PostgREST upsert over `fetch`, no new dependency,
-  bounded by a 3-second reserve taken *out of* the model stage so
-  `AGGREGATE_BUDGET_MS` stays the ceiling.
-- Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` and it starts writing.
+### Step 1 — apply the migration
 
-### What it unblocks, in order
+Supabase Dashboard → SQL Editor → paste
+`supabase/migrations/20260806000000_articles.sql` → Run.
+
+Safe to run more than once: every statement is `create … if not exists` or
+`comment on`, and the one `alter table` enables RLS, which is idempotent.
+
+### Step 2 — set two environment variables on Netlify
+
+Site configuration → Environment variables:
+
+```
+SUPABASE_URL               https://wfmurwsagrosxgcihbgw.supabase.co
+SUPABASE_SERVICE_ROLE_KEY  Dashboard → Project Settings → API → service_role
+```
+
+Then redeploy. `isStoreConfigured()` flips on and the aggregator starts writing;
+nothing else changes.
+
+**The service-role key bypasses RLS.** It is a server-only secret — never
+`NEXT_PUBLIC_`, never read from a client component. `lib/article-store.ts`
+imports `"server-only"`, so an accidental client import is a build error rather
+than a leaked key. Do not paste it into a chat or a commit.
+
+### On the Postgres credentials
+
+The direct connection details (`db.wfmurwsagrosxgcihbgw.supabase.co:5432`,
+`postgres`/`postgres`) are **not what the app uses**, and that is deliberate.
+
+`lib/article-store.ts` talks **PostgREST over HTTPS** — a stateless request per
+batch, no connection pool. On Netlify that is the right shape: functions are
+ephemeral and a direct 5432 connection per invocation would exhaust the
+connection limit under any real traffic. Supabase's own guidance is the same;
+their transaction pooler on 6543 exists for exactly this, and even that is a
+worse fit than plain HTTP here.
+
+Supabase's direct-connect host is also IPv6-only — confirmed, it resolves to
+`2406:da1a:…` with no A record — so a direct connection would depend on Netlify's
+functions having IPv6 egress.
+
+Those credentials are still worth having for `psql`, migrations and one-off
+queries. They are simply not what production reads.
+
+### Verify it is working
+
+```bash
+# 1. The table exists and is empty
+#    (Supabase SQL editor)
+select count(*) from articles;
+
+# 2. Force a regeneration, wait, count again — it should grow, then hold steady
+#    as the same stories are re-seen rather than re-inserted.
+curl -X POST "https://ekjhalak.news/api/revalidate?secret=$REVALIDATE_SECRET"
+
+# 3. first_seen_at must never move on a re-seen row. This is the one column that
+#    cannot be recovered from anywhere else, and the writer omits it from the
+#    upsert payload precisely so merge-duplicates cannot overwrite it.
+select id, first_seen_at, last_seen_at from articles order by first_seen_at limit 5;
+```
+
+The Phase 2 gate is `select count(*) from articles` growing monotonically across
+three aggregation runs spaced 10+ minutes apart, with `/api/news` unchanged in
+shape.
+
+### What this unblocks, in order
 
 **a. Permalinks stop expiring.** Today `/story/{id}` resolves against the live
 feed, so a shared link 404s once its story ages out of the aggregation window.
@@ -93,7 +154,7 @@ Phase 4's only unmet target, and deliberately not written off.
 **What remains is main-thread, not network.** The evidence, from
 `audit/post-perf/summary.md`:
 
-```
+```bash
 slow run (LCP 4.21 s):  27 requests, last ends 1.14 s, all images done by 0.62 s
 fast run (LCP 2.68 s):  30 requests, last ends 2.30 s, images at 1.03–2.07 s
 ```
@@ -164,7 +225,7 @@ sharp is the one that would matter — it processes untrusted publisher images �
 except that **it never runs in production**. `/_next/image` is served by Netlify
 Image CDN, verified from the response headers:
 
-```
+```bash
 server: Netlify
 netlify-vary: query=crop|fit|fm|format|h|height|position|q|quality|timestamp|url|w|width
 content-type: image/webp
