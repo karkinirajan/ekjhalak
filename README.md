@@ -8,6 +8,10 @@ It is bilingual by design. Native Nepali content from Setopati, Ratopati, and Na
 
 Live: [ekjhalak.news](https://ekjhalak.news)
 
+**Project state:** [`dev.md`](dev.md) tracks the eleven-phase hardening plan and
+what each verification gate returned. [`development.md`](development.md) is the
+remaining work, ordered by what unblocks the most.
+
 ---
 
 ## Architecture Overview

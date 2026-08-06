@@ -4,6 +4,12 @@ Working tracker for the solo-builder SaaS transformation. Each phase has a hard
 verification gate; a phase is not "done" because its code merged, it is done when
 its gate command returns the required result.
 
+**Final audit: 2026-08-06, against production deploy `ca9b65b`.** Seven of eleven
+phases done, two blocked on one decision, two partial for reasons recorded below.
+
+**What is left lives in [development.md](development.md)** — this file records
+what each gate returned, that one records the remaining work and why.
+
 Status legend: **done** · **partial** · **blocked** · **not started**
 
 | # | Phase | Status | Gate met |
@@ -68,9 +74,13 @@ gating whether work *starts* while the work it starts carries its own much large
 timeout. Fixed across `summarizer.ts`, `article-extractor.ts`, `rss-adapter.ts`
 and `aggregator.ts`; production went from `502 @ 40.2s` to `200 @ 16.5s` cold.
 
-**Still open:** D1 — `RESENT_API_KEY` is a typo for `RESEND_API_KEY` in the Netlify
-UI, so the newsletter is silently dead. Needs the operator's hands; also needs
-`ekjhalak.news` verified as a Resend sending domain or every send is rejected.
+**D1 — partly closed.** The production key is stored under the misspelled
+`RESENT_API_KEY`, so `RESEND_API_KEY` was undefined and every signup since the
+newsletter shipped was answered with "the list is not open yet" — the form
+worked, nothing was ever sent. `lib/newsletter.ts` now reads either spelling and
+warns once per process, so the newsletter works today. **The rename and the
+Resend sending-domain verification still need the operator**; the shim is meant
+to be deleted once the variable is renamed. See `development.md` §2.
 
 ---
 
@@ -191,9 +201,18 @@ feed cost LCP identically on mount (5.9 s) and on idle (3.9 s); only not fetchin
 until a reader asks (2.6 s) helped, because the cost was re-ranking the feed, not
 the request.
 
-**Remaining:** LCP is now main-thread, not network — on a slow run every request
-finishes by 1.14 s and images by 0.62 s, three seconds before LCP is recorded.
-Item 4 (bundle analysis) is not done.
+**Item 4 (bundle analysis) — done.** Nothing to cut, which is the useful result:
+every dependency is imported, there is no date library, no markdown library, one
+icon library with 19 icons, and no server code in any client chunk. Made
+permanent rather than left as a happy accident — seven modules now import
+`"server-only"`, so importing the aggregator or summarizer from a client
+component is a build error rather than a bundle shipping secrets and prompts.
+
+**Remaining:** mobile LCP is 3.0 s median against a 2.5 s target, and what is
+left is main-thread, not network — on a slow run every request finishes by 1.14 s
+and images by 0.62 s, three seconds before LCP is recorded. See
+`development.md` §3, which also records the three theories already tested so the
+fourth is not a guess.
 
 ---
 
@@ -256,6 +275,8 @@ against a required 95.
 
 ## Phase 7 — Auth + personalization — **blocked**
 
+Blocked on one thing only: a free Supabase project slot. See `development.md` §1.
+
 Supabase Auth, followed sources/buckets, personalized homepage for logged-in
 users with the anonymous experience unchanged, reading history.
 
@@ -265,6 +286,9 @@ identity system.
 ---
 
 ## Phase 8 — Monetization infrastructure — **blocked**
+
+Blocked on Phase 7, which is blocked on Phase 2. One decision unblocks all three.
+See `development.md` §1 and `MONETIZATION.md`.
 
 Stripe Checkout + Billing Portal + signature-verified webhook, a paywall boundary
 at the story-page and digest level that never touches the free ad-free homepage
@@ -324,8 +348,8 @@ features that were never built:
   signing scheme. None exist; the variable appears nowhere in the source. Kept as
   an explicit note rather than deleted, so a contributor who read the old version
   learns it was fiction instead of concluding the endpoints were removed.
-- **Database Setup** described `DATABASE_URL`, a transaction pooler,
-  `001_initial.sql` and `supabase/seed/sources.sql`. None of those exist either.
+- **Database Setup** described a `DATABASE_URL`, a transaction pooler, an
+  initial-migration file and a sources seed file — none of which exist either.
   Replaced with the real thing: two env vars, one migration, PostgREST over
   `fetch`, sources in code.
 

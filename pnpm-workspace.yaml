@@ -10,3 +10,25 @@ allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: true
+
+# Transitive advisories, pinned to their patched ranges. Neither package is
+# declared in package.json — both arrive through something else.
+#
+# postcss: four advisories (2 high, 2 moderate) reachable through `next`. Every
+# one is build-time and needs untrusted CSS as input, which this project never
+# has — it compiles its own globals.css and nothing else. Pinned regardless,
+# because it costs nothing.
+#
+# hono: ReDoS in CORS middleware, reachable only through the `shadcn` CLI, which
+# is a devDependency and never ships. Pinned so `pnpm audit` stays quiet enough
+# to be worth reading.
+#
+# sharp is deliberately NOT pinned. Its libvips advisory is the one that would
+# matter — it processes untrusted publisher images — except that it never runs in
+# production: `/_next/image` is served by Netlify Image CDN, verified by the
+# response headers (`server: Netlify`, `netlify-vary: query=crop|fit|fm|…`,
+# `content-type: image/webp`). Forcing a version Next.js 16.2.12 does not expect
+# would risk the local build for no production benefit.
+overrides:
+  postcss: ">=8.5.25"
+  hono: ">=4.12.34"
