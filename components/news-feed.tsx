@@ -164,18 +164,33 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
     }
 
     // The server sent enough to paint a complete page, not the whole pool —
-    // FEED_SSR_LIMIT, not FEED_PAGE_LIMIT. Fetch the rest now so the range and
-    // topic filters have everything to work over.
+    // FEED_SSR_LIMIT, not FEED_PAGE_LIMIT. The rest is fetched here so the range
+    // and topic filters have everything to work over.
     //
-    // Background, not `refreshing`: there is already a full page on screen and
-    // flashing a loading state over it would be a lie about what is happening.
-    // Safe to swap `items` wholesale here in a way it is not later — this runs
-    // on mount, before the reader has opened anything or scrolled anywhere.
-    if (initialData.items.length < limit) {
+    // On idle, not on mount. Fetched eagerly, this landed at 3.6s on a throttled
+    // mobile connection and replaced 60 items with 456, which re-runs every
+    // ranking selection and repaints the hero — and LCP is measured against the
+    // last such paint, so the fill was moving LCP out by two seconds to deliver
+    // stories the reader had not asked for yet. Measured: mobile LCP 5.9s with
+    // this eager.
+    //
+    // `requestIdleCallback` has no Safari support before 17, hence the timeout
+    // fallback; the 3s ceiling is there so a page that never goes idle still
+    // ends up with a full pool.
+    if (initialData.items.length >= limit) return;
+
+    const fill = () => {
       startTransition(() => {
         void fetchFeed(true);
       });
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(fill, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
     }
+    const id = window.setTimeout(fill, 2000);
+    return () => window.clearTimeout(id);
   }, [fetchFeed, initialData.items.length, limit]);
 
   // Background refresh, with two things it deliberately will not do.
@@ -205,28 +220,51 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
     };
   }, [fetchFeed, readerOpen]);
 
+  // Filtering is the one action that needs more than the first response holds.
+  // The idle fill above usually beats the reader to it, but a fast click on
+  // "This Month" should not show a thin month, so every filter asks for the
+  // pool first. The guard makes it at most one extra request: after the fill has
+  // landed `items` is already the full pool and this does nothing.
+  const ensureFullPool = useCallback(() => {
+    if (items.length >= limit) return;
+    void fetchFeed(true);
+  }, [fetchFeed, items.length, limit]);
+
   // Every filter change returns to page 1. Done in the setters rather than an
   // effect on [range, bucket, topic, search]: the reset is a direct consequence
   // of the reader's click, not something to re-derive after the fact.
-  const selectRange = useCallback((value: RangeKey) => {
-    setRange(value);
-    setPage(1);
-  }, []);
+  const selectRange = useCallback(
+    (value: RangeKey) => {
+      setRange(value);
+      setPage(1);
+      ensureFullPool();
+    },
+    [ensureFullPool],
+  );
 
-  const selectBucket = useCallback((value: BucketFilter) => {
-    setBucket(value);
-    setPage(1);
-  }, []);
+  const selectBucket = useCallback(
+    (value: BucketFilter) => {
+      setBucket(value);
+      setPage(1);
+      ensureFullPool();
+    },
+    [ensureFullPool],
+  );
 
-  const selectTopic = useCallback((value: TopicFilter) => {
-    setTopic(value);
-    setPage(1);
-  }, []);
+  const selectTopic = useCallback(
+    (value: TopicFilter) => {
+      setTopic(value);
+      setPage(1);
+      ensureFullPool();
+    },
+    [ensureFullPool],
+  );
 
   const applySearch = useCallback(() => {
     setSearch(searchDraft.trim());
     setPage(1);
-  }, [searchDraft]);
+    ensureFullPool();
+  }, [searchDraft, ensureFullPool]);
 
   const resetFilters = useCallback(() => {
     setTopic("all");
