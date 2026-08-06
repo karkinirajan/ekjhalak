@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { decodeEntities } from "./html-entities";
+import { decodeEntities, htmlToText } from "./html-entities";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -24,7 +24,19 @@ export function truncate(text: string, maxLength: number) {
  */
 export function sanitizeTextForDisplay(text: string): string {
   if (!text) return "";
-  return decodeEntities(text).replace(/\s+/g, " ").trim();
+  // Decode, then strip — and both, in that order.
+  //
+  // This used to decode only. That is correct for entities and silently wrong
+  // for markup: a publisher whose og:description holds `&lt;p&gt;` decoded to a
+  // real `<p>`, React escaped it on render as it should, and the reader saw the
+  // characters `<p>` printed in the middle of the story. Stripping first would
+  // not have helped, because at that point the tag was still escaped.
+  //
+  // Every reader-facing surface calls this, so it is the last line of defence
+  // rather than the only one — the extractor and the enrichment pass both clean
+  // their own output. A source that starts leaking markup tomorrow still cannot
+  // print a tag to a reader.
+  return htmlToText(decodeEntities(text));
 }
 
 /**

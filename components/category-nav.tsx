@@ -112,7 +112,14 @@ export function CategoryNav({
                 )}
               >
                 {topicLabel(id, language)}
-                <span className="ml-1.5 opacity-55 tabular-nums">
+                {/* Not `opacity-55`. Opacity multiplies whatever colour the
+                    pill resolved to, so a count that passed contrast as
+                    `--ink-muted` failed once dimmed — six nodes of serious
+                    axe `color-contrast`, invisible to scripts/check-contrast.mjs
+                    because that reads the token pairs as authored. A count is
+                    secondary to its label, so it is rendered one step down in
+                    the ink scale rather than faded. */}
+                <span className="ml-1.5 text-ink-muted tabular-nums">
                   {topicCounts[id]}
                 </span>
               </button>

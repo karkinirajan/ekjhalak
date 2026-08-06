@@ -113,7 +113,7 @@ inert without `SUPABASE_URL` and verified not to run.
 
 **Gate met**, verified against production:
 
-```
+```bash
 sitemap.xml <url> count      464   (must be > 6; was 6)
 NewsArticle JSON-LD            1   (must be >= 1)
 unknown /story/{id}          404   (a real 404, not a soft one)

@@ -140,8 +140,8 @@
   --surface: #121212;
   --raised: #1c1c1c;
   --ink: #f5f5f5;
-  --ink-soft: #c8c8c8;
-  --ink-muted: #8f8f8f;
+  --ink-soft: #d4d4d4;
+  --ink-muted: #a3a3a3;
   /* Rules sit one step closer to the stock than they did — #2a2a2a to #212121,
      #373737 to #2c2c2c. A border's job is to say where one thing stops and the
      next begins, and it has done that job the moment you can see it; anything
@@ -201,8 +201,8 @@
   --surface: #ffffff;
   --raised: #faf8f2;
   --ink: #111111;
-  --ink-soft: #525252;
-  --ink-muted: #737373;
+  --ink-soft: #454545;
+  --ink-muted: #5f5f5f;
   /* Mirror of the dark theme's step: #e5e5e5 to #ededed, #d6d6d6 to #e0e0e0.
      Paper needs the lighter touch of the two — a grey line on white reads
      heavier than the same distance from black does. */
@@ -388,7 +388,12 @@
   .eyebrow {
     font-family: var(--font-mono-custom), ui-monospace, monospace;
     font-size: 0.6875rem;
-    font-weight: 500;
+    /* 600, not 500. This class is the entire voice of the masthead and the
+       section nav — kickers, pills, timestamps, counters — and at 11px,
+       uppercase and letterspaced by 0.12em, 500 reads as thin rather than
+       quiet. The weight exists in both faces that render it (JetBrains Mono
+       and, for Nepali, Mukta), so nothing is synthesized. */
+    font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }

@@ -28,6 +28,16 @@ const NAMED: Record<string, string> = {
   emsp: " ",
   thinsp: " ",
   shy: "",
+  // Invisible joiners. These are not decoration in Devanagari — a zero-width
+  // joiner is what holds a conjunct together, so Nepali CMSes emit `&zwj;`
+  // inside ordinary words: `पद्&zwj;मा`, `नपुर्&zwj;याए`. Left unmapped they
+  // survive the decoder (unknown names are deliberately preserved, so `AT&T`
+  // works) and print literally in the middle of a headline.
+  zwj: "‍",
+  zwnj: "‌",
+  lrm: "‎",
+  rlm: "‏",
+  wj: "⁠",
   ndash: "-",
   mdash: " - ",
   hellip: "…",

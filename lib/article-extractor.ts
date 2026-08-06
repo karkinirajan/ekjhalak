@@ -35,6 +35,18 @@ export type ExtractionSource =
 export interface ExtractionResult {
   text: string;
   via: ExtractionSource;
+  /**
+   * The article page's own lead image, when the feed did not carry one.
+   *
+   * Half the feed arrived without a photograph — ten of twenty-two sources at
+   * exactly zero, including Kathmandu Post, DW, Al Jazeera and Onlinekhabar —
+   * not because those newsrooms publish without pictures but because their RSS
+   * omits the media fields `lib/rss-adapter.ts` knows how to read. The page
+   * always has one, in og:image, and this pass is already fetching the page.
+   *
+   * Null when the page declares none, which is then genuinely none.
+   */
+  imageUrl: string | null;
 }
 
 // ── Cache ───────────────────────────────────────────────────────────────────
@@ -89,7 +101,14 @@ function metaContent(html: string, attr: string, value: string): string {
   for (const pattern of patterns) {
     const match = html.match(pattern);
     if (match?.[1]) {
-      const text = decodeEntities(match[1]).replace(/\s+/g, " ").trim();
+      // Decode first, then strip — in that order, and both are needed.
+      //
+      // A meta `content` attribute cannot contain raw markup, so publishers who
+      // build og:description from article HTML ship it escaped: the attribute
+      // holds `&lt;p&gt;काठमाडौं।…`. Decoding alone turns that into a real `<p>`
+      // and prints it to the reader, which is exactly what DC Nepal's cards were
+      // doing. htmlToText afterwards removes the tag the decode revealed.
+      const text = htmlToText(decodeEntities(match[1]));
       if (text) return text;
     }
   }
@@ -164,7 +183,36 @@ function paragraphText(html: string): string {
  * to be about, so it wins whenever it is substantial enough to summarise, and
  * paragraphs are the last resort rather than the default.
  */
-function bestCandidate(html: string): ExtractionResult | null {
+/**
+ * The page's declared lead image.
+ *
+ * og:image first because it is what the publisher chose for sharing — the same
+ * picture their own card shows — then twitter:image, then the schema.org
+ * `image`. Relative and protocol-relative URLs are resolved against the article
+ * URL; anything that is still not an absolute https URL afterwards is dropped
+ * rather than rendered as a broken frame.
+ */
+function pageImage(html: string, pageUrl: string): string | null {
+  const candidates = [
+    metaContent(html, "property", "og:image"),
+    metaContent(html, "property", "og:image:url"),
+    metaContent(html, "name", "twitter:image"),
+    metaContent(html, "name", "twitter:image:src"),
+  ];
+
+  for (const raw of candidates) {
+    if (!raw) continue;
+    try {
+      const resolved = new URL(raw, pageUrl);
+      if (resolved.protocol === "https:") return resolved.toString();
+    } catch {
+      // Not a URL at all — try the next candidate.
+    }
+  }
+  return null;
+}
+
+function bestCandidate(html: string): Omit<ExtractionResult, "imageUrl"> | null {
   const ordered: Array<[ExtractionSource, string]> = [
     ["jsonld", jsonLdBody(html)],
     ["og", metaContent(html, "property", "og:description")],
@@ -223,7 +271,25 @@ async function fetchArticleHtml(
         "accept-language": "ne,en;q=0.8",
       },
       redirect: "follow",
+      // Non-negotiable. Without it `res.text()` below is unbounded, which is the
+      // bug class that took production down twice — see audit/recon.md, D3.
       signal: AbortSignal.timeout(fetchTimeout(deadline)),
+      // Declared because it is correct, not because it currently does anything.
+      //
+      // This stage runs inside `getCachedFeed`, which is `unstable_cache`, and
+      // Next.js does not populate the Data Cache from fetches nested inside one —
+      // the outer entry is what gets cached, not the calls that produced it.
+      // Measured: `.next/cache/fetch-cache` holds a single entry after several
+      // passes fetching hundreds of article pages, with and without the abort
+      // signal above. The signal was the first suspect and was ruled out.
+      //
+      // So the in-process Map is the only cache this stage has, and a cold
+      // serverless invocation starts empty. Extraction coverage is therefore
+      // bounded by what one pass can fetch from the network inside its slice of
+      // a 15-second budget, which is why a share of the feed still carries the
+      // publisher's two-line teaser. Moving that off the request path is Phase 2's
+      // job and is blocked on the archive being provisioned.
+      next: { revalidate: 21_600 },
     });
   } catch {
     return null;
@@ -250,9 +316,18 @@ export async function extractArticleText(
 
   const html = await fetchArticleHtml(url, deadline);
   const found = html ? bestCandidate(html) : null;
-  const result = found
-    ? { ...found, text: restoreSentenceSpacing(found.text) }
-    : null;
+  // The image is worth keeping even when the body is not: a story whose page
+  // yields no summarisable text still has a photograph, and the card still has
+  // a frame to fill.
+  const imageUrl = html ? pageImage(html, url) : null;
+  const result =
+    found || imageUrl
+      ? {
+          text: found ? restoreSentenceSpacing(found.text) : "",
+          via: found?.via ?? ("og" as ExtractionSource),
+          imageUrl,
+        }
+      : null;
   remember(url, result);
   return result;
 }

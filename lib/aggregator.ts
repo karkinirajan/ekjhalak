@@ -8,6 +8,7 @@ import { ACTIVE_SOURCES } from "./source-registry";
 import { fetchRssFeed } from "./rss-adapter";
 import { normalizeStory } from "./feed-normalizer";
 import { deduplicate } from "./deduplicator";
+import { decodeEntities, htmlToText } from "./html-entities";
 import { scoreStory } from "./ranking";
 import { extractMany, type ExtractionResult } from "./article-extractor";
 import {
@@ -354,7 +355,16 @@ async function enrichFeed(
   for (const item of ranked) {
     const found = extracted.get(item.sourceUrl);
     if (!found) continue;
-    if (looksLikeBoilerplate(found.text)) continue;
+
+    // The photograph, where the feed shipped none. Ten of the twenty-two
+    // sources carry no media fields in their RSS at all — Kathmandu Post, DW,
+    // Al Jazeera and Onlinekhabar among them — which left half the grid on
+    // generated cover art while the newsroom's own picture sat in og:image on a
+    // page this pass had already fetched. The feed's own image still wins when
+    // it has one: it is the publisher's choice for that item specifically.
+    if (!item.imageUrl && found.imageUrl) item.imageUrl = found.imageUrl;
+
+    if (!found.text || looksLikeBoilerplate(found.text)) continue;
     if (found.text.length > item.summary.length) item.summary = found.text;
   }
 
@@ -462,12 +472,29 @@ async function enrichFeed(
  * *translated* headline comes from the model, because there is no other source
  * for one.
  */
+/**
+ * Model output is not trusted text.
+ *
+ * The feed parser and the article extractor both clean what they read, but
+ * whatever the model returns went straight into the item — and the model is
+ * summarising HTML-derived prose, so it echoes what it was shown. A live feed
+ * had `&nbsp;` sitting inside an NDTV summary that no publisher had put there.
+ *
+ * Cleaned here rather than only at render, so the API payload and anything that
+ * ever reads it are clean too.
+ */
 function applyEnrichment(item: NewsItem, result: EnrichResult): void {
-  item.summary = result.summary;
-  if (result.titleTranslated) item.titleTranslated = result.titleTranslated;
-  if (result.summaryTranslated) {
-    item.summaryTranslated = result.summaryTranslated;
-  }
+  item.summary = cleanModelText(result.summary);
+  const title = cleanModelText(result.titleTranslated ?? "");
+  if (title) item.titleTranslated = title;
+  const summary = cleanModelText(result.summaryTranslated ?? "");
+  if (summary) item.summaryTranslated = summary;
+}
+
+/** Decode first so escaped markup is revealed, then strip what it revealed. */
+function cleanModelText(text: string): string {
+  if (!text) return "";
+  return htmlToText(decodeEntities(text));
 }
 
 export const getCachedFeed = unstable_cache(

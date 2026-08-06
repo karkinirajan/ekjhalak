@@ -68,3 +68,25 @@ test("htmlToText keeps word boundaries across block tags", () => {
   assert.equal(htmlToText("<p>One</p><p>Two</p>"), "One Two");
   assert.equal(htmlToText("One<br>Two"), "One Two");
 });
+
+// ── Regressions found in a live feed, 2026-08-06 ─────────────────────────────
+
+test("zero-width joiners decode instead of printing literally", () => {
+    // A ZWJ is what holds a Devanagari conjunct together, so Nepali CMSes emit
+    // it mid-word. Unmapped it survived the decoder — unknown names are
+    // deliberately preserved so `AT&T` works — and printed as "&zwj;" inside
+    // headlines from Nepal Khabar and Thaha Khabar.
+    assert.equal(decodeEntities("पद्&zwj;मा"), "पद्‍मा");
+    assert.equal(decodeEntities("नपुर्&zwj;याए"), "नपुर्‍याए");
+    assert.equal(decodeEntities("a&zwnj;b"), "a‌b");
+    assert.ok(!decodeEntities("पद्&zwj;मा").includes("&zwj;"));
+});
+
+test("escaped markup in an attribute does not survive as a tag", () => {
+    // DC Nepal builds og:description from article HTML, so the meta attribute
+    // holds `&lt;p&gt;…`. Decoding alone turns that into a real <p> and prints
+    // it; the extractor now decodes and then strips, which is this order.
+    const attribute = "&lt;p&gt;काठमाडौं। सशस्त्र प्रहरी&lt;/p&gt;";
+    assert.equal(htmlToText(decodeEntities(attribute)), "काठमाडौं। सशस्त्र प्रहरी");
+    assert.ok(!htmlToText(decodeEntities(attribute)).includes("<p>"));
+});

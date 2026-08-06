@@ -15,7 +15,10 @@
     "test": "node --import tsx --test lib/*.test.ts",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:a11y": "node scripts/axe-scan.mjs",
-    "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run check:contrast && pnpm run build"
+    "check:feed": "node scripts/check-feed-quality.mjs",
+    "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run check:contrast && pnpm run build",
+    "verify:live": "pnpm run check:feed && pnpm run check:a11y https://ekjhalak.news/ && pnpm run check:seo",
+    "check:seo": "node scripts/check-seo.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

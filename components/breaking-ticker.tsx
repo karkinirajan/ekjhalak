@@ -61,7 +61,7 @@ export function BreakingTicker({ items }: BreakingTickerProps) {
         <span className="eyebrow font-semibold">{t.liveLabel}</span>
         {clock && (
           <span
-            className="eyebrow hidden tabular-nums opacity-90 sm:inline"
+            className="eyebrow hidden tabular-nums sm:inline"
             suppressHydrationWarning
           >
             {clock} NPT
