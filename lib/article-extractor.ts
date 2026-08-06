@@ -343,7 +343,20 @@ export async function extractArticleText(
 export async function extractMany(
   urls: string[],
   deadline: number,
-  concurrency = 4,
+  // 8, raised from 4, and the ceiling is politeness rather than throughput.
+  //
+  // This stage is what turns a two-line teaser into a brief and what recovers a
+  // photograph for the ten sources whose RSS carries none — verified: Kathmandu
+  // Post, DW and Al Jazeera ship no media field of any kind, so the article page
+  // is the only route. It is bounded by wall-clock, not by items, so the number
+  // of stories it reaches is directly how many fetches fit in its slice. From
+  // Netlify's region those origins are slow enough that 4 workers covered 60% of
+  // the feed where the same code covers 79% from a machine in Nepal.
+  //
+  // Eight concurrent fetches spread across twenty-odd hosts is well under one
+  // per origin at a time. The URLs arrive ranked, so if the budget runs out it
+  // runs out on the tail rather than on the front page.
+  concurrency = 8,
 ): Promise<Map<string, ExtractionResult>> {
   const out = new Map<string, ExtractionResult>();
   const pending = urls.filter((url) => {
