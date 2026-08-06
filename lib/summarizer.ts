@@ -326,9 +326,25 @@ function buildRequestBody(batch: EnrichInput[]) {
  * for "this model answered". An empty array is a real answer — a model that
  * returns nothing usable should not send the caller round the chain again.
  */
+/**
+ * How long this one model call may take, given the run it belongs to.
+ *
+ * The run's deadline is checked before a batch is picked up, which decides
+ * whether to *start* a call; this decides how long the one it started may run.
+ * Without it a batch claimed with two seconds left on the clock still gets the
+ * full 45-second request timeout, and three concurrent workers turn a nine
+ * second enrichment slice into a thirty-two second one — measured, and the
+ * reason the feed endpoint was crossing Netlify's 30-second request limit and
+ * returning 502 to whichever reader happened to arrive on a stale cache.
+ */
+function requestTimeout(deadline: number): number {
+  return Math.max(1, Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now()));
+}
+
 async function callModel(
   model: string,
   batch: EnrichInput[],
+  deadline: number,
 ): Promise<ModelReply[] | null> {
   let res: Response;
   try {
@@ -341,7 +357,7 @@ async function callModel(
           "x-goog-api-key": API_KEY as string,
         },
         body: JSON.stringify(buildRequestBody(batch)),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(requestTimeout(deadline)),
       },
     );
   } catch {
@@ -392,10 +408,17 @@ async function callModel(
 }
 
 /** Walks the model chain until one answers. */
-async function enrichBatch(batch: EnrichInput[]): Promise<ModelReply[]> {
+async function enrichBatch(
+  batch: EnrichInput[],
+  deadline: number,
+): Promise<ModelReply[]> {
   for (const model of modelChain()) {
     if (isCoolingDown(model)) continue;
-    const replies = await callModel(model, batch);
+    // Walking the chain is itself work: five models that each take their turn
+    // timing out would spend five request timeouts on one batch. Stop at the
+    // deadline and let the caller keep what it already had.
+    if (Date.now() >= deadline) break;
+    const replies = await callModel(model, batch, deadline);
     if (replies) return replies;
   }
   return [];
@@ -475,7 +498,7 @@ export async function enrichStories(
 
       let replies: ModelReply[];
       try {
-        replies = await enrichBatch(batch);
+        replies = await enrichBatch(batch, deadline);
       } catch (err) {
         console.warn("[enrich] batch failed:", err);
         continue;

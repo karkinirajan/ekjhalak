@@ -195,7 +195,25 @@ function bestCandidate(html: string): ExtractionResult | null {
 
 // ── Fetch ───────────────────────────────────────────────────────────────────
 
-async function fetchArticleHtml(url: string): Promise<string | null> {
+/**
+ * How long this one fetch may take, given the pass it belongs to.
+ *
+ * Without a deadline it is the flat per-request timeout. With one, it is
+ * whichever is shorter — because a worker that starts a fetch a millisecond
+ * before the budget expires would otherwise run a further twelve seconds past
+ * it, and four such workers turn a six-second extraction slice into an
+ * eighteen-second one. The deadline check in extractMany decides whether to
+ * *start* a fetch; this decides how long the one it started may run.
+ */
+function fetchTimeout(deadline?: number): number {
+  if (deadline === undefined) return FETCH_TIMEOUT_MS;
+  return Math.max(1, Math.min(FETCH_TIMEOUT_MS, deadline - Date.now()));
+}
+
+async function fetchArticleHtml(
+  url: string,
+  deadline?: number,
+): Promise<string | null> {
   let res: Response;
   try {
     res = await fetch(url, {
@@ -205,7 +223,7 @@ async function fetchArticleHtml(url: string): Promise<string | null> {
         "accept-language": "ne,en;q=0.8",
       },
       redirect: "follow",
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      signal: AbortSignal.timeout(fetchTimeout(deadline)),
     });
   } catch {
     return null;
@@ -226,10 +244,11 @@ async function fetchArticleHtml(url: string): Promise<string | null> {
 /** Body text for one article, or null. Never throws. */
 export async function extractArticleText(
   url: string,
+  deadline?: number,
 ): Promise<ExtractionResult | null> {
   if (cache.has(url)) return cache.get(url) ?? null;
 
-  const html = await fetchArticleHtml(url);
+  const html = await fetchArticleHtml(url, deadline);
   const found = html ? bestCandidate(html) : null;
   const result = found
     ? { ...found, text: restoreSentenceSpacing(found.text) }
@@ -263,7 +282,7 @@ export async function extractMany(
   async function worker() {
     while (cursor < pending.length && Date.now() < deadline) {
       const url = pending[cursor++];
-      const result = await extractArticleText(url);
+      const result = await extractArticleText(url, deadline);
       if (result) out.set(url, result);
     }
   }

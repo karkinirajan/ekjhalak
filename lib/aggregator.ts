@@ -9,7 +9,7 @@ import { fetchRssFeed } from "./rss-adapter";
 import { normalizeStory } from "./feed-normalizer";
 import { deduplicate } from "./deduplicator";
 import { scoreStory } from "./ranking";
-import { extractMany } from "./article-extractor";
+import { extractMany, type ExtractionResult } from "./article-extractor";
 import {
   enrichStories,
   isEnrichmentConfigured,
@@ -93,6 +93,10 @@ async function fetchOneSource(source: Source): Promise<SourceResult> {
 
 async function aggregateAllSources(): Promise<AggregatedFeed> {
   const fetchedAt = Date.now();
+  // One clock for the whole pass. Both enrichment stages read what is left of
+  // it rather than starting their own, so RSS running slow shortens enrichment
+  // instead of delaying the response past the point where Netlify gives up.
+  const deadline = fetchedAt + AGGREGATE_BUDGET_MS;
 
   const sourcesToFetch = [...ACTIVE_SOURCES].sort(
     (a, b) => b.priority - a.priority,
@@ -115,8 +119,21 @@ async function aggregateAllSources(): Promise<AggregatedFeed> {
   allItems.sort((a, b) => b.publishedTimestamp - a.publishedTimestamp);
   const deduped = deduplicate(allItems);
 
-  const items = await enrichFeed(deduped, fetchedAt);
+  const rssMs = Date.now() - fetchedAt;
+
+  const items = await enrichFeed(deduped, fetchedAt, deadline);
   annotateDescriptionCoverage(sourceStatuses, items);
+
+  // Reported per stage, not as one number. "The pass took 40s" is not
+  // actionable — every stage has its own timeout and its own remedy, and the
+  // one that overran is the only one worth touching.
+  const elapsed = Date.now() - fetchedAt;
+  if (elapsed > AGGREGATE_BUDGET_MS + BUDGET_GRACE_MS) {
+    console.warn(
+      `[aggregator] pass took ${elapsed}ms, over the ${AGGREGATE_BUDGET_MS}ms budget ` +
+        `(rss ${rssMs}ms, enrich ${elapsed - rssMs}ms)`,
+    );
+  }
 
   return { items, sourceStatuses, fetchedAt };
 }
@@ -152,13 +169,64 @@ function annotateDescriptionCoverage(
 }
 
 /**
+ * The ceiling on one whole regeneration, enrichment included.
+ *
+ * This is the number that keeps the feed endpoint answering. `getCachedFeed`
+ * revalidates every five minutes, and Next.js resolves that on the request path:
+ * whichever reader arrives first after the entry goes stale pays for the entire
+ * pass while everyone behind them waits. Netlify gives up on a request at 30
+ * seconds and returns a 502, so a pass that overruns does not merely feel slow —
+ * it hands one reader every five minutes a broken page.
+ *
+ * The two stage budgets below used to be independent and additive: 15 seconds of
+ * page extraction plus 25 seconds at the model is 40 seconds before a single RSS
+ * byte is fetched. Nothing bounded the sum, and nothing had to — while
+ * GEMINI_MODEL was pinned to an exhausted model every call 429'd instantly and
+ * the model stage returned in milliseconds. Unpinning it made the fallback chain
+ * work, the stage started spending what it was given, and the pass crossed the
+ * limit for the first time.
+ *
+ * So the stage budgets are now caps *within* this deadline rather than
+ * allowances added to it, and every network call inside them clamps its own
+ * timeout to what is left — a batch claimed with two seconds on the clock does
+ * not get the full 45-second request timeout.
+ *
+ * 15 seconds against a 30-second platform limit is deliberately conservative.
+ * The pass reliably spends its whole budget, so this number *is* the cold-start
+ * latency a reader sees, and the margin above it is what absorbs a slow cold
+ * start underneath. Spending less time enriching costs coverage, not
+ * correctness: whatever this pass does not reach keeps the publisher's own text
+ * and is picked up by the next one.
+ */
+const AGGREGATE_BUDGET_MS = Number.parseInt(
+  process.env.AGGREGATE_BUDGET_MS ?? "15000",
+  10,
+);
+
+/**
+ * How far past the budget the pass may land before it is worth logging.
+ *
+ * The pass is *expected* to reach its budget — that is what a deadline is for —
+ * so warning at the budget itself would fire on every healthy cold start and
+ * teach whoever reads these logs to ignore them.
+ */
+const BUDGET_GRACE_MS = 2_000;
+
+/**
+ * The share of whatever time is left after RSS that page extraction may take.
+ *
+ * Extraction feeds the model — text pulled off the article page is what the
+ * summariser works from — so starving it makes the model stage worse, not
+ * faster. But it is spent on two dozen other people's web servers and is the
+ * more likely of the two to stall, so it gets the smaller half.
+ */
+const EXTRACT_SHARE = 0.4;
+
+/**
  * How long one regeneration may spend at the model.
  *
- * The old value was 12 seconds, chosen against a since-raised 60-second Vercel
- * limit and against a pipeline that made one request per story. This pass makes
- * one request per ten stories and has translation to do as well, so the ceiling
- * moved and the work it buys moved further: 12 seconds now covers several
- * batches rather than a handful of individual stories.
+ * A cap, not an allowance: the pass takes the lesser of this and whatever
+ * remains of AGGREGATE_BUDGET_MS after RSS and extraction have had their turn.
  *
  * Whatever the budget does not reach keeps its cached enrichment or its
  * deterministic fallback, and the next regeneration picks up where this one
@@ -181,19 +249,34 @@ const ENRICH_BUDGET_MS = Number.parseInt(
 /**
  * Wall-clock for the article-page pass that runs before the model does.
  *
- * Separate from the model budget because it is spent on other people's servers,
- * not on quota. Whatever it does not reach this time is cached-by-absence
- * nowhere — the next regeneration simply starts again from the same ranked
- * order, so the front page converges first.
+ * A cap, like ENRICH_BUDGET_MS: the pass takes the lesser of this and its share
+ * of what remains of AGGREGATE_BUDGET_MS. Whatever it does not reach this time
+ * is cached-by-absence nowhere — the next regeneration simply starts again from
+ * the same ranked order, so the front page converges first.
  */
 const EXTRACT_BUDGET_MS = Number.parseInt(
   process.env.EXTRACT_BUDGET_MS ?? "15000",
   10,
 );
 
+/**
+ * A stage's slice of the pass, in milliseconds, floored at zero.
+ *
+ * Returning 0 rather than a negative number matters: both stages take a
+ * deadline as an absolute timestamp, and `Date.now() + -4000` is a deadline four
+ * seconds in the past, which reads to them as "one item then stop" rather than
+ * "skip". Callers check for 0 and skip the stage outright.
+ */
+function slice(deadline: number, cap: number, share = 1): number {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) return 0;
+  return Math.max(0, Math.min(cap, Math.floor(remaining * share)));
+}
+
 async function enrichFeed(
   items: NewsItem[],
   now: number,
+  deadline: number,
 ): Promise<NewsItem[]> {
   const ranked = [...items].sort(
     (a, b) => scoreStory(b, now) - scoreStory(a, now),
@@ -207,10 +290,20 @@ async function enrichFeed(
   // against feed blurbs of 130–250. Where the page has more to say than the
   // feed, the page wins: it is the same newsroom's text either way, and the
   // longer one is the one they actually wrote.
-  const extracted = await extractMany(
-    ranked.map((item) => item.sourceUrl),
-    Date.now() + EXTRACT_BUDGET_MS,
-  );
+  const extractMs = slice(deadline, EXTRACT_BUDGET_MS, EXTRACT_SHARE);
+  const extractStart = Date.now();
+  const extracted = extractMs
+    ? await extractMany(
+        ranked.map((item) => item.sourceUrl),
+        Date.now() + extractMs,
+      )
+    : new Map<string, ExtractionResult>();
+  const extractElapsed = Date.now() - extractStart;
+  if (extractElapsed > extractMs + 1000) {
+    console.warn(
+      `[aggregator] extraction took ${extractElapsed}ms against a ${extractMs}ms slice`,
+    );
+  }
 
   for (const item of ranked) {
     const found = extracted.get(item.sourceUrl);
@@ -262,11 +355,16 @@ async function enrichFeed(
   }
 
   // ── 3. Summarize and translate what is left ───────────────────────────────
-  if (pending.length > 0 && isEnrichmentConfigured()) {
+  //
+  // Takes whatever the pass has left after extraction rather than a fixed
+  // allowance, so a slow extraction stage costs the model its time instead of
+  // pushing the whole regeneration past the platform's request limit.
+  const enrichMs = slice(deadline, ENRICH_BUDGET_MS);
+  if (pending.length > 0 && enrichMs > 0 && isEnrichmentConfigured()) {
     try {
       const results = await enrichStories(
         pending.map((entry) => entry.input),
-        Date.now() + ENRICH_BUDGET_MS,
+        Date.now() + enrichMs,
       );
 
       for (const entry of pending) {

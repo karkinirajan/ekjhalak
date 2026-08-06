@@ -232,7 +232,7 @@ On-demand cache invalidation. Busts the `"news-feed"` tag immediately — next r
 
 Both verbs fail closed: `GET` expects `Authorization: Bearer $CRON_SECRET`, `POST` expects `?secret=$REVALIDATE_SECRET`, and a missing secret is a 401 in production rather than an open cache-purge endpoint.
 
-Set `REVALIDATE_SECRET` in Vercel environment variables. Without it, the endpoint is open (fine for dev/staging).
+Set `REVALIDATE_SECRET` on the Netlify site (Site configuration → Environment variables). Without it the route returns 401 in production rather than accepting anyone; it is open in dev/staging.
 
 ---
 
@@ -268,8 +268,9 @@ A translation that comes back in the wrong script is discarded rather than shown
 | `GEMINI_MODEL`         | No          | built-in 5-model chain      | Pins a model, or a comma-separated list      |
 | `GEMINI_BATCH_SIZE`    | No          | `10`                        | Stories per request (1–40)                   |
 | `GEMINI_CONCURRENCY`   | No          | `3`                         | Requests in flight at once (1–8)             |
-| `GEMINI_BUDGET_MS`     | No          | `25000`                     | Wall-clock one regeneration may spend        |
-| `EXTRACT_BUDGET_MS`    | No          | `15000`                     | Wall-clock for the article-page pass         |
+| `AGGREGATE_BUDGET_MS`  | No          | `15000`                     | Ceiling on one whole regeneration            |
+| `GEMINI_BUDGET_MS`     | No          | `25000`                     | Cap on the model pass, within the above      |
+| `EXTRACT_BUDGET_MS`    | No          | `15000`                     | Cap on the article-page pass, within the above |
 | `REVALIDATE_SECRET`    | Production  | —                           | Protects POST /api/revalidate                |
 | `NEWSLETTER_SECRET`    | For opt-in  | —                           | Signs confirmation links (16+ chars)         |
 | `RESEND_API_KEY`       | For email   | —                           | Set by the Resend Marketplace integration    |
@@ -289,13 +290,13 @@ A blocking inline script in `<head>` sets `data-cfn-theme` on the root element b
 
 The Nepali script uses `Mukta` — the face Kantipur uses — loaded via `next/font/google`. Apply with the `.font-np` utility class.
 
-Corners are a flat, near-square scale: `--radius` is 4px and the derived `--radius-sm` … `--radius-3xl` steps run 2px to 10px as absolute values rather than multiples. Anything that must be a circle asks for `rounded-full`, which the scale does not touch.
+Corners are a flat, near-square scale: `--radius` is 6px and the derived `--radius-sm` … `--radius-3xl` steps run 4px to 14px as absolute values rather than multiples. Anything that must be a circle asks for `rounded-full`, which the scale does not touch.
 
 ---
 
 ## Production Notes
 
-- **Cold start:** First request after a deploy triggers parallel fetching of all active sources (~3–5s). Subsequent requests within 10 minutes are cache hits.
+- **Cold start:** The feed cache revalidates every 5 minutes and Next.js resolves that on the request path, so whichever reader arrives first after it goes stale pays for the whole regeneration — RSS, article extraction and the model pass. `AGGREGATE_BUDGET_MS` (15s) bounds that so it cannot cross Netlify's 30-second request limit; measured at 15.0s cold, 0.01s warm. Every network call inside the pass clamps its own timeout to the time remaining, which is what makes the bound hold.
 - **Image optimization:** `next/image` is configured with `remotePatterns` for all active source domains. Unknown image hosts fall back gracefully (no image shown).
 - **Error isolation:** A source that times out, returns HTTP 4xx/5xx, or emits malformed XML produces a `SourceStatusMeta` with `ok: false`. The rest of the feed is unaffected.
 - **Cache invalidation:** To force an immediate refresh (e.g. after adding a source), delete `.next/cache` and restart the server, or call `revalidateTag("news-feed")` from a protected admin route.
