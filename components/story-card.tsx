@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Newspaper } from "lucide-react";
 import { StoryImage } from "@/components/story-image";
 import { SourceMark, TopicPill } from "@/components/topic-pill";
@@ -15,6 +16,30 @@ import {
 import type { NewsItem } from "@/lib/news-pipeline";
 
 export type StoryVariant = "grid" | "compact";
+
+/**
+ * A headline that is a real link and also opens the reading panel.
+ *
+ * These used to be `<button onClick>`, which meant the fastest path into a
+ * story existed only for someone holding a mouse and running JavaScript: no
+ * href to crawl, nothing to copy as a share link, no open-in-new-tab, and a
+ * control announced as a button when it navigates.
+ *
+ * So it is an anchor to the story's permalink, and a plain left-click is
+ * intercepted to open the panel instead — the in-page reading experience is the
+ * better one and it stays the default. Anything the browser treats as "open this
+ * somewhere else" (⌘/Ctrl/Shift/Alt, middle-click) is left alone, because a
+ * reader who asked for a new tab is asking for the page, not the panel.
+ */
+function isPlainLeftClick(event: React.MouseEvent): boolean {
+  return (
+    event.button === 0 &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey
+  );
+}
 
 interface StoryCardProps {
   item: NewsItem;
@@ -122,13 +147,17 @@ export function StoryCard({
               isNp && "font-np",
             )}
           >
-            <button
-              type="button"
-              onClick={() => onOpen(item)}
+            <Link
+              href={`/story/${item.id}`}
+              onClick={(event) => {
+                if (!isPlainLeftClick(event)) return;
+                event.preventDefault();
+                onOpen(item);
+              }}
               className="card-focus cursor-pointer text-left"
             >
               {title}
-            </button>
+            </Link>
           </h3>
           <p className="mt-1.5 eyebrow flex flex-wrap items-center gap-x-2 text-ink-muted">
             <span className="truncate">{item.sourceName}</span>
@@ -197,13 +226,17 @@ export function StoryCard({
             isNp ? "font-np leading-[1.5]" : "font-display",
           )}
         >
-          <button
-            type="button"
-            onClick={() => onOpen(item)}
+          <Link
+            href={`/story/${item.id}`}
+            onClick={(event) => {
+              if (!isPlainLeftClick(event)) return;
+              event.preventDefault();
+              onOpen(item);
+            }}
             className="card-focus cursor-pointer text-left"
           >
             {title}
-          </button>
+          </Link>
         </h3>
 
         {summary && (

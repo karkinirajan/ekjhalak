@@ -45,6 +45,7 @@ const en = {
   // ── Story metadata ─────────────────────────────────────────────────────────
   readBrief: "Read brief",
   readFull: "Read at source",
+  permalink: "Story link",
   outletsOne: "1 outlet",
   outletsMany: "outlets covering",
   minRead: "min read",
@@ -145,6 +146,7 @@ const np: I18nDict = {
 
   readBrief: "पूरा पढ्नुहोस्",
   readFull: "स्रोतमा पढ्नुहोस्",
+  permalink: "कथाको लिंक",
   outletsOne: "१ सञ्चारगृह",
   outletsMany: "सञ्चारगृहले समेटे",
   minRead: "मिनेट",

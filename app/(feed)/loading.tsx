@@ -7,6 +7,19 @@
  * one uniform card grid beside the trending rail) so hydration doesn't shift
  * anything.
  */
+// Scoped to the (feed) route group rather than sitting at app/ root, and the
+// reason is a status code, not layout.
+//
+// A loading.tsx wraps its whole segment in a Suspense boundary, and Next.js
+// flushes that shell as HTTP 200 before the page has finished rendering. The
+// status cannot change once streaming has begun, so `notFound()` in any route
+// underneath produced the not-found UI with a 200 — a soft 404, which tells a
+// crawler that an expired /story/{id} permalink is a live page worth keeping
+// indexed. Measured: 200 with this file at app/ root, 404 without it.
+//
+// The homepage still gets its skeleton, because that is the only route with a
+// wait worth showing one for — it is the one that can trigger a full
+// aggregation. Everything else renders from cache or is static.
 export default function Loading() {
   return (
     <div className="min-h-screen bg-canvas">

@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowUpRight, Clock, Languages, Newspaper } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowUpRight,
+  Clock,
+  Languages,
+  Link as LinkIcon,
+  Newspaper,
+} from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { StoryImage } from "@/components/story-image";
 import { SourceMark, TopicPill } from "@/components/topic-pill";
@@ -151,7 +158,19 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
               {t.readFull}
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </a>
-            <p className="eyebrow text-ink-muted">{item.publishedAt}</p>
+            {/* The panel has no URL of its own — it is a sheet over the feed —
+                so a reader who wants to send someone this story has nothing to
+                copy. This is that link. */}
+            <Link
+              href={`/story/${item.id}`}
+              className="card-focus eyebrow inline-flex items-center gap-1.5 text-ink-muted underline underline-offset-4 transition-colors hover:text-ink"
+            >
+              <LinkIcon className="h-3 w-3" aria-hidden="true" />
+              {t.permalink}
+            </Link>
+            <p className="eyebrow text-ink-muted sm:ml-auto">
+              {item.publishedAt}
+            </p>
           </div>
         </div>
       </SheetContent>
