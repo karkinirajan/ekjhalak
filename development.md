@@ -178,6 +178,79 @@ See `MONETIZATION.md`.
 
 ---
 
+## 1b. Bilingual verify-then-publish pipeline — designed, half built
+
+The goal: no story reaches a reader until it has been summarised, verified,
+translated, verified again and audited — in both directions, so every story and
+the whole site are bilingual.
+
+### Which model, and why not a different one
+
+Researched rather than assumed, and the answer is that **the current choice is
+already the right one**. Gemini ranks first overall on translation quality in
+2026 evaluations (Alconost AQI 77.7 across 3,800+ evaluations) and its free tier
+is 1,500 requests/day per model — with the five-model fallback chain already in
+`lib/summarizer.ts`, roughly 7,500/day.
+
+The alternatives lose on the axis that matters here. Groq is faster and gives
+~1,000 RPD on Llama 3.3 70B; Cerebras gives 1M tokens/day; Mistral is the most
+generous on volume at 1B tokens/month. But the first systematic benchmark of
+comparable-sized open models on Nepali found Llama-3.1-8B, Mistral-7B and
+Qwen3-8B all weak on it before fine-tuning — Qwen produced output only in English
+or Devanagari regardless of what was asked, Mistral dropped verb endings and
+postpositions. Gemma 3 is strong on low-resource languages generally and still
+weak on Indic. For a bilingual Nepali news site, throughput is not the binding
+constraint; Devanagari competence is.
+
+**Conclusion: stay on Gemini.** A second provider is worth adding later as
+overflow for English-only work, where the open models are competent, but it is
+not an upgrade and should not be sold as one.
+
+### The quota arithmetic, which decides the architecture
+
+Five stages per story, ~1,500 new stories a day surviving dedup:
+
+```
+naive          5 calls x 1,500 stories        = 7,500 calls/day   at the ceiling
+batched at 10  5 calls x 150 batches          =   750 calls/day   comfortable
+```
+
+Batching is not an optimisation here, it is what makes the design possible.
+`lib/summarizer.ts` already batches at 10 with a concurrency of 3.
+
+Two of the five stages need no model at all. `lib/text-audit.ts` decides script
+mixing, mojibake, leaked markup, truncation, degeneration and model preamble by
+looking at the characters — free, instant, and more reliable than asking a model
+whether its own output is broken. What genuinely needs a model is the semantic
+question: does this say what the source said.
+
+### The blocker
+
+**This cannot run on the request path.** `/api/news` regenerates inside a
+15-second budget because Netlify abandons a request at 30 seconds; a five-stage
+pipeline over hundreds of stories does not fit and never will. It needs the
+`articles` table as a work queue with a status column, a Netlify scheduled
+function draining it, and the site reading only rows that reached `published`.
+
+That is Phase 2, and Phase 2 is one environment variable away — see §1.
+
+### What shipped today, without the queue
+
+The deterministic half runs inline right now and gates every model output:
+
+- A rewritten summary that fails the audit is discarded; the publisher's own
+  text stays. It may be plainer, but it is not half Devanagari.
+- A failed translation is dropped entirely rather than shown. The UI already
+  handles a missing translation honestly; it renders a broken one as though it
+  were real.
+- Half a translation — headline without body — is rejected as a pair.
+
+So the *quality floor* is enforced today. What waits on the queue is the
+*ceiling*: every story carrying a verified translation, rather than only the
+stories one 15-second pass could reach.
+
+---
+
 ## 2. Needs your hands — Netlify and Resend
 
 **Rename `RESENT_API_KEY` → `RESEND_API_KEY`** in Site configuration →

@@ -24,7 +24,9 @@ Status legend: **done** · **partial** · **blocked** · **not started**
 | 7 | Auth + personalization | **blocked** on Phase 2 | — |
 | 8 | Monetization infrastructure | **blocked** on Phase 7 | — |
 | 9 | Full re-verification | **done** | yes — no regressions |
-| 10 | Documentation | **done** | yes |  
+| 10 | Documentation | **done** | yes |
+| 11 | Bilingual verify-then-publish | **partial** — audit shipped, queue blocked | see development.md §1b |
+| 12 | Category colour system | **done** | yes — 62 contrast + 110 distinctness pairs |  
 
 ---
 
