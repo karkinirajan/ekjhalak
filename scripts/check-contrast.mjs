@@ -115,13 +115,79 @@ function checksFor(t) {
   return rows;
 }
 
+// ── Every category must be its own colour ───────────────────────────────────
+//
+// The palette this replaced had eleven categories sharing three hue families —
+// three reds, four greens, four greys — so business and health, or culture and
+// opinion, were indistinguishable. Contrast cannot see that: each of those
+// colours passed on its own. This is the check that would have caught it.
+//
+// Measured as perceptual distance in OKLab, not as hue angle. Hue angle is the
+// obvious choice and the wrong one: at the low chroma the light theme needs to
+// keep white legible on the fill, two colours 25 degrees apart in OKLCH land
+// within 12 degrees of each other in RGB terms, so an angle test either fails
+// colours a reader can tell apart or passes ones they cannot. OKLab distance
+// accounts for lightness and chroma too, which is what actually decides whether
+// two badges look like the same colour.
+//
+// The threshold is calibrated against the palette that failed: the old
+// business/health pair sat at 0.055 and the old culture/society pair at 0.033.
+// 0.10 rejects both comfortably and passes every pair in the current palette.
+const MIN_PERCEPTUAL_DISTANCE = 0.1;
+
+/** sRGB hex to OKLab. */
+function oklab(hex) {
+  const [r, g, b] = parse(hex).map((v) => srgb(v));
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+const perceptualDistance = (a, b) => {
+  const [l1, a1, b1] = oklab(a);
+  const [l2, a2, b2] = oklab(b);
+  return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
+};
+
+function distinctnessFailures(tokens) {
+  const topics = Object.entries(tokens)
+    .filter(([k]) => k.startsWith("topic-") && k !== "topic-ink")
+    .map(([k, v]) => [k.replace("topic-", ""), v]);
+
+  const bad = [];
+  for (let i = 0; i < topics.length; i++) {
+    for (let j = i + 1; j < topics.length; j++) {
+      const [an, ah] = topics[i];
+      const [bn, bh] = topics[j];
+      const d = perceptualDistance(ah, bh);
+      if (d < MIN_PERCEPTUAL_DISTANCE) {
+        bad.push([`${an} (${ah}) and ${bn} (${bh}) differ by ${d.toFixed(3)}`, d]);
+      }
+    }
+  }
+  return bad;
+}
+
 let failed = 0;
 for (const [name, tokens] of Object.entries(THEMES)) {
   const rows = checksFor(tokens);
   const bad = rows.filter(([, r, need]) => r < need);
   failed += bad.length;
 
+  const notDistinct = distinctnessFailures(tokens);
+  failed += notDistinct.length;
+
   console.log(`\n${name.toUpperCase()} — ${rows.length} pairings`);
+  if (notDistinct.length === 0) {
+    console.log("  all 11 categories carry a distinct hue");
+  } else {
+    for (const [msg] of notDistinct) console.log(`  FAIL distinct · ${msg}`);
+  }
   if (bad.length === 0) {
     const worst = rows.reduce((a, b) => (a[1] < b[1] ? a : b));
     console.log(`  all pass · closest: ${worst[0]} at ${worst[1].toFixed(2)}:1`);

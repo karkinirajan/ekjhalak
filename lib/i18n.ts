@@ -156,7 +156,7 @@ const np: I18nDict = {
   translatedNotice: "मेसिन अनुवाद",
 
   newsletterKicker: "दैनिक ब्रिफिङ",
-  newsletterTitle: "एउटा इमेल। हरेक बिहान। अरू केही होइन।",
+  newsletterTitle: "एउटा इमेल, सम्पूर्ण महत्त्वपूर्ण समाचारका साथ।",
   newsletterDesc:
     "नेपाल र विश्वमा के महत्त्वपूर्ण भयो — छोटो सारांश, बिहानको चिया अघि नै तपाईंको इनबक्समा।",
   newsletterPlaceholder: "you@example.com",

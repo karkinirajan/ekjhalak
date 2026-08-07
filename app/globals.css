@@ -159,30 +159,39 @@
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.18), 0 10px 24px rgb(0 0 0 / 0.12);
   --shadow-lift: 0 4px 12px rgb(0 0 0 / 0.2), 0 24px 48px rgb(0 0 0 / 0.16);
 
-  /* Topic colours, drawn only from the three available hues.
-       red   — urgent or contested
-       green — measured, material, played or grown
-       grey  — reflective
-     Each group has a brighter member so the lead beat still separates.
+  /* Eleven categories, eleven hues, none repeated.
 
-     politics and world are each one step brighter than they were (#e5484d and
-     #d0555a). The quiet pill sets topic-coloured text on a 13% wash of that
-     same topic, so the background it is actually read against is lighter than
-     --surface — measuring against --surface alone flattered these two into
-     4.70 and 4.49 when the real figures were 4.14 and 3.97. The nudge is the
-     smallest one that clears 4.5 on the composited background; the hue ratios
-     are untouched, so both are still the same red. */
-  --topic-breaking: #ff5a5f;
-  --topic-politics: #e85c61;
-  --topic-world: #d66a6f;
-  --topic-business: #3fb950;
-  --topic-sports: #56d364;
-  --topic-health: #4ac35b;
-  --topic-environment: #35a848;
-  --topic-culture: #c4c4cd;
-  --topic-technology: #a8a8b2;
-  --topic-society: #b6b6bf;
-  --topic-opinion: #92929c;
+     They used to be three hue families doing eleven jobs: breaking, politics
+     and world were three reds within 30 of each other, business, sports,
+     health and environment were four greens, and culture, technology, society
+     and opinion were four greys. Semantically that grouping was defensible —
+     urgent, material, reflective — but on screen it meant a reader could not
+     tell business from health, or culture from opinion, by colour at all. A
+     colour that cannot be told from its neighbour is not carrying information.
+
+     So each category now owns a hue roughly 30-35 degrees from its nearest
+     neighbour, right around the wheel: red, orange, yellow-green, green,
+     emerald, teal, cyan, blue, violet, magenta, crimson. Breaking keeps red
+     because that is the one association worth preserving.
+
+     Every value was solved rather than picked, by searching OKLCH for the most
+     saturated colour at each hue that clears all four pairings this UI actually
+     paints — topic on --surface, topic on --canvas, topic on its own 13% quiet
+     wash, and --topic-ink on the solid fill. Lightness is bounded and chroma is
+     capped at 0.22: uncapped, the search returns fluorescent greens and hot
+     pink, and "bold" was the requirement, not "electric". scripts/check-contrast.mjs
+     verifies all 62 pairings on every `pnpm verify`. */
+  --topic-breaking: #ff2f2b;
+  --topic-politics: #f0559f;
+  --topic-world: #4a88fe;
+  --topic-business: #0fc899;
+  --topic-sports: #9a8809;
+  --topic-health: #11ebf1;
+  --topic-environment: #52f711;
+  --topic-culture: #be53fe;
+  --topic-technology: #00bbfb;
+  --topic-society: #a99dff;
+  --topic-opinion: #ff9d36;
 }
 
 /* ── Light: Press Day ──────────────────────────────────────────────────────
@@ -220,26 +229,23 @@
   --shadow-lift:
     0 6px 18px rgb(17 17 17 / 0.08), 0 24px 48px rgb(17 17 17 / 0.06);
 
-  /* Same three groups, same ordering within each group — darkened for paper.
+  /* The same eleven hues, darkened for paper.
 
-     politics, business, health and opinion are each one step darker than they
-     were (#d11f26, #1a7f37, #1f7a45, #6a6a72). The quiet pill reads its text
-     against a 13% wash of its own topic rather than against bare --surface, and
-     on that composited background those four measured 3.97, 3.94, 4.12 and
-     4.18. Mirror of the correction applied to the dark theme, and the same
-     minimal, hue-preserving step. All eleven now clear 4.5:1 both as text on
-     the tint and as --topic-ink on the solid fill. */
-  --topic-breaking: #c2131a;
-  --topic-politics: #bd1c22;
-  --topic-world: #a83238;
-  --topic-business: #177131;
-  --topic-sports: #14682f;
-  --topic-health: #1d703f;
-  --topic-environment: #116b31;
-  --topic-culture: #4b4b52;
-  --topic-technology: #5c5c63;
-  --topic-society: #52525a;
-  --topic-opinion: #626269;
+     Solved the same way and against the same four pairings, with --topic-ink
+     now white on the solid fill, so the constraint pushes darker where the dark
+     theme's pushed lighter. Hue is held constant across the two themes: a
+     category is the same colour in both, one is simply the paper version. */
+  --topic-breaking: #cb020e;
+  --topic-politics: #75015d;
+  --topic-world: #0159f5;
+  --topic-business: #09765a;
+  --topic-sports: #796b04;
+  --topic-health: #024d4f;
+  --topic-environment: #165701;
+  --topic-culture: #a206e5;
+  --topic-technology: #047199;
+  --topic-society: #4a05b0;
+  --topic-opinion: #713f01;
 }
 
 /* ── Topic binding ─────────────────────────────────────────────────────────
