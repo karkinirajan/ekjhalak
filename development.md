@@ -224,6 +224,50 @@ looking at the characters — free, instant, and more reliable than asking a mod
 whether its own output is broken. What genuinely needs a model is the semantic
 question: does this say what the source said.
 
+### Measured, not researched: the quota is the whole story
+
+Published free-tier figures said 1,500 requests/day on Gemini Flash. This
+account's actual allowance, measured against every model in the chain on
+2026-08-06:
+
+```
+gemini-3.5-flash-lite    500/day
+gemini-3.1-flash-lite    500/day
+gemini-2.5-flash-lite     20/day
+gemini-2.5-flash          20/day
+gemini-3.6-flash          20/day
+                       ─────────
+                       1,060/day   — and all five exhausted when measured
+```
+
+**Production is serving zero translations. Not few — zero.** 0 of 200 items
+carry `titleTranslated` or `summaryTranslated`. The site is not bilingual today
+and has not been.
+
+The key is valid: it answers 429, not 400. So this is not a credential problem
+and no amount of pipeline engineering fixes it. 1,060 requests at a batch size
+of 10 is 10,600 story-slots a day, comfortably more than the ~1,500 new stories
+that survive dedup — the allowance is sufficient and it is being spent in the
+wrong place.
+
+**Where it goes.** `lib/enrichment-cache.ts` is in-process. On Netlify every cold
+invocation starts empty, so a pass re-enriches stories it has already enriched,
+and the feed regenerates every five minutes — 288 passes a day, each spending
+requests on work already done. The allowance is gone long before the day is.
+
+This is the same shape as the extraction ceiling in §1: work that should be done
+once per story is being done once per invocation, because there is nowhere
+durable to record that it was done.
+
+**So the fix is the same fix.** Persist enrichment in the `articles` table, and
+the 1,060 daily requests go to stories that have never been enriched instead of
+to the same stories repeatedly. That is what turns "every news is bilingual"
+from an aspiration into arithmetic that works.
+
+Worth noting for later: a fresh key from aistudio.google.com may carry higher
+per-model limits than this one, and the two 500/day models are doing most of the
+work. But the durable cache matters more than the key.
+
 ### The blocker
 
 **This cannot run on the request path.** `/api/news` regenerates inside a

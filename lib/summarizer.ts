@@ -345,11 +345,11 @@ function requestTimeout(deadline: number): number {
   return Math.max(1, Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now()));
 }
 
-async function callModel(
+async function callModel<T>(
   model: string,
-  batch: EnrichInput[],
+  requestBody: unknown,
   deadline: number,
-): Promise<ModelReply[] | null> {
+): Promise<T[] | null> {
   let res: Response;
   try {
     res = await fetch(
@@ -360,7 +360,7 @@ async function callModel(
           "Content-Type": "application/json",
           "x-goog-api-key": API_KEY as string,
         },
-        body: JSON.stringify(buildRequestBody(batch)),
+        body: JSON.stringify(requestBody),
         signal: AbortSignal.timeout(requestTimeout(deadline)),
       },
     );
@@ -405,10 +405,181 @@ async function callModel(
 
   try {
     const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? (parsed as ModelReply[]) : null;
+    return Array.isArray(parsed) ? (parsed as T[]) : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Walk the model chain for any request shape.
+ *
+ * Factored out of `enrichBatch` when verification became a second kind of call.
+ * The chain, the cooldowns and the "stop at the deadline rather than let five
+ * models each spend a request timeout" rule are the same for both, and they are
+ * the parts that took production down when they were wrong — duplicating them
+ * for a second caller would have been the obvious way to get them wrong again.
+ */
+async function askChain<T>(requestBody: unknown, deadline: number): Promise<T[]> {
+  for (const model of modelChain()) {
+    if (isCoolingDown(model)) continue;
+    if (Date.now() >= deadline) break;
+    const replies = await callModel<T>(model, requestBody, deadline);
+    if (replies) return replies;
+  }
+  return [];
+}
+
+// ── Verification ────────────────────────────────────────────────────────────
+//
+// The second model pass, and the only question left for a model to answer.
+//
+// lib/text-audit.ts has already decided everything a machine can decide by
+// looking at the characters — script mixing, mojibake, truncation, preamble,
+// degeneration. What it cannot decide is whether the summary says what the
+// source said, and whether the translation says what the summary said. Those
+// are the two questions here, and they are asked about text that has already
+// passed every mechanical check, so a model is never spending a request
+// grading something that was obviously broken.
+//
+// Asked as one batched call per ten stories, like enrichment, because the
+// arithmetic only works batched: five stages over ~1,500 new stories a day is
+// 7,500 calls unbatched and 750 batched, against a free tier of roughly 7,500.
+
+const VERIFY_SYSTEM_PROMPT =
+  "You are a bilingual news desk fact-checker for Nepali and English. " +
+  "For each item you receive the source body, a summary written from it, and a " +
+  "translation of that summary. Judge two things and nothing else.\n\n" +
+  "summaryFaithful: does the summary state only what the source states? " +
+  "Mark it false if it asserts a fact, number, name, date or causal claim the " +
+  "source does not support, or if it reverses or overstates the source. " +
+  "Do not mark it false for being shorter than the source, for omitting detail, " +
+  "or for rewording. Omission is not error; invention is.\n\n" +
+  "translationFaithful: does the translation carry the same meaning as the " +
+  "summary, completely, in the target language? Mark it false if a clause is " +
+  "dropped or added, if a number or name changes, if the meaning shifts, or if " +
+  "any part was left untranslated. Do not mark it false for natural word order " +
+  "or idiom differences between Nepali and English.\n\n" +
+  "Answer with JSON only. Be strict: when genuinely unsure, mark false. A story " +
+  "held back costs a reader nothing; a wrong one costs the publication.";
+
+const VERIFY_SCHEMA = {
+  type: "ARRAY",
+  items: {
+    type: "OBJECT",
+    properties: {
+      id: { type: "STRING" },
+      summaryFaithful: { type: "BOOLEAN" },
+      translationFaithful: { type: "BOOLEAN" },
+      reason: { type: "STRING" },
+    },
+    required: ["id", "summaryFaithful", "translationFaithful"],
+  },
+} as const;
+
+/** What verification is asked about one story. */
+export interface VerifyInput {
+  id: string;
+  /** The source body the summary was written from. */
+  source: string;
+  lang: "en" | "np";
+  summary: string;
+  titleTranslated: string;
+  summaryTranslated: string;
+}
+
+export interface VerifyVerdict {
+  summaryFaithful: boolean;
+  translationFaithful: boolean;
+  reason?: string;
+}
+
+interface VerifyReply {
+  id?: string;
+  summaryFaithful?: boolean;
+  translationFaithful?: boolean;
+  reason?: string;
+}
+
+/**
+ * Source text is truncated harder here than for enrichment.
+ *
+ * The judge needs enough of the article to spot an invented fact, not the whole
+ * of it, and this pass has to fit alongside enrichment inside one regeneration.
+ * Sending 6,000 characters per story to both stages would double the tokens for
+ * a question the first 2,500 characters almost always answer.
+ */
+const VERIFY_SOURCE_CHARS = 2_500;
+
+function buildVerifyBody(batch: VerifyInput[]) {
+  const payload = batch.map((item) => ({
+    id: item.id,
+    sourceLanguage: item.lang === "np" ? "Nepali" : "English",
+    targetLanguage: item.lang === "np" ? "English" : "Nepali",
+    source: normalizeText(item.source).slice(0, VERIFY_SOURCE_CHARS),
+    summary: normalizeText(item.summary).slice(0, 3_000),
+    translation: normalizeText(
+      `${item.titleTranslated}\n${item.summaryTranslated}`,
+    ).slice(0, 3_000),
+  }));
+
+  return {
+    system_instruction: { parts: [{ text: VERIFY_SYSTEM_PROMPT }] },
+    contents: [{ parts: [{ text: JSON.stringify(payload) }] }],
+    generationConfig: {
+      // Lower than enrichment. This is a judgement, not a piece of writing, and
+      // the same input should get the same verdict twice.
+      temperature: 0,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      responseMimeType: "application/json",
+      responseSchema: VERIFY_SCHEMA,
+    },
+  };
+}
+
+/**
+ * Check summaries and translations against their sources.
+ *
+ * Returns a verdict per story id. **An id absent from the result was not
+ * checked**, which is not the same as failing — the budget ran out, the chain
+ * was exhausted, or the model did not answer for it. Callers decide what an
+ * unchecked story is worth; this function refuses to guess on their behalf.
+ */
+export async function verifyEnrichments(
+  inputs: VerifyInput[],
+  deadline: number,
+): Promise<Map<string, VerifyVerdict>> {
+  const verdicts = new Map<string, VerifyVerdict>();
+  if (!API_KEY || inputs.length === 0) return verdicts;
+
+  const batches: VerifyInput[][] = [];
+  for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
+    batches.push(inputs.slice(i, i + BATCH_SIZE));
+  }
+
+  let cursor = 0;
+  async function worker() {
+    while (cursor < batches.length && Date.now() < deadline) {
+      const batch = batches[cursor++];
+      const replies = await askChain<VerifyReply>(
+        buildVerifyBody(batch),
+        deadline,
+      );
+      for (const reply of replies) {
+        if (!reply?.id) continue;
+        verdicts.set(reply.id, {
+          summaryFaithful: reply.summaryFaithful !== false,
+          translationFaithful: reply.translationFaithful !== false,
+          reason: reply.reason,
+        });
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, batches.length) }, worker),
+  );
+  return verdicts;
 }
 
 /** Walks the model chain until one answers. */
@@ -416,16 +587,7 @@ async function enrichBatch(
   batch: EnrichInput[],
   deadline: number,
 ): Promise<ModelReply[]> {
-  for (const model of modelChain()) {
-    if (isCoolingDown(model)) continue;
-    // Walking the chain is itself work: five models that each take their turn
-    // timing out would spend five request timeouts on one batch. Stop at the
-    // deadline and let the caller keep what it already had.
-    if (Date.now() >= deadline) break;
-    const replies = await callModel(model, batch, deadline);
-    if (replies) return replies;
-  }
-  return [];
+  return askChain<ModelReply>(buildRequestBody(batch), deadline);
 }
 
 /**

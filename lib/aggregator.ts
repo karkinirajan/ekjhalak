@@ -24,6 +24,7 @@ import { scoreStory } from "./ranking";
 import { extractMany, type ExtractionResult } from "./article-extractor";
 import {
   enrichStories,
+  verifyEnrichments,
   isEnrichmentConfigured,
   looksLikeBoilerplate,
   hardTruncateSummary,
@@ -255,6 +256,20 @@ const BUDGET_GRACE_MS = 2_000;
 const STORE_RESERVE_MS = 3_000;
 
 /**
+ * The ceiling on the verification pass.
+ *
+ * A cap within AGGREGATE_BUDGET_MS like every other stage, and the last in the
+ * queue, so on a slow pass it gets nothing and stories stay unverified rather
+ * than the pass overrunning. That ordering is deliberate: an unverified story
+ * still reads correctly, whereas a pass that crosses Netlify's 30-second limit
+ * returns 502 to a reader. Quality is worth budget; it is not worth the site.
+ */
+const VERIFY_BUDGET_MS = Number.parseInt(
+  process.env.VERIFY_BUDGET_MS ?? "8000",
+  10,
+);
+
+/**
  * The share of the pass that RSS ingestion may take.
  *
  * Every source is fetched at once and awaited together, so the stage costs
@@ -446,6 +461,67 @@ async function enrichFeed(
     }
   }
 
+  // ── 3b. Ask a model whether the text is faithful ──────────────────────────
+  //
+  // The last of the five stages, and the only one a model is genuinely needed
+  // for. Everything mechanical was settled by lib/text-audit.ts before this ran,
+  // so no request is spent grading text that was already visibly broken, and
+  // only stories that got a full bilingual pair are candidates.
+  //
+  // Its budget is carved out of what enrichment left rather than added on. A
+  // pass that spent everything writing has nothing left to check with, and that
+  // is the correct outcome: an unverified story keeps its translation and is
+  // simply marked unverified, which is what `quality.verified === undefined`
+  // means. Withholding it instead would empty the feed on a slow day.
+  const verifyMs = slice(deadline, VERIFY_BUDGET_MS);
+  const candidates = ranked.filter(
+    (item) => item.quality?.bilingual && item.summaryTranslated,
+  );
+
+  if (candidates.length > 0 && verifyMs > 0 && isEnrichmentConfigured()) {
+    try {
+      const verdicts = await verifyEnrichments(
+        candidates.map((item) => ({
+          id: item.id,
+          source: item.summary,
+          lang: item.originalLang,
+          summary: item.summary,
+          titleTranslated: item.titleTranslated ?? "",
+          summaryTranslated: item.summaryTranslated ?? "",
+        })),
+        Date.now() + verifyMs,
+      );
+
+      let failed = 0;
+      for (const item of candidates) {
+        const verdict = verdicts.get(item.id);
+        if (!verdict) continue; // not reached this pass — not a failure
+
+        const ok = verdict.summaryFaithful && verdict.translationFaithful;
+        item.quality = { ...item.quality!, verified: ok, note: verdict.reason };
+
+        if (!verdict.translationFaithful) {
+          // Same rule as the audit: a translation that does not carry the
+          // meaning is worse than no translation, because the UI renders it as
+          // though it were sound.
+          delete item.titleTranslated;
+          delete item.summaryTranslated;
+          item.quality.bilingual = false;
+          failed++;
+        }
+      }
+      if (failed > 0) {
+        console.info(
+          `[verify] ${verdicts.size} checked, ${failed} translation(s) withdrawn`,
+        );
+      }
+    } catch (err) {
+      // A verification pass that throws leaves everything unverified, which is
+      // the same state as never having run. It must not cost the feed.
+      console.warn("[verify] pass failed:", err);
+    }
+  }
+
   // ── 4. Cap whatever the model never reached ───────────────────────────────
   //
   // These keep the publisher's words, just bounded. A story the budget ran out
@@ -554,6 +630,7 @@ function applyEnrichment(item: NewsItem, result: EnrichResult): void {
     if (verdict.ok) {
       item.titleTranslated = title;
       item.summaryTranslated = summary;
+      item.quality = { audited: true, bilingual: true };
     } else {
       rejected(item, `translation/${otherLang}`, verdict);
     }

@@ -68,6 +68,31 @@ export interface NewsItem {
    * `deduplicate`. Captured there or not at all.
    */
   alternateSourceIds?: string[];
+  /**
+   * Which quality gates this story cleared, and how far it got.
+   *
+   * Server-side only; stripped in lib/feed-payload.ts.
+   *
+   *   audited   — the deterministic checks passed in both languages
+   *   verified  — a model confirmed the summary is faithful to the source and
+   *               the translation faithful to the summary
+   *   bilingual — both languages are present
+   *
+   * `verified` absent does not mean a story failed. It far more often means the
+   * pass ran out of budget before reaching it, and the next pass will. The
+   * distinction matters: a failed story must never be published, an unchecked
+   * one is simply not yet at the top of the queue.
+   */
+  quality?: StoryQuality;
+}
+
+export interface StoryQuality {
+  audited: boolean;
+  bilingual: boolean;
+  /** undefined = not checked this pass, not "checked and failed". */
+  verified?: boolean;
+  /** Why a model rejected it, when one did. */
+  note?: string;
 }
 
 export interface SourceStatusMeta {
