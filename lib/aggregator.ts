@@ -13,6 +13,13 @@ import { fetchRssFeed } from "./rss-adapter";
 import { normalizeStory } from "./feed-normalizer";
 import { deduplicate } from "./deduplicator";
 import { decodeEntities, htmlToText } from "./html-entities";
+import {
+  auditStoryText,
+  auditText,
+  formatFindings,
+  type AuditResult,
+  type TextLang,
+} from "./text-audit";
 import { scoreStory } from "./ranking";
 import { extractMany, type ExtractionResult } from "./article-extractor";
 import {
@@ -464,6 +471,28 @@ async function enrichFeed(
       `[aggregator] dropped ${dropped}/${items.length} stories with no body text`,
     );
   }
+
+  // ── 6. One last decode, wherever the text came from ───────────────────────
+  //
+  // Text reaches an item by four routes — the feed's own description, the
+  // article page, the model, or a cache entry written by an older build — and
+  // each was cleaned at its own entry point. That is three places to get right
+  // and one, the cache, that can hold text cleaned by rules that have since
+  // changed. A live feed still surfaced `&nbsp;` from NDTV after all three
+  // entry points were fixed.
+  //
+  // The display layer already decodes, so a reader never saw it. The API
+  // payload did carry it, and that payload is what the archive stores, what a
+  // digest would send and what anything reading /api/news receives. Converging
+  // here costs a few string operations over a few hundred items and makes the
+  // guarantee positional rather than a property of every upstream path.
+  for (const item of kept) {
+    item.title = cleanModelText(item.title);
+    item.summary = cleanModelText(item.summary);
+    if (item.titleTranslated) item.titleTranslated = cleanModelText(item.titleTranslated);
+    if (item.summaryTranslated) item.summaryTranslated = cleanModelText(item.summaryTranslated);
+  }
+
   return kept;
 }
 
@@ -488,11 +517,81 @@ async function enrichFeed(
  * ever reads it are clean too.
  */
 function applyEnrichment(item: NewsItem, result: EnrichResult): void {
-  item.summary = cleanModelText(result.summary);
+  const originalLang = item.originalLang;
+  const otherLang: TextLang = originalLang === "np" ? "en" : "np";
+
+  // ── The original language ─────────────────────────────────────────────────
+  //
+  // A rewrite that fails the audit is discarded rather than shown. The
+  // publisher's own text is already sitting in `item.summary`, and it is always
+  // the safer of the two: whatever is wrong with it, it is not half Devanagari
+  // and it does not start by saying "Here is the summary:".
+  const rewritten = cleanModelText(result.summary);
+  if (rewritten) {
+    const verdict = auditText(rewritten, {
+      lang: originalLang,
+      title: item.title,
+    });
+    if (verdict.ok) {
+      item.summary = rewritten;
+    } else {
+      rejected(item, `summary/${originalLang}`, verdict);
+    }
+  }
+
+  // ── The translation ───────────────────────────────────────────────────────
+  //
+  // Here there is no fallback, and that is the point. A missing translation is
+  // handled everywhere in the UI — the reader sees the story in its original
+  // language, which is honest. A *broken* translation is rendered as though it
+  // were real, and a Nepali reader gets a paragraph of English with three
+  // Devanagari words in it. Absent beats wrong.
   const title = cleanModelText(result.titleTranslated ?? "");
-  if (title) item.titleTranslated = title;
   const summary = cleanModelText(result.summaryTranslated ?? "");
-  if (summary) item.summaryTranslated = summary;
+
+  if (title && summary) {
+    const verdict = auditStoryText({ title, summary }, otherLang);
+    if (verdict.ok) {
+      item.titleTranslated = title;
+      item.summaryTranslated = summary;
+    } else {
+      rejected(item, `translation/${otherLang}`, verdict);
+    }
+  } else if (title || summary) {
+    // Half a translation is not a translation. Rendering a translated headline
+    // over an untranslated body reads as a bug to anyone who can read both.
+    rejected(item, `translation/${otherLang}`, {
+      ok: false,
+      findings: [
+        {
+          code: "empty",
+          severity: "fatal",
+          detail: title ? "headline without body" : "body without headline",
+        },
+      ],
+    });
+  }
+}
+
+/**
+ * One line per rejection, sampled rather than exhaustive.
+ *
+ * A model having a bad minute can fail hundreds of items in one pass, and a log
+ * line each turns a signal into a wall. The counter is what tells you whether
+ * this is one odd story or the whole batch.
+ */
+let rejectionCount = 0;
+const REJECTION_LOG_LIMIT = 12;
+
+function rejected(item: NewsItem, stage: string, verdict: AuditResult): void {
+  rejectionCount++;
+  if (rejectionCount <= REJECTION_LOG_LIMIT) {
+    console.warn(
+      `[audit] dropped ${stage} for ${item.sourceName} — ${formatFindings(verdict)}`,
+    );
+  } else if (rejectionCount === REJECTION_LOG_LIMIT + 1) {
+    console.warn("[audit] further rejections suppressed for this process");
+  }
 }
 
 /** Decode first so escaped markup is revealed, then strip what it revealed. */
