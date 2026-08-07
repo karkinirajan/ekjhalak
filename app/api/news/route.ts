@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCachedFeed } from "@/lib/aggregator";
+import { getPublishedFeed } from "@/lib/aggregator";
 import { FEED_PAGE_LIMIT, toClientItems } from "@/lib/feed-payload";
 import type { RangeKey } from "@/lib/news-pipeline";
 
@@ -48,9 +48,9 @@ export async function GET(request: NextRequest) {
   // Get aggregated feed (cached up to 10 minutes)
   let feed;
   try {
-    feed = await getCachedFeed();
+    feed = await getPublishedFeed();
   } catch (err) {
-    console.error("[api/news] getCachedFeed failed:", err);
+    console.error("[api/news] getPublishedFeed failed:", err);
     return NextResponse.json(
       {
         error: "Feed unavailable",

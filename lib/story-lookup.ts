@@ -16,10 +16,10 @@
 // should require.
 
 // Build-time guard: importing this from a client component is a build
-// error rather than a shipped bundle. Calls getCachedFeed, which is the whole server pipeline.
+// error rather than a shipped bundle. Calls getPublishedFeed, the whole server pipeline.
 import "server-only";
 
-import { getCachedFeed } from "./aggregator";
+import { getPublishedFeed } from "./aggregator";
 import type { NewsItem } from "./news-pipeline";
 
 export interface StoryLookup {
@@ -44,12 +44,12 @@ const RELATED_COUNT = 6;
 export async function findStory(id: string): Promise<StoryLookup | null> {
   let feed;
   try {
-    feed = await getCachedFeed();
+    feed = await getPublishedFeed();
   } catch (err) {
     // A failed aggregation is not a missing story. Letting this throw gives a
     // 500, which is the truthful answer: the story may well exist and we cannot
     // currently say. Answering 404 would tell Google to drop a live URL.
-    console.error("[story-lookup] getCachedFeed failed:", err);
+    console.error("[story-lookup] getPublishedFeed failed:", err);
     throw err;
   }
 
@@ -72,7 +72,7 @@ export async function findStory(id: string): Promise<StoryLookup | null> {
  */
 export async function listStories(): Promise<NewsItem[]> {
   try {
-    const feed = await getCachedFeed();
+    const feed = await getPublishedFeed();
     return [...feed.items].sort(
       (a, b) => b.publishedTimestamp - a.publishedTimestamp,
     );

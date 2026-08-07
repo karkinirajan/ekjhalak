@@ -39,6 +39,7 @@ import {
   writeEnrichment,
 } from "./enrichment-cache";
 import { recordArticles, isStoreConfigured } from "./article-store";
+import { applyPublishGate } from "./publish-gate";
 import type { NewsItem, SourceStatusMeta } from "./news-pipeline";
 import type { Source } from "./source-registry";
 
@@ -540,6 +541,29 @@ async function enrichFeed(
   // Its feed had no description, its own page had no extractable text, and the
   // model was never given anything to work from — there is no version of this
   // card that informs anyone.
+  // Stories the model never reached carry no verdict, and under the default
+  // policy that is fine — `audited` asks whether anything *failed*, not whether
+  // everything was checked. Marking them here keeps the gate's reasons honest:
+  // "not audited" should mean the audit rejected something, not that the story
+  // arrived straight from a feed that was already clean.
+  for (const item of items) {
+    if (!item.quality) {
+      item.quality = { audited: true, bilingual: Boolean(item.summaryTranslated) };
+    }
+  }
+
+  // The publish gate is deliberately *not* applied here.
+  //
+  // This function's result is what `unstable_cache` stores, and the archive is
+  // written from it. Gating at this point would bake one policy into a cache
+  // entry that lives five minutes — changing PUBLISH_POLICY would then do
+  // nothing until the cache turned over, which is exactly the confusing
+  // behaviour it produced when it was written this way. It would also mean the
+  // archive only ever recorded what happened to be publishable that minute,
+  // when the whole point of an archive is to hold the rest too.
+  //
+  // So everything with body text is kept and carries its verdict, and the gate
+  // runs at the read layer — see `getPublishedFeed`.
   const kept = items.filter((item) => Boolean(item.summary));
   const dropped = items.length - kept.length;
   if (dropped > 0) {
@@ -610,6 +634,7 @@ function applyEnrichment(item: NewsItem, result: EnrichResult): void {
     });
     if (verdict.ok) {
       item.summary = rewritten;
+      item.quality = { ...(item.quality ?? { bilingual: false }), audited: true };
     } else {
       rejected(item, `summary/${originalLang}`, verdict);
     }
@@ -630,7 +655,7 @@ function applyEnrichment(item: NewsItem, result: EnrichResult): void {
     if (verdict.ok) {
       item.titleTranslated = title;
       item.summaryTranslated = summary;
-      item.quality = { audited: true, bilingual: true };
+      item.quality = { ...(item.quality ?? {}), audited: true, bilingual: true };
     } else {
       rejected(item, `translation/${otherLang}`, verdict);
     }
@@ -675,6 +700,42 @@ function rejected(item: NewsItem, stage: string, verdict: AuditResult): void {
 function cleanModelText(text: string): string {
   if (!text) return "";
   return htmlToText(decodeEntities(text));
+}
+
+/**
+ * The feed as a reader should see it.
+ *
+ * The gate lives here rather than inside the cached aggregation so that the
+ * policy is applied per request: `unstable_cache` holds every story with its
+ * verdict, and what is published is decided fresh each time. Changing
+ * PUBLISH_POLICY takes effect on the next request rather than on the next cache
+ * turnover, and the archive keeps the stories the gate withheld.
+ */
+export async function getPublishedFeed(): Promise<AggregatedFeed> {
+  const feed = await getCachedFeed();
+  const gate = applyPublishGate(feed.items);
+
+  if (gate.withheld > 0) {
+    const why = Object.entries(gate.reasons)
+      .map(([reason, n]) => `${n} ${reason}`)
+      .join(", ");
+    console.info(
+      `[publish] policy=${gate.policy} — ${gate.published.length}/${feed.items.length} ` +
+        `published, ${gate.withheld} withheld (${why})`,
+    );
+  }
+
+  // A policy withholding most of the feed is indistinguishable from an
+  // aggregator that stopped working, and the two need opposite responses.
+  if (feed.items.length > 0 && gate.published.length < feed.items.length * 0.25) {
+    console.warn(
+      `[publish] PUBLISH_POLICY=${gate.policy} is withholding ` +
+        `${Math.round((gate.withheld / feed.items.length) * 100)}% of the feed. ` +
+        "That is what the policy asks for; check it is what you meant.",
+    );
+  }
+
+  return { ...feed, items: gate.published };
 }
 
 export const getCachedFeed = unstable_cache(

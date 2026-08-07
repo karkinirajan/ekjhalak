@@ -1,4 +1,4 @@
-import { getCachedFeed } from "@/lib/aggregator";
+import { getPublishedFeed } from "@/lib/aggregator";
 import { NewsFeed } from "@/components/news-feed";
 import {
   FEED_PAGE_LIMIT,
@@ -15,9 +15,9 @@ export const revalidate = 300;
 export default async function Page() {
   let feed;
   try {
-    feed = await getCachedFeed();
+    feed = await getPublishedFeed();
   } catch (err) {
-    console.error("[page] getCachedFeed failed:", err);
+    console.error("[page] getPublishedFeed failed:", err);
     feed = { items: [], sourceStatuses: [], fetchedAt: 0 };
   }
 

@@ -268,6 +268,32 @@ Worth noting for later: a fresh key from aistudio.google.com may carry higher
 per-model limits than this one, and the two 500/day models are doing most of the
 work. But the durable cache matters more than the key.
 
+### The gate itself is built and enforced
+
+`lib/publish-gate.ts` decides what reaches a reader, at four levels — `all`,
+`audited`, `bilingual`, `verified` — set by `PUBLISH_POLICY` and applied per
+request in `getPublishedFeed`, not inside the cached aggregation. That placement
+matters: gating inside the cache would bake one policy into a five-minute entry,
+and would mean the archive only recorded whatever happened to be publishable that
+minute.
+
+Demonstrated against a live local feed:
+
+```
+PUBLISH_POLICY=audited    -> 391 items
+PUBLISH_POLICY=bilingual  ->   0 items   455 withheld (455 not bilingual)
+PUBLISH_POLICY=verified   ->   0 items   455 withheld (455 not bilingual)
+```
+
+That zero is not a bug in the gate — it is the gate correctly reporting the
+quota finding above. There are no translations to publish. The gate also warns
+when it withholds more than three quarters of the feed, because a policy doing
+that is indistinguishable from an aggregator that has stopped working.
+
+The default stays `audited`, which is the level that is honestly reachable
+today. Raising it is one environment variable, and it becomes the right thing to
+do the moment enrichment persists.
+
 ### The blocker
 
 **This cannot run on the request path.** `/api/news` regenerates inside a
