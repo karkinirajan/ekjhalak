@@ -51,9 +51,9 @@ export function BreakingTicker({ items }: BreakingTickerProps) {
   const headlines = items.slice(0, 8);
 
   return (
-    <div className="relative z-40 flex w-full items-stretch overflow-hidden bg-red-solid text-white">
+    <div className="relative z-40 flex w-full items-stretch overflow-hidden bg-[#8b0000] text-white">
       {/* Label block — stays pinned while headlines scroll past it */}
-      <div className="relative z-10 flex shrink-0 items-center gap-2 bg-red-solid py-2 pr-4 pl-4 shadow-[8px_0_12px_-4px_var(--red-solid)] sm:pl-6">
+      <div className="relative z-10 flex shrink-0 items-center gap-2 bg-[#8b0000] py-2 pr-4 pl-4 shadow-[8px_0_12px_-4px_#8b0000] sm:pl-6">
         <span className="relative flex h-2 w-2 text-white">
           <span className="pulse-dot absolute inline-flex h-full w-full" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
