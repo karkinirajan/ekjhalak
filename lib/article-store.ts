@@ -106,7 +106,35 @@ const REST_ORIGIN: string | null = (() => {
     return null;
   }
 
-  if (!ORIGIN_ENV) return null;
+  if (!ORIGIN_ENV) {
+    // The last silent path, closed.
+    //
+    // Returning null quietly here is right when nobody intended an archive at
+    // all — a deployment without a database should not shout about one. But a
+    // service-role key with no origin is not that. It is somebody who meant to
+    // configure this and named the variable something else, which has now
+    // happened four times running, twice with the value sitting right there
+    // under `DATABASE_URL`.
+    //
+    // So the condition is the key, not the origin: say something exactly when
+    // there is evidence of intent, and say the actual value to paste.
+    if (SERVICE_KEY) {
+      const ref = process.env.DATABASE_URL?.match(
+        /(?:postgres\.|db\.)([a-z0-9]{20})/i,
+      )?.[1];
+      console.error(
+        "[article-store] SUPABASE_SERVICE_ROLE_KEY is set but no REST origin " +
+          "is. The archive is OFF and nothing is being written. Set " +
+          "SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) to " +
+          (ref
+            ? `https://${ref}.supabase.co — the project ref is already in your DATABASE_URL, ` +
+              "which is the Postgres wire protocol and not something this module can use."
+            : "your project's REST origin, https://<project-ref>.supabase.co " +
+              "(Dashboard → Project Settings → Data API → Project URL)."),
+      );
+    }
+    return null;
+  }
 
   let parsed: URL;
   try {

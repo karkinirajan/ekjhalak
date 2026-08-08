@@ -109,9 +109,15 @@ section("Configuration");
 let origin = null;
 
 if (!ORIGIN_RAW) {
+  // If DATABASE_URL is present the project ref is already on hand, so name the
+  // exact value to paste rather than describing where to find it.
+  const ref = env.DATABASE_URL?.match(/(?:postgres\.|db\.)([a-z0-9]{20})/i)?.[1];
   fail(
     "REST origin",
-    "neither SUPABASE_URL nor NEXT_PUBLIC_SUPABASE_URL is set",
+    ref
+      ? `neither SUPABASE_URL nor NEXT_PUBLIC_SUPABASE_URL is set — from your ` +
+        `DATABASE_URL it should be https://${ref}.supabase.co`
+      : "neither SUPABASE_URL nor NEXT_PUBLIC_SUPABASE_URL is set",
   );
 } else {
   try {
