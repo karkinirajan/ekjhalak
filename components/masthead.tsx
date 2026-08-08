@@ -111,7 +111,7 @@ export function Masthead({
               placeholder={t.searchPlaceholder}
               aria-label={t.searchLabel}
               className={cn(
-                "h-10 w-full rounded-full border-none bg-surface/50 shadow-inner pl-10 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-red",
+                "h-10 w-full rounded-md border-none bg-surface/50 shadow-inner pl-10 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-red",
                 isNp && "font-np",
               )}
             />
@@ -126,7 +126,7 @@ export function Masthead({
             onClick={onRefresh}
             disabled={isRefreshing}
             aria-label={t.refreshFeed}
-            className="rounded-full text-ink-muted hover:text-ink hover:bg-surface/50"
+            className="rounded-md text-ink-muted hover:text-ink hover:bg-surface/50"
           >
             <RefreshCw
               className={cn("h-4 w-4", isRefreshing && "animate-spin")}
@@ -139,7 +139,7 @@ export function Masthead({
             size="icon-sm"
             onClick={toggleTheme}
             aria-label={themeMode === "dark" ? t.themeLight : t.themeDark}
-            className="rounded-full text-ink-muted hover:text-ink hover:bg-surface/50"
+            className="rounded-md text-ink-muted hover:text-ink hover:bg-surface/50"
           >
             {themeMode === "dark" ? (
               <Sun className="h-4 w-4" aria-hidden="true" />
@@ -154,7 +154,7 @@ export function Masthead({
             onClick={toggleLanguage}
             aria-label={t.langToggleLabel}
             className={cn(
-              "h-8 gap-1.5 rounded-full px-3 text-xs text-ink-muted hover:text-ink hover:bg-surface/50",
+              "h-8 gap-1.5 rounded-md px-3 text-xs text-ink-muted hover:text-ink hover:bg-surface/50",
               !isNp && "font-np",
             )}
           >
@@ -166,7 +166,7 @@ export function Masthead({
             size="sm"
             onClick={onSubscribe}
             className={cn(
-              "h-8 rounded-full bg-gradient-to-r from-red-solid to-red px-4 text-xs font-bold text-white shadow-md hover:opacity-90 transition-opacity",
+              "h-8 rounded-md bg-gradient-to-r from-red-solid to-red px-4 text-xs font-bold text-white shadow-md hover:opacity-90 transition-opacity",
               isNp && "font-np",
             )}
           >
