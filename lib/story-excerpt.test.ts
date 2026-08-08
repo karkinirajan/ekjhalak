@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EXCERPT_MAX_CHARS, isTruncated, storyExcerpt } from "./story-excerpt";
+import { isTruncated, storyExcerpt } from "./story-excerpt";
 
 const sentence = (n: number) => `Sentence number ${n} runs on for a while. `;
 const long = sentence(1).repeat(40);
@@ -23,7 +23,7 @@ test("text is returned untouched regardless of length", () => {
 
 test("surrounding whitespace never survives", () => {
     assert.equal(storyExcerpt("   padded   "), "padded");
-    assert.equal(isTruncated(`  ${"x".repeat(EXCERPT_MAX_CHARS)}  `), false);
+    assert.equal(isTruncated(`  ${"x".repeat(400)}  `), false);
 });
 
 test("an empty summary stays empty rather than becoming an ellipsis", () => {
