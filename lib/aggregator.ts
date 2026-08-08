@@ -38,7 +38,12 @@ import {
   readEnrichment,
   writeEnrichment,
 } from "./enrichment-cache";
-import { recordArticles, isStoreConfigured } from "./article-store";
+import {
+  recordArticles,
+  fetchEnrichments,
+  noteHydrate,
+  isStoreConfigured,
+} from "./article-store";
 import { applyPublishGate } from "./publish-gate";
 import type { NewsItem, SourceStatusMeta } from "./news-pipeline";
 import type { Source } from "./source-registry";
@@ -257,6 +262,20 @@ const BUDGET_GRACE_MS = 2_000;
 const STORE_RESERVE_MS = 3_000;
 
 /**
+ * The ceiling on asking the archive what it already knows.
+ *
+ * A cap *within* the model stage, not an allowance added to it: whatever this
+ * spends, the model does not get. That trade is lopsided in its favour and the
+ * arithmetic says so. One read of a few hundred ids costs a few hundred
+ * milliseconds and can return hundreds of finished translations; the same
+ * stories cost the model a metered request each, out of a measured allowance of
+ * 1,060 a day. On a day when that allowance is already spent — which is most
+ * days, and was every day before this existed — the archive is not the cheaper
+ * source of translations, it is the only one.
+ */
+const HYDRATE_BUDGET_MS = 3_000;
+
+/**
  * The ceiling on the verification pass.
  *
  * A cap within AGGREGATE_BUDGET_MS like every other stage, and the last in the
@@ -396,8 +415,27 @@ async function enrichFeed(
   }
 
   // ── 2. Decide what still needs the model ──────────────────────────────────
-  const pending: Array<{ item: NewsItem; key: string; input: EnrichInput }> = [];
+  let pending: Array<{ item: NewsItem; key: string; input: EnrichInput }> = [];
   const enriched = new Set<string>();
+
+  /**
+   * Mark a story as carrying this pass's enrichment.
+   *
+   * Stamping `enrichmentKey` is what gives `recordArticles` permission to write
+   * the four enrichment columns for this story, so it happens **only where
+   * enrichment actually landed** — an L1 hit, an archive hit, or a model reply —
+   * and never merely where one was attempted.
+   *
+   * The distinction is not fussiness. A story still awaiting the model has no
+   * translation on it; if it were stamped and the archive read had timed out,
+   * the writer would send `title_translated: null` and erase a translation an
+   * earlier pass paid a metered request for. Attempted is not the same as
+   * answered, and only answered may overwrite.
+   */
+  const markEnriched = (item: NewsItem, key: string): void => {
+    item.enrichmentKey = key;
+    enriched.add(item.id);
+  };
 
   for (const item of ranked) {
     // Nothing to work from, from the feed or from the page. The headline is the
@@ -420,7 +458,7 @@ async function enrichFeed(
     const cached = readEnrichment(key);
     if (cached) {
       applyEnrichment(item, cached);
-      enriched.add(item.id);
+      markEnriched(item, key);
       continue;
     }
 
@@ -435,6 +473,84 @@ async function enrichFeed(
         verbatim,
       },
     });
+  }
+
+  // ── 2b. Ask the archive before asking the model ───────────────────────────
+  //
+  // The stage that makes a bilingual site arithmetically possible.
+  //
+  // lib/enrichment-cache.ts is an in-process Map, so on Netlify it is empty at
+  // the start of every cold invocation. The feed regenerates 288 times a day and
+  // each cold pass re-translated stories that were already translated, which is
+  // how a measured allowance of 1,060 model requests — comfortably more than the
+  // ~1,500 new stories a day need, once batched — produced exactly zero
+  // translations in production. The allowance was never insufficient. It was
+  // being spent entirely on work already done.
+  //
+  // The archive is the memory that process lacks, so it becomes the L2 behind
+  // that Map's L1 and the two share one key format deliberately. A row only
+  // counts when its stored `enrichment_key` equals the freshly computed one,
+  // which means the story *and the exact text it was translated from* are
+  // unchanged; a publisher who quietly rewrites a body under the same URL — as
+  // several here do within the first hour of a breaking story — produces a
+  // different key and gets a fresh translation rather than a stale one served
+  // forever.
+  if (pending.length > 0 && isStoreConfigured()) {
+    const hydrateMs = Math.min(HYDRATE_BUDGET_MS, deadline - Date.now());
+    if (hydrateMs > 0) {
+      const stored = await fetchEnrichments(
+        pending.map((entry) => entry.item.id),
+        Date.now() + hydrateMs,
+      );
+
+      const stillPending: typeof pending = [];
+      let hits = 0;
+
+      for (const entry of pending) {
+        const row = stored.get(entry.item.id);
+        if (!row || row.enrichmentKey !== entry.key) {
+          stillPending.push(entry);
+          continue;
+        }
+
+        // Re-audited on the way in rather than trusted. `applyEnrichment` runs
+        // the same deterministic checks it runs on fresh model output, which
+        // costs nothing and means a row written by an older, weaker audit is
+        // re-examined instead of grandfathered past the gate.
+        const result: EnrichResult = {
+          summary: row.summary,
+          titleTranslated: row.titleTranslated ?? "",
+          summaryTranslated: row.summaryTranslated ?? "",
+        };
+        applyEnrichment(entry.item, result);
+
+        // The one verdict that cannot be recomputed for free. `audited` and
+        // `bilingual` are functions of text we now hold, so they were just
+        // recalculated; `verified` cost a model request when it was earned and
+        // would cost another to re-earn. Carried across only when the audit it
+        // was granted under still passes — `applyEnrichment` sets `quality`
+        // exactly when it does.
+        if (entry.item.quality && row.quality?.verified !== undefined) {
+          entry.item.quality.verified = row.quality.verified;
+          entry.item.quality.note = row.quality.note;
+        }
+
+        // Promote into the L1 too, so the rest of this instance's lifetime is
+        // served from memory rather than from another round trip.
+        writeEnrichment(entry.key, result);
+        markEnriched(entry.item, entry.key);
+        hits++;
+      }
+
+      noteHydrate(hits, stillPending.length);
+      pending = stillPending;
+
+      if (hits > 0) {
+        console.info(
+          `[archive] restored ${hits} enrichment(s); ${stillPending.length} still need the model`,
+        );
+      }
+    }
   }
 
   // ── 3. Summarize and translate what is left ───────────────────────────────
@@ -455,7 +571,7 @@ async function enrichFeed(
         if (!result) continue;
         writeEnrichment(entry.key, result);
         applyEnrichment(entry.item, result);
-        enriched.add(entry.item.id);
+        markEnriched(entry.item, entry.key);
       }
     } catch (err) {
       console.warn("[aggregator] enrichment pass failed:", err);
@@ -475,8 +591,15 @@ async function enrichFeed(
   // simply marked unverified, which is what `quality.verified === undefined`
   // means. Withholding it instead would empty the feed on a slow day.
   const verifyMs = slice(deadline, VERIFY_BUDGET_MS);
+  // Already-verified stories are excluded, not re-checked. A verdict restored
+  // from the archive was paid for with a model request on an earlier pass, and
+  // re-earning it every five minutes would put this stage in exactly the loop
+  // stage 2b just took the translation stage out of.
   const candidates = ranked.filter(
-    (item) => item.quality?.bilingual && item.summaryTranslated,
+    (item) =>
+      item.quality?.bilingual &&
+      item.summaryTranslated &&
+      item.quality.verified === undefined,
   );
 
   if (candidates.length > 0 && verifyMs > 0 && isEnrichmentConfigured()) {

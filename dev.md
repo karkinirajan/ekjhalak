@@ -7,25 +7,30 @@ its gate command returns the required result.
 **Final audit: 2026-08-06, against production deploy `ca9b65b`.** Seven of eleven
 phases done, two blocked on one decision, two partial for reasons recorded below.
 
+**Updated 2026-08-08: Phase 2 is done.** The archive is provisioned, migrated and
+verified against the live project — which unblocks Phase 7 and moves Phase 11's
+blocker from "impossible" to "one scheduled function". Phase 2's own section
+records what the gate returned.
+
 **What is left lives in [development.md](development.md)** — this file records
 what each gate returned, that one records the remaining work and why.
 
 Status legend: **done** · **partial** · **blocked** · **not started**
 
 | # | Phase | Status | Gate met |
-| --- | --- | --- | --- |
+| --- | --- | --- | --- | 
 | 0 | Recon | **done** | yes |
 | 1 | Automated audit baseline | **done** | yes |
-| 2 | Content persistence layer | **partial** — project exists, 2 setup steps left | no — see development.md §1 |
+| 2 | Content persistence layer | **done** | yes — 472→512 rows, monotonic |
 | 3 | Story pages + SEO remediation | **done** | yes |
 | 4 | Performance remediation | **partial** | CLS yes, LCP target no |
 | 5 | Accessibility remediation | **done** | yes |
 | 6 | Best practices remediation | **done** | yes |
-| 7 | Auth + personalization | **blocked** on Phase 2 | — |
+| 7 | Auth + personalization | **not started** — Phase 2 no longer blocks it | — |
 | 8 | Monetization infrastructure | **blocked** on Phase 7 | — |
 | 9 | Full re-verification | **done** | yes — no regressions |
 | 10 | Documentation | **done** | yes |
-| 11 | Bilingual verify-then-publish | **partial** — audit shipped, queue blocked | see development.md §1b |
+| 11 | Bilingual verify-then-publish | **partial** — enrichment now persists; queue left | see development.md §1b |
 | 12 | Category colour system | **done** | yes — 62 contrast + 110 distinctness pairs |  
 
 ---
@@ -97,34 +102,73 @@ axe violations, both on the home page, nothing critical.
 
 ---
 
-## Phase 2 — Content persistence layer — **partial**
+## Phase 2 — Content persistence layer — **done**
 
 Story pages need stable permalinks, and the pipeline holds items only inside a
 5-minute cache window — an item that rolls out of the range filter becomes
 unreachable.
 
-Merged: `supabase/migrations/20260806000000_articles.sql` (SHA-256 fingerprint as
-PK, `first_seen_at`, `last_seen_at`, nullable `canonical_id` self-FK, RLS on with
-no policies as a deliberate deny-all), `lib/article-store.ts` (PostgREST upsert
-over `fetch`, no new dependency, bounded by a 3-second reserve taken *out of* the
-model stage so `AGGREGATE_BUDGET_MS` stays the ceiling), and `deduplicator.ts` now
-recording `alternateSourceIds[]` — which outlets carried a story, not merely how
-many — captured at the only moment that answer exists.
+**Gate met on 2026-08-08**, against the live project `wfmurwsagrosxgcihbgw`:
 
-**Gate:** `SELECT count(*) FROM articles` grows monotonically across three
-aggregation runs 10+ minutes apart. **Not met yet — but no longer blocked.**
+```bash
+pnpm check:archive           all checks passed
+rows across four passes      472 -> 478 -> 490 -> 512   (monotonic)
+first_seen_at moved on       0 of 3 sampled rows        (must be 0)
+last_seen_at moved on        2 of 3 sampled rows        (proves the upsert ran)
+anon SELECT on articles      []                         (RLS deny-all holds)
+anon RPC prune_article_…     401 permission denied
+/api/news                    200, shape unchanged
+```
 
-A project now exists: `wfmurwsagrosxgcihbgw`, REST origin verified reachable. It
-is not visible to the Supabase MCP connection used here (different account), so
-the migration could not be applied from this side. Two operator steps remain —
-paste the migration into the SQL editor, set `SUPABASE_URL` and
-`SUPABASE_SERVICE_ROLE_KEY` on Netlify. Runbook and verification queries in
-`development.md` §1.
+The three migrations were applied over the pooler with `psql`. Two things had to
+be found first, and both are recorded because both cost real time: the project's
+`DATABASE_URL` password contains `$`, `&` and `^`, so `source .env` silently
+corrupts it and the failure looks exactly like a wrong password; and the REST
+origin had been set under three different names across attempts —
+`DATABASE_URL`, then `NEXT_PUBLIC_SUPABASE_URL`, never `SUPABASE_URL`.
 
-Everything above stays inert until those two variables are set, and is verified
-not to run without them.
+### What is stored, and what reads it
 
-**Unblocks:** Phase 3's permalink durability, Phase 7 entirely.
+`supabase/migrations/20260806000000_articles.sql` — SHA-256 fingerprint as PK,
+`first_seen_at`, `last_seen_at`, nullable `canonical_id` self-FK, RLS on with no
+policies as a deliberate deny-all. `20260808000000_articles_enrichment.sql` adds
+`enrichment_key` and `quality`.
+
+`lib/article-rows.ts` decides what to send; `lib/article-store.ts` is transport.
+The split exists because the rule about *which columns to send* has an invariant
+worth testing, and `server-only` makes the transport untestable in a plain-Node
+runner.
+
+**That invariant, in one line: a column that is never sent is never overwritten.**
+`first_seen_at` is omitted from every payload — it is the one timestamp no feed
+can reconstruct. The four enrichment columns are omitted from stories a pass did
+not enrich, which is why `recordArticles` partitions its rows at all. Sending
+`title_translated: null` for a story the pass never reached would erase a
+translation an earlier pass paid a metered model request for, 288 times a day;
+the archive would spend all day deleting its own most valuable content. Nine
+tests in `lib/article-rows.test.ts` hold this.
+
+### The two things it unblocked, both verified live
+
+**Permalinks outlive the feed.** `lib/story-lookup.ts` was written as a seam for
+exactly this and is the only module that changed. A story that had aged out of
+every feed returned **200** from the archive; an unknown id still returns a real
+**404**.
+
+**Enrichment survives the process.** The archive is now the L2 behind
+`lib/enrichment-cache.ts`'s in-process L1, keyed identically, so a cold
+invocation no longer re-translates what an earlier one already did. Demonstrated
+against 40 seeded rows: `[archive] restored 33 enrichment(s); 423 still need the
+model` — 33 stories reached the reader fully bilingual at a cost of **zero model
+requests**. The 7 misses were stories whose body text changed between passes,
+which is the key doing its job rather than a failure. Seed data was reverted; the
+table holds only real rows.
+
+`/api/archive?secret=…` reports the same numbers at runtime. It exists because
+this module swallows its failures by design, and that design is precisely why
+nobody noticed the archive had never written a row.
+
+**Unblocks:** Phase 3's permalink durability (done), Phase 7 entirely.
 
 ---
 

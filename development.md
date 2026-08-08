@@ -12,9 +12,13 @@ Ordered by what unblocks the most, not by effort.
 
 ## The short version
 
-Seven of eleven phases are done. Two are partial for reasons recorded below, and
-two are waiting on the archive — for which a project now exists and two setup
-steps remain (§1). That is still the item worth more than everything else here.
+**Updated 2026-08-08.** Eight of eleven phases are done: the archive (§1) is
+provisioned, migrated and verified, which was the item worth more than everything
+else here. It closed Phase 2, made permalinks durable, and gave enrichment
+somewhere to survive between invocations.
+
+What is left of the bilingual pipeline is no longer a missing capability, it is a
+scheduled function (§1b). Phase 7 is unblocked and unstarted.
 
 Nothing here is a known regression being parked as future work. Production is
 healthy: `/api/news` 200 at 16.4 s cold and 0.6 s warm, home 200 at 1.05 s, all
@@ -22,71 +26,67 @@ verification gates passing.
 
 ---
 
-## 1. Archive — project provisioned, two steps left
+## 1. Archive — **done, 2026-08-08**
 
-**Status changed 2026-08-06.** A Supabase project exists:
-`wfmurwsagrosxgcihbgw`, REST origin `https://wfmurwsagrosxgcihbgw.supabase.co`
-(verified reachable — `/rest/v1/` answers 401, which is what an unauthenticated
-request should get).
+The three migrations are applied to `wfmurwsagrosxgcihbgw` and the table is
+writing. `pnpm check:archive` passes; rows grew 472 → 478 → 490 → 512 across four
+aggregation passes, `first_seen_at` moved on none of them, and anon still reads
+`[]`. Phase 2's section in `dev.md` has the full gate output.
 
-It is not visible to the Supabase MCP connection used here, which sees only
-`finance-tracker` and `todos` under org `pyzwffgwuelhcypzehhe` and returns "you do
-not have permission" for this ref. So the migration could not be applied from
-here, and the two remaining steps are the operator's.
+### What took the time, so nobody re-derives it
 
-### Step 1 — apply both migrations, in order
+**The name of the origin variable.** It had been set as `DATABASE_URL`, then as
+`NEXT_PUBLIC_SUPABASE_URL`, and never as `SUPABASE_URL`, which is what
+`lib/article-store.ts` read. Each attempt looked correct from the dashboard and
+produced no error, because the writer swallows its own failures by design.
 
-Supabase Dashboard → SQL Editor → paste and Run, in this order:
+That is now handled in code rather than in a runbook: **the origin is read under
+either name.** It is public by design, so accepting both is safe. The
+service-role key is not, and gets the opposite treatment — if any
+`NEXT_PUBLIC_*SERVICE_ROLE*` variable exists, the archive refuses to start and
+says the key must be rotated rather than renamed, because `NEXT_PUBLIC_` values
+are inlined into the browser bundle at build time.
 
-1. `supabase/migrations/20260806000000_articles.sql` — the table.
-2. `supabase/migrations/20260806010000_articles_retention.sql` — the retention
-   and storage functions.
+**The database password contains `$`, `&` and `^`.** `source .env` expands those,
+so the connection string is silently corrupted and `psql` reports
+`password authentication failed` — indistinguishable from a wrong password.
+`scripts/check-archive.mjs` parses `.env` itself, without expansion, for exactly
+this reason.
 
-Both are safe to run more than once: every statement is `create … if not
-exists`, `create or replace`, `comment on`, `revoke`, or the one idempotent
-`alter table … enable row level security`.
+### The one thing still worth checking in production
 
-### Step 2 — fix `SUPABASE_URL`
+The code is name-agnostic now, so production works with the origin under either
+spelling. What it cannot work without is `SUPABASE_SERVICE_ROLE_KEY`, and that
+value only ever returns masked from the Netlify API — it cannot be verified from
+here.
 
-**This was set wrong on the first attempt and is the reason nothing was written.**
-The value in production ends in `…postgres` — it is the Postgres connection
-string, not the REST origin. `fetch` throws
-`TypeError: Request cannot be constructed from a URL that includes credentials`
-on every batch, the writer swallows it by design, and the feed keeps returning
-200 while the archive stays empty.
+After the next deploy, ask the site itself:
 
-Netlify → Site configuration → Environment variables:
-
+```bash
+curl "https://ekjhalak.news/api/archive?secret=$REVALIDATE_SECRET"
 ```
-SUPABASE_URL               https://wfmurwsagrosxgcihbgw.supabase.co
-SUPABASE_SERVICE_ROLE_KEY  Dashboard → Project Settings → API → service_role
-```
 
-`SUPABASE_SERVICE_ROLE_KEY` is already set and cannot be checked from here — the
-API only returns it masked. If the archive still writes nothing after the URL is
-corrected, that key is the next thing to re-copy.
+`{"ok":true,"rows":N,…}` means it is writing. `configured:false` means the key is
+missing; a non-null `lastError` is PostgREST's own words about why the last write
+failed. This endpoint exists because the archive was misconfigured for its entire
+first existence while every dashboard looked healthy — a warning in a serverless
+log nobody tails is silence, and this project paid for that lesson twice.
 
-`NEXT_PUBLIC_SUPABASE_ANON_KEY` is also set and nothing reads it. Harmless — the
-anon key is designed to be public — but it is dead config and can go.
-
-Then redeploy. `isStoreConfigured()` flips on and the aggregator starts writing;
-nothing else changes.
-
-Since this mistake is easy to make and was invisible when made,
-`lib/article-store.ts` now validates the URL at module load: a non-HTTP scheme
-logs one line naming the correct value and disables the archive, so the pass
-stops reserving three seconds out of the model stage for a write that cannot
-succeed.
+`REVALIDATE_SECRET` must be set in production for that route to answer at all; it
+fails closed exactly like `/api/revalidate`.
 
 **The service-role key bypasses RLS.** It is a server-only secret — never
 `NEXT_PUBLIC_`, never read from a client component. `lib/article-store.ts`
 imports `"server-only"`, so an accidental client import is a build error rather
-than a leaked key. Do not paste it into a chat or a commit.
+than a leaked key, and it now also refuses to start if it finds the key under a
+`NEXT_PUBLIC_` name. Do not paste it into a chat or a commit.
 
 ### On the Postgres credentials
 
-The direct connection details (`db.wfmurwsagrosxgcihbgw.supabase.co:5432`,
-`postgres`/`postgres`) are **not what the app uses**, and that is deliberate.
+The direct connection details are **not what the app uses**, and that is
+deliberate. They are how the three migrations were applied — `psql` over the
+transaction pooler on 6543 — and they remain the right tool for migrations and
+one-off queries.
 
 `lib/article-store.ts` talks **PostgREST over HTTPS** — a stateless request per
 batch, no connection pool. On Netlify that is the right shape: functions are
@@ -105,20 +105,29 @@ queries. They are simply not what production reads.
 ### Verify it is working
 
 ```bash
-# 1. The table exists and is empty
-#    (Supabase SQL editor)
-select count(*) from articles;
+# Configuration, schema, RLS posture and row count, in one command. Reads the
+# same two variables the app does, and authenticates the same way, so a pass
+# here is a statement about the app rather than about the script.
+pnpm check:archive
+```
 
-# 2. Force a regeneration, wait, count again — it should grow, then hold steady
-#    as the same stories are re-seen rather than re-inserted.
+Then, for the growth half of the gate:
+
+```bash
+# Force a regeneration, wait, and run check:archive again. `rows` must only ever
+# rise: new stories insert, re-seen ones update in place.
 curl -X POST "https://ekjhalak.news/api/revalidate?secret=$REVALIDATE_SECRET"
+```
 
-# 3. first_seen_at must never move on a re-seen row. This is the one column that
-#    cannot be recovered from anywhere else, and the writer omits it from the
-#    upsert payload precisely so merge-duplicates cannot overwrite it.
+In the SQL editor, the two questions the script does not answer:
+
+```sql
+-- first_seen_at must never move on a re-seen row. It is the one column that
+-- cannot be recovered from anywhere else, and the writer omits it from the
+-- upsert payload precisely so merge-duplicates cannot overwrite it.
 select id, first_seen_at, last_seen_at from articles order by first_seen_at limit 5;
 
-# 4. What the table costs, before deciding whether it needs pruning at all.
+-- What the table costs, before deciding whether it needs pruning at all.
 select * from article_storage();
 ```
 
@@ -149,26 +158,53 @@ columns should not be one HTTP request away from the public internet.
 
 The Phase 2 gate is `select count(*) from articles` growing monotonically across
 three aggregation runs spaced 10+ minutes apart, with `/api/news` unchanged in
-shape.
+shape. **Met on 2026-08-08**: 472 → 478 → 490 → 512.
 
-### What this unblocks, in order
+### What this unblocked
 
-**a. Permalinks stop expiring.** Today `/story/{id}` resolves against the live
-feed, so a shared link 404s once its story ages out of the aggregation window.
-`lib/story-lookup.ts` is the single seam — that one module's body changes, and
-the pages, sitemaps and metadata do not.
+**a. Permalinks stop expiring — done.** `/story/{id}` now falls back to the
+archive when a story has aged out of the aggregation window, so a shared link
+survives its story leaving the feeds. `lib/story-lookup.ts` was written as the
+seam for exactly this and is the only module that changed; the pages, sitemaps
+and metadata did not. Verified live: an archived story that is no longer in any
+feed returns 200, an unknown id still returns a real 404.
 
-**b. The extraction ceiling lifts.** Roughly half the feed still carries the
-publisher's two-line teaser and ~20% has no photograph, because extraction is
+The archived story is put through the same `PUBLISH_POLICY` gate as the feed.
+A story the gate would withhold from the homepage is not served merely because it
+is old — otherwise the archive becomes a way *around* the editorial standard
+rather than a way to reach its back catalogue.
+
+One asymmetry was introduced deliberately: `listStories()`, which feeds the
+sitemaps, still returns the live feed only, so it is now a subset of what
+`findStory` resolves. A sitemap must not list URLs the site would 404 on; it is
+under no obligation to list every URL that works. Listing the whole archive means
+~1,500 entries a day, through the 50,000-URL limit inside a month and into
+sitemap index files — real work, and separate. Meanwhile the part that mattered
+for search is already fixed: URLs Google crawled while they *were* listed now
+answer 200 instead of 404 when it returns to them.
+
+**b. Enrichment survives the process — done.** The archive is the L2 behind
+`lib/enrichment-cache.ts`'s in-process L1, keyed identically, so a cold
+invocation no longer re-translates what an earlier one already paid for.
+Demonstrated live against 40 seeded rows: 33 restored, 33 stories bilingual at a
+cost of zero model requests, the other 7 correctly missing because their body
+text had changed. See §1b — this is the fix that turns "every news is bilingual"
+into arithmetic that works.
+
+**c. The extraction ceiling still has not lifted.** Roughly half the feed carries
+the publisher's two-line teaser and ~20% has no photograph, because extraction is
 bounded by one pass's slice of a 15-second request-path budget. Measured and
 recorded: `next: { revalidate }` does **not** help — fetches nested inside
 `unstable_cache` never populate the Data Cache. One fetch-cache entry after
-hundreds of article fetches, with and without the abort signal. The ceiling only
-moves by taking enrichment off the request path, which needs somewhere to write.
+hundreds of article fetches, with and without the abort signal.
 
-**c. Phase 7 (auth + personalization)** — Supabase Auth, followed sources, a
+Persistence was the prerequisite, not the fix. The ceiling moves when extraction
+comes off the request path, which is the same scheduled-function work §1b needs
+for the model queue — one job, two payoffs. Bound the parse first (§4).
+
+**d. Phase 7 (auth + personalization)** — Supabase Auth, followed sources, a
 personalized homepage with the anonymous experience unchanged, reading history.
-Specified in `dev.md`, entirely unbuilt.
+Specified in `dev.md`, entirely unbuilt, and no longer blocked.
 
 **d. Phase 8 (monetization)** — Stripe Checkout + Billing Portal +
 signature-verified webhook, a paywall boundary at the story-page and digest level
@@ -178,7 +214,7 @@ See `MONETIZATION.md`.
 
 ---
 
-## 1b. Bilingual verify-then-publish pipeline — designed, half built
+## 1b. Bilingual verify-then-publish pipeline — persistence done, queue left
 
 The goal: no story reaches a reader until it has been summarised, verified,
 translated, verified again and audited — in both directions, so every story and
@@ -259,14 +295,35 @@ This is the same shape as the extraction ceiling in §1: work that should be don
 once per story is being done once per invocation, because there is nowhere
 durable to record that it was done.
 
-**So the fix is the same fix.** Persist enrichment in the `articles` table, and
-the 1,060 daily requests go to stories that have never been enriched instead of
-to the same stories repeatedly. That is what turns "every news is bilingual"
-from an aspiration into arithmetic that works.
+**So the fix is the same fix — and it shipped on 2026-08-08.** Enrichment is now
+persisted in the `articles` table and read back before the model is asked, so the
+1,060 daily requests go to stories that have never been enriched instead of to
+the same stories repeatedly.
+
+The mechanism is `enrichment_key`: the story id plus a hash of the exact text that
+was sent to the model, stored alongside the translation and compared against a
+freshly computed one. Equal means the story *and its source text* are unchanged
+and the stored translation stands. Different means the publisher rewrote the body
+under the same URL — which several outlets here do within the first hour of a
+breaking story — and it earns a fresh translation rather than a stale one served
+forever. `lib/enrichment-cache.ts` remains the L1; the archive is the L2 behind
+it, keyed identically.
+
+Measured live against 40 seeded rows: `[archive] restored 33 enrichment(s); 423
+still need the model`. Thirty-three stories reached the reader fully bilingual for
+zero model requests; the seven misses were stories whose body had changed since
+they were stored, which is the key working rather than failing.
+
+Verification results are carried across too, but only `verified` — `audited` and
+`bilingual` are deterministic functions of text the table already holds, so they
+are recomputed on every hydrate. That is deliberate: it costs nothing and means a
+row written under an older, weaker audit is re-examined rather than grandfathered
+past the gate. `verified` is the one verdict that cost a model request to earn.
 
 Worth noting for later: a fresh key from aistudio.google.com may carry higher
 per-model limits than this one, and the two 500/day models are doing most of the
-work. But the durable cache matters more than the key.
+work. But the durable cache mattered more than the key, which is why it came
+first.
 
 ### The gate itself is built and enforced
 
@@ -302,7 +359,18 @@ pipeline over hundreds of stories does not fit and never will. It needs the
 `articles` table as a work queue with a status column, a Netlify scheduled
 function draining it, and the site reading only rows that reached `published`.
 
-That is Phase 2, and Phase 2 is one environment variable away — see §1.
+**The table half is done (§1); the scheduled function is what remains.** The
+distinction matters because the two failure modes were never the same one. Before
+persistence, a story could not stay enriched — the work was destroyed every cold
+start and no amount of scheduling would have helped. Now it stays, and each pass
+adds to it, so the feed converges on bilingual over hours instead of thrashing.
+What the queue buys on top is *rate*: draining on a schedule rather than in the
+seconds a reader is willing to wait, which is what would let every story be
+verified rather than only the ones a 15-second pass could reach.
+
+So this is now an optimisation with a known shape, not a blocker. The same
+scheduled function also lifts the extraction ceiling (§1 c) — one job, two
+payoffs.
 
 ### What shipped today, without the queue
 
@@ -482,8 +550,9 @@ So the next person does not redo it:
 ## Verification commands
 
 ```bash
-pnpm verify                       # lint, typecheck, 52 tests, contrast, build
+pnpm verify                       # lint, typecheck, 88 tests, contrast, build
 pnpm verify:live                  # feed quality -> axe -> SEO, against production
+pnpm check:archive                # archive config, schema, RLS posture, row count
 pnpm check:feed [url]             # 19 checks on a live feed
 pnpm check:seo [url]              # sitemaps, canonical host, NewsArticle, real 404
 pnpm check:a11y <url>             # axe-core; exits non-zero on critical/serious

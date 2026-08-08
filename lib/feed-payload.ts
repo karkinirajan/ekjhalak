@@ -10,8 +10,8 @@
 // Two cuts, in this order:
 //
 //   1. Drop the fields nothing reads. `sourceHomepage`, `category`,
-//      `alternateSourceIds` and `quality` qualify. `credibility` and `sourceId` look
-//      server-side but are not:
+//      `alternateSourceIds`, `quality` and `enrichmentKey` qualify. `credibility`
+//      and `sourceId` look server-side but are not:
 //      `scoreStory`, `diversifyBySource` and `selectTrending` all run inside the
 //      client component, so both fields have to travel. This cut is small.
 //
@@ -69,6 +69,7 @@ export function toClientItem(item: NewsItem): NewsItem {
   delete trimmed.category;
   delete trimmed.alternateSourceIds;
   delete trimmed.quality;
+  delete trimmed.enrichmentKey;
   return trimmed;
 }
 

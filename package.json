@@ -16,6 +16,7 @@
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:a11y": "node scripts/axe-scan.mjs",
     "check:feed": "node scripts/check-feed-quality.mjs",
+    "check:archive": "node scripts/check-archive.mjs",
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run check:contrast && pnpm run build",
     "verify:live": "pnpm run check:feed && pnpm run check:a11y https://ekjhalak.news/ && pnpm run check:seo",
     "check:seo": "node scripts/check-seo.mjs"

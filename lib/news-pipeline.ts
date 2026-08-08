@@ -84,6 +84,20 @@ export interface NewsItem {
    * one is simply not yet at the top of the queue.
    */
   quality?: StoryQuality;
+  /**
+   * The cache key for this story's enrichment — its id plus a hash of the exact
+   * text that was sent to the model. Set by the enrichment stage on every story
+   * it reached, whether the model succeeded or the audit rejected the result.
+   *
+   * Server-side only; stripped in lib/feed-payload.ts.
+   *
+   * Its presence is load-bearing, not informational: `recordArticles` writes the
+   * four enrichment columns only for stories that carry one, because a story
+   * this pass never looked at holds no translation, and writing its absence
+   * would erase one an earlier pass paid a metered model request for. See the
+   * partition in lib/article-store.ts.
+   */
+  enrichmentKey?: string;
 }
 
 export interface StoryQuality {
