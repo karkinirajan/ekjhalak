@@ -64,7 +64,7 @@ const GRID_SUMMARY_CHARS = 155;
  * categorised object and the photograph is simply part of it.
  */
 const THUMB_FRAME =
-  "overflow-hidden rounded-md bg-raised/60 border border-rule/50";
+  "overflow-hidden rounded-sm bg-raised/60 border border-rule/20";
 
 /**
  * The card's border, at rest and on hover.
@@ -78,7 +78,7 @@ const THUMB_FRAME =
  * at, not on all twelve at once.
  */
 const CARD_BORDER =
-  "border border-rule/50 hover:border-[var(--topic)] hover:shadow-[0_8px_32px_color-mix(in_srgb,var(--topic)_20%,transparent)] transition-all duration-500 hover:-translate-y-1";
+  "border border-rule/20 border-b-2 border-b-[var(--topic)] hover:border-[var(--topic)] hover:shadow-[0_8px_32px_color-mix(in_srgb,var(--topic)_20%,transparent)] transition-all duration-500 hover:-translate-y-1";
 
 /**
  * One story, in two editorial weights.
@@ -112,7 +112,7 @@ export function StoryCard({
     return (
       <article
         data-topic={item.topic}
-        className="group relative flex gap-3.5 p-2 rounded-xl transition-all duration-300 hover:bg-surface/50 hover:-translate-y-0.5"
+        className="group relative flex gap-3.5 p-2 rounded-sm transition-all duration-300 hover:bg-surface/50 hover:-translate-y-0.5"
       >
         {/* `self-start` is load-bearing, not alignment taste. This <article> is
             a row flex container, so the default `align-items: stretch` gives the
@@ -194,7 +194,7 @@ export function StoryCard({
     <article
       data-topic={item.topic}
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-2xl bg-surface/80 backdrop-blur-sm transition-all duration-300 hover:bg-surface",
+        "group relative flex h-full flex-col overflow-hidden rounded-sm bg-surface/80 backdrop-blur-sm transition-all duration-300 hover:bg-surface",
         CARD_BORDER,
       )}
     >

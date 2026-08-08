@@ -72,8 +72,8 @@ export function Masthead({
       : "—";
 
   return (
-    <header className="sticky top-0 z-50 w-full transition-all duration-300 glass border-b border-rule/50 shadow-sm">
-      <div className="flex h-16 w-full items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
+    <header className="sticky top-0 z-50 w-full transition-all duration-300 glass border-b border-rule/20 shadow-sm">
+      <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
         
         {/* Brand */}
         <div className="flex items-center gap-3">
@@ -196,7 +196,7 @@ export function Masthead({
             placeholder={t.searchPlaceholder}
             aria-label={t.searchLabel}
             className={cn(
-              "h-12 w-full rounded-2xl bg-surface/60 backdrop-blur-xl shadow-card border border-rule/50 pl-11 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-red",
+              "h-12 w-full rounded-sm bg-surface/60 backdrop-blur-xl shadow-card border border-rule/20 pl-11 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-red",
               isNp && "font-np",
             )}
           />

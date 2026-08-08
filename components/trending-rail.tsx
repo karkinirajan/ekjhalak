@@ -28,8 +28,8 @@ export function TrendingRail({ items, onOpen }: TrendingRailProps) {
 
   return (
     <aside className="lg:sticky lg:top-32">
-      <div className="rounded-md border border-rule bg-surface p-5 shadow-card">
-        <div className="mb-5 border-b border-rule pb-4">
+      <div className="rounded-sm border border-rule/20 bg-surface p-5 shadow-card">
+        <div className="mb-5 border-b border-rule/20 pb-4">
           <h2
             className={cn(
               "flex items-center gap-2 text-lg font-bold tracking-tight text-ink",

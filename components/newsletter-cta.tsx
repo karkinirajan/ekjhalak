@@ -100,7 +100,7 @@ export function NewsletterCta() {
   return (
     <section
       aria-label={t.newsletterTitle}
-      className="relative isolate overflow-hidden rounded-md border border-rule bg-surface px-6 py-12 sm:px-10 sm:py-14"
+      className="relative isolate overflow-hidden rounded-sm border border-rule/20 bg-surface px-6 py-12 sm:px-10 sm:py-14"
     >
       {/* Ambient wash — red in one corner, green in the other. The only place
           the two accents meet, which is what marks this band as the offer. */}
