@@ -147,9 +147,9 @@
   --rule: rgba(248, 248, 242, 0.1);
   --rule-strong: rgba(255, 255, 255, 0.15);
   
-  --red: #ff5e9c;
-  --red-solid: #e31254;
-  --red-soft: rgba(249, 38, 114, 0.15);
+  --red: #2ddc87;
+  --red-solid: #008a00;
+  --red-soft: rgba(45, 220, 135, 0.15);
   --green: #a6e22e;
   --green-soft: rgba(166, 226, 46, 0.15);
   --topic-ink: #111111;
@@ -158,7 +158,7 @@
   --shadow-lift: 0 10px 40px -4px rgba(0, 0, 0, 0.6), 0 0 4px rgba(255, 255, 255, 0.1);
 
   /* Monokai Accent Palette */
-  --topic-breaking: #ff5e9c; /* Pink */
+  --topic-breaking: #2ddc87; /* Emerald Green */
   --topic-politics: #fdac47; /* Orange */
   --topic-world: #66d9ef; /* Blue */
   --topic-business: #a6e22e; /* Green */
@@ -192,9 +192,9 @@
   --rule: rgba(39, 40, 34, 0.1);
   --rule-strong: #cbd5e1;
   
-  --red: #b8154e;
-  --red-solid: #b8154e;
-  --red-soft: rgba(208, 26, 91, 0.1);
+  --red: #006600;
+  --red-solid: #006600;
+  --red-soft: rgba(0, 102, 0, 0.1);
   --green: #4d7a12;
   --green-soft: rgba(77, 122, 18, 0.1);
   --topic-ink: #ffffff;
@@ -203,13 +203,13 @@
   --shadow-lift: 0 12px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
 
   /* Deepened Accents for WCAG on Light */
-  --topic-breaking: #cb020e;
+  --topic-breaking: #006600;
   --topic-politics: #75015d;
   --topic-world: #0159f5;
-  --topic-business: #09765a;
+  --topic-business: #00326e;
   --topic-sports: #796b04;
   --topic-health: #024d4f;
-  --topic-environment: #165701;
+  --topic-environment: #1c4000;
   --topic-technology: #047199;
   --topic-society: #4a05b0;
 }
