@@ -117,14 +117,13 @@ export function CategoryNav({
                 )}
               >
                 {topicLabel(id, language)}
-                {/* Not `opacity-55`. Opacity multiplies whatever colour the
-                    pill resolved to, so a count that passed contrast as
-                    `--ink-muted` failed once dimmed — six nodes of serious
-                    axe `color-contrast`, invisible to scripts/check-contrast.mjs
-                    because that reads the token pairs as authored. A count is
-                    secondary to its label, so it is rendered one step down in
-                    the ink scale rather than faded. */}
-                <span className="ml-1.5 text-ink-muted tabular-nums">
+                {/* The count is rendered slightly muted when inactive, but must match the active ink color (with slight opacity) when the pill is solid to maintain WCAG contrast against the vibrant background. */}
+                <span 
+                  className={cn(
+                    "ml-1.5 tabular-nums",
+                    isActive ? "text-topic-ink opacity-90" : "text-ink-muted"
+                  )}
+                >
                   {topicCounts[id]}
                 </span>
               </button>

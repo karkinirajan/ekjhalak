@@ -76,7 +76,7 @@ const THEMES = {
 
 const TOPICS = [
   "breaking", "politics", "world", "business", "sports", "health",
-  "environment", "culture", "technology", "society", "opinion",
+  "environment", "technology", "society",
 ];
 
 /** The wash behind quiet-tone pill text — see components/topic-pill.tsx. */

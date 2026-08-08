@@ -72,8 +72,8 @@ export function Masthead({
       : "—";
 
   return (
-    <header className="sticky top-4 z-50 w-full px-4 sm:px-6 lg:px-8 mb-8 pointer-events-none transition-all duration-300">
-      <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between rounded-2xl glass pointer-events-auto px-4 shadow-lift gap-4">
+    <header className="sticky top-0 z-50 w-full transition-all duration-300 glass border-b border-rule/50 shadow-sm">
+      <div className="flex h-16 w-full items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
         
         {/* Brand */}
         <div className="flex items-center gap-3">
@@ -176,7 +176,7 @@ export function Masthead({
       </div>
       
       {/* Mobile Search */}
-      <div className="mx-auto mt-3 w-full max-w-[1400px] px-0 lg:hidden pointer-events-auto">
+      <div className="w-full px-4 pb-4 lg:hidden">
         <form
           role="search"
           onSubmit={(event) => {

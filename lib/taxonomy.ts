@@ -16,12 +16,10 @@ export type TopicId =
   | "world"
   | "business"
   | "sports"
-  | "culture"
   | "technology"
   | "health"
   | "environment"
-  | "society"
-  | "opinion";
+  | "society";
 
 export interface Topic {
   id: TopicId;
@@ -37,7 +35,6 @@ export const TOPICS: Record<TopicId, Topic> = {
   world: { id: "world", en: "World", np: "विश्व", glyph: "🌐" },
   business: { id: "business", en: "Business", np: "अर्थतन्त्र", glyph: "📈" },
   sports: { id: "sports", en: "Sports", np: "खेलकुद", glyph: "🏆" },
-  culture: { id: "culture", en: "Culture", np: "कला", glyph: "🎭" },
   technology: { id: "technology", en: "Tech", np: "प्रविधि", glyph: "⌘" },
   health: { id: "health", en: "Health", np: "स्वास्थ्य", glyph: "✚" },
   environment: {
@@ -47,7 +44,6 @@ export const TOPICS: Record<TopicId, Topic> = {
     glyph: "🌿",
   },
   society: { id: "society", en: "Society", np: "समाज", glyph: "◉" },
-  opinion: { id: "opinion", en: "Opinion", np: "विचार", glyph: "✎" },
 };
 
 /** Display order for the category navigation rail. */
@@ -57,11 +53,9 @@ export const TOPIC_ORDER: TopicId[] = [
   "business",
   "society",
   "sports",
-  "culture",
   "technology",
   "health",
   "environment",
-  "opinion",
 ];
 
 export function topicLabel(id: TopicId, lang: "en" | "np"): string {
@@ -168,39 +162,22 @@ const TOPIC_MATCHERS: Matcher[] = [
     ],
   },
   {
-    id: "culture",
-    en: [
-      "festival", "film", "movie", "cinema", "music", "concert", "album",
-      "art", "artist", "museum", "heritage", "literature", "novel", "poet",
-      "theatre", "theater", "dance", "temple", "tradition", "actor", "actress",
-      "exhibition", "award",
-    ],
-    np: [
-      "संस्कृति", "चाडपर्व", "पर्व", "दशैं", "तिहार", "फिल्म", "चलचित्र",
-      "संगीत", "कला", "कलाकार", "साहित्य", "मन्दिर", "सम्पदा", "परम्परा",
-      "नृत्य",
-    ],
-  },
-  {
-    id: "opinion",
-    en: [
-      "opinion", "editorial", "commentary", "analysis", "viewpoint",
-      "column", "op-ed", "perspective",
-    ],
-    np: ["विचार", "सम्पादकीय", "टिप्पणी", "विश्लेषण", "दृष्टिकोण"],
-  },
-  {
     id: "society",
     en: [
       "school", "schools", "university", "students", "education", "teachers",
       "women", "children", "caste", "migrant", "migration", "labour", "labor",
       "poverty", "welfare", "crime", "police", "court", "arrest", "trafficking",
-      "rights", "community", "village", "housing",
+      "rights", "community", "village", "housing", "festival", "film", "movie",
+      "cinema", "music", "concert", "album", "art", "artist", "museum",
+      "heritage", "literature", "novel", "poet", "theatre", "theater", "dance",
+      "temple", "tradition", "actor", "actress", "exhibition", "award",
     ],
     np: [
       "समाज", "विद्यालय", "विश्वविद्यालय", "विद्यार्थी", "शिक्षा", "शिक्षक",
       "महिला", "बालबालिका", "प्रहरी", "अदालत", "पक्राउ", "अपराध", "गरिबी",
-      "श्रमिक", "अधिकार", "समुदाय",
+      "श्रमिक", "अधिकार", "समुदाय", "संस्कृति", "चाडपर्व", "पर्व", "दशैं",
+      "तिहार", "फिल्म", "चलचित्र", "संगीत", "कला", "कलाकार", "साहित्य",
+      "मन्दिर", "सम्पदा", "परम्परा", "नृत्य",
     ],
   },
   {
@@ -230,7 +207,6 @@ const SOURCE_CATEGORY_MAP: Record<string, TopicId> = {
   development: "business",
   society: "society",
   street: "society",
-  opinion: "opinion",
   world: "world",
   conflict: "world",
   europe: "world",

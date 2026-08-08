@@ -33,12 +33,10 @@ const TOPIC_PALETTES: Record<TopicId, { background: string; accent: string }> = 
   world: { background: "#f4efe6", accent: "#3f5d7a" },
   business: { background: "#f6f2e8", accent: "#2e6f4f" },
   sports: { background: "#eef4f0", accent: "#1d4ed8" },
-  culture: { background: "#f8f1e7", accent: "#8b5e3c" },
   technology: { background: "#f2f4f8", accent: "#2563eb" },
   health: { background: "#f7f5ef", accent: "#0f766e" },
   environment: { background: "#eef7ee", accent: "#3f7d20" },
   society: { background: "#f8f4ed", accent: "#7c3aed" },
-  opinion: { background: "#f7f2ea", accent: "#7a4b2f" },
 };
 
 /**
