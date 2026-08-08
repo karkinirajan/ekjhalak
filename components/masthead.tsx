@@ -69,7 +69,9 @@ export function Masthead({
           hour12: false,
           timeZone: KATHMANDU_TZ,
         })
-      :   return (
+      : "—";
+
+  return (
     <header className="sticky top-4 z-50 w-full px-4 sm:px-6 lg:px-8 mb-8 pointer-events-none transition-all duration-300">
       <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between rounded-2xl glass pointer-events-auto px-4 shadow-lift gap-4">
         
@@ -201,4 +203,5 @@ export function Masthead({
         </form>
       </div>
     </header>
+  );
 }

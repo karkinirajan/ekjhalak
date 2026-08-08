@@ -147,27 +147,27 @@
   --rule-strong: rgba(255, 255, 255, 0.15);
   
   --red: #f87171;
-  --red-solid: #ef4444;
-  --red-soft: rgba(239, 68, 68, 0.1);
+  --red-solid: #dc2626;
+  --red-soft: #3b1818;
   --green: #34d399;
-  --green-soft: rgba(52, 211, 153, 0.1);
-  --topic-ink: #ffffff;
+  --green-soft: #123123;
+  --topic-ink: #111111;
 
   --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 0 3px rgba(255, 255, 255, 0.05);
   --shadow-lift: 0 10px 40px -4px rgba(0, 0, 0, 0.6), 0 0 4px rgba(255, 255, 255, 0.1);
 
-  /* Vibrant, glowing dark mode topics */
-  --topic-breaking: #ff4747;
-  --topic-politics: #f43f5e;
-  --topic-world: #3b82f6;
-  --topic-business: #10b981;
-  --topic-sports: #f59e0b;
-  --topic-health: #06b6d4;
-  --topic-environment: #84cc16;
-  --topic-culture: #a855f7;
-  --topic-technology: #0ea5e9;
-  --topic-society: #8b5cf6;
-  --topic-opinion: #f97316;
+  /* Vibrant dark mode topics (WCAG compliant) */
+  --topic-breaking: #ff4540;
+  --topic-politics: #f0559f;
+  --topic-world: #5b92fe;
+  --topic-business: #0fc899;
+  --topic-sports: #ab9c21;
+  --topic-health: #11ebf1;
+  --topic-environment: #52f711;
+  --topic-culture: #c665fe;
+  --topic-technology: #00bbfb;
+  --topic-society: #a99dff;
+  --topic-opinion: #ff9d36;
 }
 
 /* ── Light: Press Day ──────────────────────────────────────────────────────
@@ -192,28 +192,28 @@
   --rule: #e2e8f0;
   --rule-strong: #cbd5e1;
   
-  --red: #ef4444;
+  --red: #dc2626;
   --red-solid: #dc2626;
   --red-soft: #fef2f2;
-  --green: #10b981;
-  --green-soft: #ecfdf5;
+  --green: #15803d;
+  --green-soft: #f0fdf4;
   --topic-ink: #ffffff;
 
   --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 0 3px rgba(15, 23, 42, 0.02);
   --shadow-lift: 0 10px 40px -4px rgba(15, 23, 42, 0.1), 0 0 4px rgba(15, 23, 42, 0.04);
 
-  /* Clean, vibrant light mode topics */
-  --topic-breaking: #dc2626;
-  --topic-politics: #e11d48;
-  --topic-world: #2563eb;
-  --topic-business: #059669;
-  --topic-sports: #d97706;
-  --topic-health: #0891b2;
-  --topic-environment: #65a30d;
-  --topic-culture: #9333ea;
-  --topic-technology: #0284c7;
-  --topic-society: #7c3aed;
-  --topic-opinion: #ea580c;
+  /* Clean, vibrant light mode topics (WCAG compliant) */
+  --topic-breaking: #cb020e;
+  --topic-politics: #75015d;
+  --topic-world: #0159f5;
+  --topic-business: #09765a;
+  --topic-sports: #796b04;
+  --topic-health: #024d4f;
+  --topic-environment: #165701;
+  --topic-culture: #a206e5;
+  --topic-technology: #047199;
+  --topic-society: #4a05b0;
+  --topic-opinion: #713f01;
 }
 
 /* ── Topic binding ─────────────────────────────────────────────────────────
