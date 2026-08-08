@@ -10,12 +10,26 @@
 // So before a story is dropped for having nothing to say, its own page is asked.
 // Measured on the four offenders: every one has an og:description between 2,000
 // and 2,300 characters — the whole article, not a teaser.
+//
+// This file is fetch, cache and scheduling. Turning the fetched HTML into text is
+// lib/article-parse.ts, which is pure and therefore testable — and which is where
+// the clock lives, because parsing was the one stage in this pipeline that had a
+// budget nobody enforced.
 
 // Build-time guard: importing this from a client component is a build
 // error rather than a shipped bundle. Fetches other people's pages with a spoofed UA.
 import "server-only";
 
-import { decodeEntities, htmlToText } from "./html-entities";
+import { parseArticle } from "./article-parse";
+
+// Re-exported so callers that only ever wanted the shape do not have to know
+// about the split. lib/aggregator.ts imports `ExtractionResult` from here.
+export type {
+  ExtractionResult,
+  ExtractionSource,
+} from "./article-parse";
+
+import type { ExtractionResult } from "./article-parse";
 
 /** A real browser UA. Several Nepali CMSes return a stub page to anything else. */
 const USER_AGENT =
@@ -24,34 +38,6 @@ const USER_AGENT =
 const FETCH_TIMEOUT_MS = 12_000;
 /** Past this the rest of the document is comments, related links and scripts. */
 const MAX_HTML_BYTES = 1_200_000;
-/** Shorter than this is a teaser or a nav crumb, not something to summarise. */
-const MIN_USABLE_CHARS = 120;
-/** The model gets a hard cap anyway; this just bounds what we hold. */
-const MAX_EXTRACTED_CHARS = 6_000;
-
-export type ExtractionSource =
-  | "jsonld"
-  | "og"
-  | "meta"
-  | "twitter"
-  | "paragraphs";
-
-export interface ExtractionResult {
-  text: string;
-  via: ExtractionSource;
-  /**
-   * The article page's own lead image, when the feed did not carry one.
-   *
-   * Half the feed arrived without a photograph — ten of twenty-two sources at
-   * exactly zero, including Kathmandu Post, DW, Al Jazeera and Onlinekhabar —
-   * not because those newsrooms publish without pictures but because their RSS
-   * omits the media fields `lib/rss-adapter.ts` knows how to read. The page
-   * always has one, in og:image, and this pass is already fetching the page.
-   *
-   * Null when the page declares none, which is then genuinely none.
-   */
-  imageUrl: string | null;
-}
 
 // ── Cache ───────────────────────────────────────────────────────────────────
 //
@@ -70,179 +56,6 @@ function remember(url: string, value: ExtractionResult | null) {
     if (oldest.done) break;
     cache.delete(oldest.value);
   }
-}
-
-// ── Candidate extraction ────────────────────────────────────────────────────
-
-/**
- * Put the space back after a danda.
- *
- * Nepali CMSes build og:description by concatenating paragraphs with no
- * separator, so the text arrives as "…गठन गरेको छ।अर्थमन्त्री डा…" — sentences
- * welded together at the danda. It is only ever cosmetic for the model, which
- * reads it correctly either way, but verbatim text goes to the reader exactly as
- * it stands, and a wall with no sentence breaks is hard to read in any script.
- *
- * Danda only. Doing the same for a full stop would put a space inside "U.S." and
- * every abbreviation and decimal in the English feeds.
- */
-function restoreSentenceSpacing(text: string): string {
-  return text.replace(/।(?=\S)/g, "। ");
-}
-
-function metaContent(html: string, attr: string, value: string): string {
-  // Both attribute orders occur in the wild, and either quote style.
-  const patterns = [
-    new RegExp(
-      `<meta[^>]+${attr}=["']${value}["'][^>]*content=["']([^"']*)["']`,
-      "i",
-    ),
-    new RegExp(
-      `<meta[^>]+content=["']([^"']*)["'][^>]*${attr}=["']${value}["']`,
-      "i",
-    ),
-  ];
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match?.[1]) {
-      // Decode first, then strip — in that order, and both are needed.
-      //
-      // A meta `content` attribute cannot contain raw markup, so publishers who
-      // build og:description from article HTML ship it escaped: the attribute
-      // holds `&lt;p&gt;काठमाडौं।…`. Decoding alone turns that into a real `<p>`
-      // and prints it to the reader, which is exactly what DC Nepal's cards were
-      // doing. htmlToText afterwards removes the tag the decode revealed.
-      const text = htmlToText(decodeEntities(match[1]));
-      if (text) return text;
-    }
-  }
-  return "";
-}
-
-/** schema.org articleBody, which is the full text when a publisher emits it. */
-function jsonLdBody(html: string): string {
-  let best = "";
-  for (const block of html.matchAll(
-    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
-  )) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(block[1].trim());
-    } catch {
-      continue;
-    }
-    const nodes: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
-    // @graph is how most CMSes nest the Article node.
-    for (const node of [...nodes]) {
-      const graph = (node as { "@graph"?: unknown })?.["@graph"];
-      if (Array.isArray(graph)) nodes.push(...graph);
-    }
-    for (const node of nodes) {
-      const record = node as { articleBody?: unknown; description?: unknown };
-      for (const field of [record?.articleBody, record?.description]) {
-        if (typeof field === "string") {
-          const text = htmlToText(field);
-          if (text.length > best.length) best = text;
-        }
-      }
-    }
-  }
-  return best;
-}
-
-/**
- * Navigation, not prose.
- *
- * Thaha Khabar renders its whole section menu inside <p>, so joining the page's
- * paragraphs there yields "गृहपृष्ठ राजनीति विश्वकप फुटबल प्रदेश समाचार …" — a
- * list of every section on the site, which reads as a summary of nothing. Real
- * sentences end in a terminator and do not run twenty words without one.
- */
-function looksLikeNavigation(text: string): boolean {
-  if (!/[.।!?]/.test(text)) return true;
-  const words = text.split(/\s+/).length;
-  const sentences = (text.match(/[.।!?]/g) ?? []).length;
-  return words / Math.max(1, sentences) > 40;
-}
-
-function paragraphText(html: string): string {
-  const paragraphs: string[] = [];
-  for (const match of html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
-    const text = htmlToText(match[1]);
-    if (text.length < 60) continue;
-    if (looksLikeNavigation(text)) continue;
-    paragraphs.push(text);
-    if (paragraphs.join(" ").length > MAX_EXTRACTED_CHARS) break;
-  }
-  return paragraphs.join(" ").trim();
-}
-
-/**
- * Pick the best candidate.
- *
- * Ordered by trustworthiness, not by length. Paragraph scraping routinely
- * returns the longest string on the page and the least useful one — it was
- * beating a perfectly good 2,063-character og:description with 3,658 characters
- * of site menu. Structured metadata is what the publisher declared the article
- * to be about, so it wins whenever it is substantial enough to summarise, and
- * paragraphs are the last resort rather than the default.
- */
-/**
- * The page's declared lead image.
- *
- * og:image first because it is what the publisher chose for sharing — the same
- * picture their own card shows — then twitter:image, then the schema.org
- * `image`. Relative and protocol-relative URLs are resolved against the article
- * URL; anything that is still not an absolute https URL afterwards is dropped
- * rather than rendered as a broken frame.
- */
-function pageImage(html: string, pageUrl: string): string | null {
-  const candidates = [
-    metaContent(html, "property", "og:image"),
-    metaContent(html, "property", "og:image:url"),
-    metaContent(html, "name", "twitter:image"),
-    metaContent(html, "name", "twitter:image:src"),
-  ];
-
-  for (const raw of candidates) {
-    if (!raw) continue;
-    try {
-      const resolved = new URL(raw, pageUrl);
-      if (resolved.protocol === "https:") return resolved.toString();
-    } catch {
-      // Not a URL at all — try the next candidate.
-    }
-  }
-  return null;
-}
-
-function bestCandidate(html: string): Omit<ExtractionResult, "imageUrl"> | null {
-  const ordered: Array<[ExtractionSource, string]> = [
-    ["jsonld", jsonLdBody(html)],
-    ["og", metaContent(html, "property", "og:description")],
-    ["meta", metaContent(html, "name", "description")],
-    ["twitter", metaContent(html, "name", "twitter:description")],
-  ];
-
-  for (const [via, text] of ordered) {
-    if (text.length >= MIN_USABLE_CHARS) {
-      return { text: text.slice(0, MAX_EXTRACTED_CHARS), via };
-    }
-  }
-
-  const paragraphs = paragraphText(html);
-  if (paragraphs.length >= MIN_USABLE_CHARS) {
-    return { text: paragraphs.slice(0, MAX_EXTRACTED_CHARS), via: "paragraphs" };
-  }
-
-  // Nothing structured cleared the bar — take the longest short candidate
-  // rather than nothing, provided it says more than a headline would.
-  const fallback = ordered
-    .map(([, text]) => text)
-    .sort((a, b) => b.length - a.length)[0];
-  return fallback && fallback.length >= 60
-    ? { text: fallback, via: "og" }
-    : null;
 }
 
 // ── Fetch ───────────────────────────────────────────────────────────────────
@@ -289,10 +102,9 @@ async function fetchArticleHtml(
       //
       // So the in-process Map is the only cache this stage has, and a cold
       // serverless invocation starts empty. Extraction coverage is therefore
-      // bounded by what one pass can fetch from the network inside its slice of
-      // a 15-second budget, which is why a share of the feed still carries the
-      // publisher's two-line teaser. Moving that off the request path is Phase 2's
-      // job and is blocked on the archive being provisioned.
+      // bounded by what one pass can fetch inside its slice of a 15-second
+      // budget — which is what the scheduled drain in netlify/functions exists
+      // to lift, now that there is somewhere durable to write.
       next: { revalidate: 21_600 },
     });
   } catch {
@@ -319,19 +131,7 @@ export async function extractArticleText(
   if (cache.has(url)) return cache.get(url) ?? null;
 
   const html = await fetchArticleHtml(url, deadline);
-  const found = html ? bestCandidate(html) : null;
-  // The image is worth keeping even when the body is not: a story whose page
-  // yields no summarisable text still has a photograph, and the card still has
-  // a frame to fill.
-  const imageUrl = html ? pageImage(html, url) : null;
-  const result =
-    found || imageUrl
-      ? {
-          text: found ? restoreSentenceSpacing(found.text) : "",
-          via: found?.via ?? ("og" as ExtractionSource),
-          imageUrl,
-        }
-      : null;
+  const result = html ? parseArticle(html, url, deadline) : null;
   remember(url, result);
   return result;
 }
@@ -339,28 +139,33 @@ export async function extractArticleText(
 /**
  * Extract for many articles, best stories first, inside a wall-clock budget.
  *
- * Concurrency is deliberately low. These are other people's newsrooms, several
- * of them small Nepali outlets on modest hosting, and this runs every time the
- * feed regenerates — a wide fan-out would be indistinguishable from a scrape.
- * The cache means each URL is fetched once regardless.
+ * Concurrency is deliberately modest. These are other people's newsrooms,
+ * several of them small Nepali outlets on modest hosting, and this runs every
+ * time the feed regenerates — a wide fan-out would be indistinguishable from a
+ * scrape. The cache means each URL is fetched once regardless.
  */
 export async function extractMany(
   urls: string[],
   deadline: number,
-  // 4, and it was 8 for exactly one deploy.
+  // 6, having been 4, and 8 for exactly one deploy.
   //
-  // Raising it to recover more photographs put the cold pass at 30.9s and
-  // returned 502 — over Netlify's limit, the same outage this project already
-  // fixed once. The reason is the bug class from audit/recon.md D3 wearing a new
-  // coat: `extractMany` checks the deadline before *starting* an item, and the
-  // network call it starts is clamped to the deadline, but `bestCandidate` then
-  // runs unbounded regex work over up to 1.2 MB of HTML. That is synchronous, it
-  // blocks the event loop, and no deadline check covers it — so doubling the
-  // workers doubled the CPU the stage could pile up past its slice.
+  // The 8 put the cold pass at 30.9 s and returned 502 — over Netlify's limit,
+  // the same outage this project already fixed once. The diagnosis at the time
+  // named the right culprit: `extractMany` checked the deadline before *starting*
+  // an item and clamped the fetch to it, while the parse that followed ran
+  // unbounded regex work over up to 1.2 MB of HTML with no clock on it at all.
   //
-  // Coverage is worth having. It is not worth a 502, and buying it needs the
-  // parse bounded, not the fan-out widened.
-  concurrency = 4,
+  // That is now fixed rather than worked around — lib/article-parse.ts builds its
+  // metadata table in one pass instead of sixteen and checks the deadline before
+  // each expensive stage. Measured on a 1.2 MB page, same output both ways:
+  // 3.6 ms → 1.1 ms per article with no usable metadata, 1.6 ms → 0.4 ms with it,
+  // which is 1.4 s → 0.5 s of blocked event loop across a 400-story pass. So the
+  // fan-out can widen again. It widens to 6 and not back to 8, because the
+  // measurement that justified the original retreat was of a cold pass on
+  // Netlify, not of this benchmark, and the polite ceiling on somebody else's
+  // newsroom is a separate argument from the safe one. Re-measure the cold pass
+  // before moving it again.
+  concurrency = 6,
 ): Promise<Map<string, ExtractionResult>> {
   const out = new Map<string, ExtractionResult>();
   const pending = urls.filter((url) => {
