@@ -6,7 +6,7 @@ import { ArrowUpRight, Clock, Newspaper, Users } from "lucide-react";
 import { StoryImage } from "@/components/story-image";
 import { SourceMark, TopicPill } from "@/components/topic-pill";
 import { findStory } from "@/lib/story-lookup";
-import { storyExcerpt } from "@/lib/story-excerpt";
+import { storyExcerpt, isTruncated } from "@/lib/story-excerpt";
 import { langAttr } from "@/lib/story-text";
 import { getSourceById } from "@/lib/source-registry";
 import { topicLabel } from "@/lib/taxonomy";
@@ -70,7 +70,8 @@ export async function generateMetadata({
   // description is reader-facing text that gets copied into other people's
   // surfaces, so it is bound by the display cap like everything else.
   const description = storyExcerpt(
-    sanitizeTextForDisplay(item.summary)
+    sanitizeTextForDisplay(item.summary),
+    200,
   );
   const url = storyUrl(item.id);
 
@@ -106,6 +107,7 @@ export default async function StoryPage({ params }: PageProps) {
   const title = sanitizeTextForDisplay(item.title);
   const fullSummary = sanitizeTextForDisplay(item.summary);
   const excerpt = storyExcerpt(fullSummary);
+  const capped = isTruncated(fullSummary);
   const paragraphs = splitIntoParagraphs(excerpt, 3);
 
   const translatedTitle = item.titleTranslated
@@ -238,6 +240,25 @@ export default async function StoryPage({ params }: PageProps) {
             {paragraph}
           </p>
         ))}
+
+        {/* Said out loud rather than implied by an ellipsis. A reader is
+            entitled to know they are looking at an excerpt by design and not a
+            story that happened to be short. */}
+        {capped && (
+          <p className="eyebrow mt-5 text-ink-muted">
+            This is a short excerpt. EkJhalak links out rather than reproducing
+            other newsrooms&rsquo; work —{" "}
+            <a
+              href={item.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="underline underline-offset-4 transition-colors hover:text-ink"
+            >
+              continue at {item.sourceName}
+            </a>
+            .
+          </p>
+        )}
       </div>
 
       {translatedSummary && (

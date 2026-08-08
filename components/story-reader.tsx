@@ -12,7 +12,7 @@ import { SourceMark, TopicPill } from "@/components/topic-pill";
 import { useFeedClock } from "@/components/feed-clock";
 import { useTheme } from "@/components/theme-provider";
 import { langAttr, storyText } from "@/lib/story-text";
-import { storyExcerpt } from "@/lib/story-excerpt";
+import { isTruncated, storyExcerpt } from "@/lib/story-excerpt";
 import {
   cn,
   formatRelativeTime,
@@ -54,6 +54,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
   // read and the wrong side of the line the cap is drawn on.
   const full = sanitizeTextForDisplay(text.summary);
   const summary = storyExcerpt(full);
+  const capped = isTruncated(full);
   const paragraphs = splitIntoParagraphs(summary, 5);
 
   return (
@@ -152,6 +153,10 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
               </p>
             ))}
           </div>
+
+          {capped && (
+            <p className="eyebrow text-ink-muted">{t.excerptNotice}</p>
+          )}
 
           <div className="flex flex-col gap-3 border-t border-rule pt-6 sm:flex-row sm:items-center">
             <a

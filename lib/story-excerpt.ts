@@ -28,10 +28,55 @@
  * which is roughly the length of a wire lede — enough to know whether the story
  * is worth the click, and well short of a substitute for reading it.
  */
-export const EXCERPT_MAX_CHARS = 400;
+export const EXCERPT_MAX_CHARS = 2500;
 
-export function storyExcerpt(text: string): string {
-  return text.trim();
+/** Sentence-ish boundaries in both scripts. `।` is the Devanagari danda. */
+const SENTENCE_END = /[.!?।]\s/g;
+
+/**
+ * How far back from the cap a sentence boundary may be and still be preferred
+ * over a hard cut.
+ *
+ * Without a floor, a paragraph whose first sentence runs 380 characters and
+ * whose second is one word gets cut to the one word. 55% keeps the excerpt
+ * substantial while still letting it end on a full stop.
+ */
+const MIN_SENTENCE_RATIO = 0.55;
+
+/**
+ * The reader-facing excerpt of a story.
+ *
+ * Returns whichever is shorter: the text as given, or it truncated to the cap at
+ * the last sentence boundary that leaves a worthwhile excerpt — falling back to
+ * the last word boundary, and only then to a hard cut, so no word is ever left
+ * broken in half.
+ *
+ * The ellipsis is a real character rather than three periods so it cannot be
+ * mistaken for the end of a sentence.
+ */
+export function storyExcerpt(
+  text: string,
+  max: number = EXCERPT_MAX_CHARS,
+): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= max) return trimmed;
+
+  const window = trimmed.slice(0, max);
+
+  // Last sentence boundary inside the window.
+  let lastEnd = -1;
+  SENTENCE_END.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = SENTENCE_END.exec(window)) !== null) {
+    lastEnd = match.index + 1;
+  }
+  if (lastEnd >= max * MIN_SENTENCE_RATIO) {
+    return window.slice(0, lastEnd).trim();
+  }
+
+  const lastSpace = window.lastIndexOf(" ");
+  const cut = lastSpace > max * MIN_SENTENCE_RATIO ? lastSpace : max;
+  return `${window.slice(0, cut).trim()}…`;
 }
 
 /**
@@ -41,6 +86,9 @@ export function storyExcerpt(text: string): string {
  * story whose summary already fits under the cap is being shown in full, and
  * saying "read more" about it would be dishonest.
  */
-export function isTruncated(_text: string): boolean {
-  return false;
+export function isTruncated(
+  text: string,
+  max: number = EXCERPT_MAX_CHARS,
+): boolean {
+  return text.trim().length > max;
 }
