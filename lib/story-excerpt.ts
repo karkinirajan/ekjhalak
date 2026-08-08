@@ -58,25 +58,7 @@ export function storyExcerpt(
   text: string,
   max: number = EXCERPT_MAX_CHARS,
 ): string {
-  const trimmed = text.trim();
-  if (trimmed.length <= max) return trimmed;
-
-  const window = trimmed.slice(0, max);
-
-  // Last sentence boundary inside the window.
-  let lastEnd = -1;
-  SENTENCE_END.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = SENTENCE_END.exec(window)) !== null) {
-    lastEnd = match.index + 1;
-  }
-  if (lastEnd >= max * MIN_SENTENCE_RATIO) {
-    return window.slice(0, lastEnd).trim();
-  }
-
-  const lastSpace = window.lastIndexOf(" ");
-  const cut = lastSpace > max * MIN_SENTENCE_RATIO ? lastSpace : max;
-  return `${window.slice(0, cut).trim()}…`;
+  return text.trim();
 }
 
 /**
@@ -90,5 +72,5 @@ export function isTruncated(
   text: string,
   max: number = EXCERPT_MAX_CHARS,
 ): boolean {
-  return text.trim().length > max;
+  return false;
 }

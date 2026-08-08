@@ -243,7 +243,7 @@ export function StoryCard({
           <p
             lang={langAttr(text.lang)}
             className={cn(
-              "clamp-3 mt-2.5 text-[0.9rem] leading-[1.7] text-ink-soft",
+              "mt-2.5 text-[0.9rem] leading-[1.7] text-ink-soft",
               isNp && "font-np leading-[1.8]",
             )}
           >

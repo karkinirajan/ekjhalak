@@ -135,17 +135,17 @@
 
 :root,
 [data-theme="dark"] {
-  /* Dark Mode: Authentic Monokai */
-  --pitch: #272822;
-  --canvas: #272822; /* Classic Monokai Background */
-  --surface: #1e1f1c; /* Darker Card Background */
-  --raised: #3e3d32;
-  --ink: #f8f8f2;
-  --ink-soft: #cbd5e1;
-  --ink-muted: #9c9782;
+  /* Dark Mode: GitHub Default */
+  --pitch: #0d1117;
+  --canvas: #0d1117;
+  --surface: #161b22;
+  --raised: #21262d;
+  --ink: #e6edf3;
+  --ink-soft: #848d97;
+  --ink-muted: #848d97;
   
-  --rule: rgba(248, 248, 242, 0.1);
-  --rule-strong: rgba(255, 255, 255, 0.15);
+  --rule: #30363d;
+  --rule-strong: #30363d;
   
   --red: #2ddc87;
   --red-solid: #008a00;
@@ -180,17 +180,17 @@
    different theme.                                                         */
 
 [data-theme="light"] {
-  /* Light Mode: Inverted Monokai */
-  --pitch: #f2f2f2;
-  --canvas: #f2f2f2;
-  --surface: #ffffff;
-  --raised: #e0e0e0;
-  --ink: #272822;
-  --ink-soft: #334155;
-  --ink-muted: #524f41;
+  /* Light Mode: GitHub Default */
+  --pitch: #ffffff;
+  --canvas: #ffffff;
+  --surface: #f6f8fa;
+  --raised: #ffffff;
+  --ink: #1F2328;
+  --ink-soft: #656d76;
+  --ink-muted: #656d76;
   
-  --rule: rgba(39, 40, 34, 0.1);
-  --rule-strong: #cbd5e1;
+  --rule: #d0d7de;
+  --rule-strong: #d0d7de;
   
   --red: #006600;
   --red-solid: #006600;
@@ -205,12 +205,12 @@
   /* Deepened Accents for WCAG on Light */
   --topic-breaking: #006600;
   --topic-politics: #75015d;
-  --topic-world: #0159f5;
+  --topic-world: #0150dd;
   --topic-business: #00326e;
-  --topic-sports: #796b04;
+  --topic-sports: #6a5d03;
   --topic-health: #024d4f;
   --topic-environment: #1c4000;
-  --topic-technology: #047199;
+  --topic-technology: #036488;
   --topic-society: #4a05b0;
 }
 
