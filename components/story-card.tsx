@@ -78,7 +78,7 @@ const THUMB_FRAME =
  * at, not on all twelve at once.
  */
 const CARD_BORDER =
-  "border border-[color-mix(in_oklab,var(--topic)_15%,var(--rule))] hover:border-[color-mix(in_oklab,var(--topic)_65%,var(--rule))]";
+  "border border-rule/50 hover:border-[var(--topic)] hover:shadow-[0_8px_32px_color-mix(in_srgb,var(--topic)_20%,transparent)] transition-all duration-500 hover:-translate-y-1";
 
 /**
  * One story, in two editorial weights.
@@ -112,7 +112,7 @@ export function StoryCard({
     return (
       <article
         data-topic={item.topic}
-        className="group relative flex gap-3.5 py-1"
+        className="group relative flex gap-3.5 p-2 rounded-xl transition-all duration-300 hover:bg-surface/50 hover:-translate-y-0.5"
       >
         {/* `self-start` is load-bearing, not alignment taste. This <article> is
             a row flex container, so the default `align-items: stretch` gives the
@@ -194,7 +194,7 @@ export function StoryCard({
     <article
       data-topic={item.topic}
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-md bg-surface transition-colors duration-200 hover:bg-raised/40",
+        "group relative flex h-full flex-col overflow-hidden rounded-2xl bg-surface/80 backdrop-blur-sm transition-all duration-300 hover:bg-surface",
         CARD_BORDER,
       )}
     >
@@ -209,7 +209,7 @@ export function StoryCard({
           // viewport the xl card paints about 350px, so 400px is the ceiling
           // rather than a guess.
           sizes="(min-width: 1280px) 400px, (min-width: 1024px) 45vw, (min-width: 640px) 50vw, 100vw"
-          className="h-full w-full"
+          className="h-full w-full transition-transform duration-700 ease-out group-hover:scale-105"
         />
       </div>
 

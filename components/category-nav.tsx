@@ -86,9 +86,9 @@ export function CategoryNav({
             onClick={() => setTopic("all")}
             aria-current={topic === "all" ? "true" : undefined}
             className={cn(
-              "eyebrow shrink-0 rounded-md px-3 py-1.5 transition-colors sm:px-3.5",
+              "eyebrow shrink-0 rounded-full px-4 py-1.5 transition-all duration-300 sm:px-4",
               topic === "all"
-                ? "bg-ink text-canvas"
+                ? "bg-ink text-canvas shadow-md"
                 : "text-ink-muted hover:bg-raised hover:text-ink",
               isNp && "font-np tracking-normal",
             )}
@@ -109,10 +109,10 @@ export function CategoryNav({
                 onClick={() => setTopic(id)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "eyebrow shrink-0 rounded-md px-3 py-1.5 transition-colors",
+                  "eyebrow shrink-0 rounded-full px-4 py-1.5 transition-all duration-300",
                   isActive
-                    ? "bg-(--topic) text-topic-ink"
-                    : "text-ink-muted hover:bg-[color-mix(in_oklab,var(--topic)_12%,transparent)] hover:text-(--topic)",
+                    ? "bg-[var(--topic)] text-topic-ink shadow-[0_0_12px_color-mix(in_srgb,var(--topic)_50%,transparent)]"
+                    : "text-ink-muted hover:bg-[color-mix(in_srgb,var(--topic)_15%,transparent)] hover:text-[var(--topic)]",
                   isNp && "font-np tracking-normal",
                 )}
               >
@@ -142,10 +142,10 @@ export function CategoryNav({
                 onClick={() => setBucket(option.key)}
                 aria-pressed={bucket === option.key}
                 className={cn(
-                  "rounded-md px-3 py-1 text-xs font-semibold transition-colors",
+                  "rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-300",
                   bucket === option.key
-                    ? "bg-red-soft text-red"
-                    : "text-ink-muted hover:text-ink",
+                    ? "bg-red text-white shadow-[0_0_12px_color-mix(in_srgb,var(--red)_50%,transparent)]"
+                    : "text-ink-muted hover:bg-raised/50 hover:text-ink",
                   isNp && "font-np",
                 )}
               >

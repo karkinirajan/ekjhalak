@@ -34,8 +34,8 @@ export function TopicPill({
         // is near-black on dark and white on light, so one class reads correctly
         // in both themes.
         tone === "solid"
-          ? "bg-[var(--topic)] text-topic-ink"
-          : "bg-[color-mix(in_oklab,var(--topic)_13%,transparent)] text-[var(--topic)]",
+          ? "bg-[var(--topic)] text-topic-ink shadow-[0_0_16px_color-mix(in_srgb,var(--topic)_50%,transparent)]"
+          : "bg-[color-mix(in_srgb,var(--topic)_15%,transparent)] text-[var(--topic)] border border-[color-mix(in_srgb,var(--topic)_30%,transparent)]",
         className,
       )}
     >
@@ -72,7 +72,7 @@ export function SourceMark({
     <span className={cn("inline-flex min-w-0 items-center gap-2", className)}>
       <span
         aria-hidden="true"
-        className="eyebrow flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--topic,var(--red))] text-[9px] tracking-normal text-topic-ink"
+        className="eyebrow flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--topic,var(--red))] text-[9px] tracking-normal text-topic-ink shadow-[0_2px_8px_color-mix(in_srgb,var(--topic,var(--red))_40%,transparent)]"
       >
         {sourceMonogram(name)}
       </span>

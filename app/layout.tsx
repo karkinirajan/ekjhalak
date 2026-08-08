@@ -1,37 +1,27 @@
 import type { Metadata } from "next";
 import {
   JetBrains_Mono,
-  Merriweather,
+  Inter,
   Mukta,
-  Space_Grotesk,
+  Outfit,
 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SITE_NAME, SITE_URL } from "@/lib/site-url";
 
-// English UI and headlines use Space Grotesk for a crisp modern voice.
-const spaceGrotesk = Space_Grotesk({
+// Premium English UI and headlines use Outfit for a vibrant, modern tech-forward voice.
+const outfit = Outfit({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-// English body copy uses Merriweather for long-form readability.
-//
-// 400 for prose and 700 for emphasis inside it. 300 and 900 were declared and
-// never reached: nothing in the app sets a light weight, and every `font-black`
-// in the codebase sits on a `font-display` element, so Merriweather 900 was two
-// files downloaded to render nothing.
-//
-// Not preloaded. It sets body copy, which is below the headline in every layout
-// here, and Georgia — the first fallback — is close enough in metrics that the
-// swap does not move text around. Preloading it made four font files compete
-// with the lead image for a throttled connection's first bytes.
-const merriweather = Merriweather({
+// English body copy uses Inter for ultra-clean digital legibility.
+const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
   preload: false,
 });
@@ -181,7 +171,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       data-theme="light"
-      className={`${spaceGrotesk.variable} ${merriweather.variable} ${mukta.variable} ${jetbrainsMono.variable}`}
+      className={`${outfit.variable} ${inter.variable} ${mukta.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         {/* Lets the browser paint form controls and scrollbars to match
