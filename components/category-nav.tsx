@@ -86,11 +86,11 @@ export function CategoryNav({
             onClick={() => setTopic("all")}
             aria-current={topic === "all" ? "true" : undefined}
             className={cn(
-              "eyebrow shrink-0 rounded-md px-4 py-1.5 transition-all duration-300 sm:px-4",
+              "shrink-0 rounded-md px-4 py-1.5 transition-all duration-300 sm:px-4 text-[1.08rem] leading-[1.32] font-semibold tracking-[-0.015em]",
               topic === "all"
                 ? "bg-ink text-canvas shadow-md"
                 : "text-ink-muted hover:bg-raised hover:text-ink",
-              isNp && "font-np tracking-normal",
+              isNp ? "font-np leading-[1.5]" : "font-display",
             )}
           >
             {t.allTopics}
@@ -109,11 +109,11 @@ export function CategoryNav({
                 onClick={() => setTopic(id)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "eyebrow shrink-0 rounded-md px-4 py-1.5 transition-all duration-300",
+                  "shrink-0 rounded-md px-4 py-1.5 transition-all duration-300 text-[1.08rem] leading-[1.32] font-semibold tracking-[-0.015em]",
                   isActive
                     ? "bg-[var(--topic)] text-topic-ink shadow-[0_0_12px_color-mix(in_srgb,var(--topic)_50%,transparent)]"
                     : "text-ink-muted hover:bg-[color-mix(in_srgb,var(--topic)_15%,transparent)] hover:text-[var(--topic)]",
-                  isNp && "font-np tracking-normal",
+                  isNp ? "font-np leading-[1.5]" : "font-display",
                 )}
               >
                 {topicLabel(id, language)}
