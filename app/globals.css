@@ -426,22 +426,6 @@
       var(--topic, var(--red)) 55%,
       var(--raised)
     );
-    background-image:
-      radial-gradient(
-        circle at 20% 16%,
-        color-mix(in oklab, var(--topic, var(--red)) 62%, transparent),
-        transparent 62%
-      ),
-      radial-gradient(
-        circle at 84% 82%,
-        color-mix(in oklab, var(--topic, var(--red)) 38%, transparent),
-        transparent 66%
-      ),
-      linear-gradient(
-        142deg,
-        color-mix(in oklab, var(--topic, var(--red)) 58%, var(--raised)),
-        color-mix(in oklab, var(--topic, var(--red)) 26%, var(--raised))
-      );
   }
 
   /* Knocked out in the same near-black the solid pills use, so the glyph is
@@ -487,13 +471,7 @@
   /* Diagonal hatch over hero photography so white headlines stay legible
      regardless of what the publisher's image happens to look like. */
   .photo-scrim {
-    background-image: linear-gradient(
-      to top,
-      rgb(8 8 14 / 0.92) 0%,
-      rgb(8 8 14 / 0.72) 34%,
-      rgb(8 8 14 / 0.24) 68%,
-      rgb(8 8 14 / 0.05) 100%
-    );
+    background-color: rgb(8 8 14 / 0.65);
   }
 
   /* Fully opaque. A translucent sticky nav let headlines scroll through it and

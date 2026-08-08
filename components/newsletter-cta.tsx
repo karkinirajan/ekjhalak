@@ -104,14 +104,7 @@ export function NewsletterCta() {
     >
       {/* Ambient wash — red in one corner, green in the other. The only place
           the two accents meet, which is what marks this band as the offer. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(ellipse 70% 90% at 8% 0%, color-mix(in oklab, var(--red) 30%, transparent), transparent 62%), radial-gradient(ellipse 60% 80% at 96% 100%, color-mix(in oklab, var(--green) 18%, transparent), transparent 60%)",
-        }}
-      />
+
 
       <div className="relative mx-auto max-w-2xl text-center">
         <span className="eyebrow inline-flex items-center gap-2 rounded-md border border-rule-strong bg-raised px-3 py-1.5 text-ink">

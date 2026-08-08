@@ -166,7 +166,7 @@ export function Masthead({
             size="sm"
             onClick={onSubscribe}
             className={cn(
-              "h-8 rounded-md bg-gradient-to-r from-red-solid to-red px-4 text-xs font-bold text-white shadow-md hover:opacity-90 transition-opacity",
+              "h-8 rounded-md bg-red-solid px-4 text-xs font-bold text-white shadow-md hover:opacity-90 transition-opacity",
               isNp && "font-np",
             )}
           >
