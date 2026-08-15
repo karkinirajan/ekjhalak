@@ -133,7 +133,7 @@ const editorial: Record<Lang, PageContent> = {
         heading: "The pipeline",
         body: [
           "A story arrives as an RSS entry: a headline, a link, a timestamp and whatever body text the publisher chose to syndicate. Subscription pitches, copyright lines and section labels are stripped mechanically before anything else happens.",
-          "What remains is sent to Google's Gemini models, which are asked for two things: a summary in the language the story was published in, and a translation of both headline and summary into the other. The instruction is explicit that only facts present in the source may be used and that no name, number, quote or date may be invented.",
+          "What remains is sent to a language model hosted on Groq, which is asked for two things: a summary in the language the story was published in, and a translation of both headline and summary into the other. The instruction is explicit that only facts present in the source may be used and that no name, number, quote or date may be invented.",
           "A translation that comes back in the wrong script is discarded and the original is shown instead. A summary that comes back as publisher boilerplate is discarded and the card renders the headline alone. Nothing is padded to fill a card.",
         ],
       },
@@ -235,7 +235,7 @@ const privacy: Record<Lang, PageContent> = {
         body: [
           "The site is hosted on Vercel, which necessarily processes the request in order to serve the page and keeps standard server logs. Vercel Speed Insights measures page-load performance; it reports timings, not people, and is not used to identify or follow anyone.",
           "Fonts are served from Google Fonts. Story photographs are loaded directly from each publisher's own image servers, which means those servers see the request — the site sends no referrer with it.",
-          "Story text is sent to Google's Gemini API to be summarised and translated. What is sent is the publisher's own headline and syndicated body text, which is already public. Nothing about you is included, because nothing about you is held.",
+          "Story text is sent to Groq's API to be summarised and translated. What is sent is the publisher's own headline and syndicated body text, which is already public. Nothing about you is included, because nothing about you is held.",
         ],
       },
       {

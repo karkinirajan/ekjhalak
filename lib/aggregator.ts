@@ -4,7 +4,7 @@
 // Server-only.
 
 // Build-time guard: importing this from a client component is a build
-// error rather than a shipped bundle. Reads GEMINI_API_KEY and SUPABASE_SERVICE_ROLE_KEY through its callees.
+// error rather than a shipped bundle. Reads GROQ_API_KEY and SUPABASE_SERVICE_ROLE_KEY through its callees.
 import "server-only";
 
 import { unstable_cache } from "next/cache";
@@ -219,7 +219,7 @@ function annotateDescriptionCoverage(
  * The two stage budgets below used to be independent and additive: 15 seconds of
  * page extraction plus 25 seconds at the model is 40 seconds before a single RSS
  * byte is fetched. Nothing bounded the sum, and nothing had to — while
- * GEMINI_MODEL was pinned to an exhausted model every call 429'd instantly and
+ * GROQ_MODEL was pinned to an exhausted model every call 429'd instantly and
  * the model stage returned in milliseconds. Unpinning it made the fallback chain
  * work, the stage started spending what it was given, and the pass crossed the
  * limit for the first time.
@@ -326,7 +326,7 @@ const EXTRACT_SHARE = 0.4;
  * stopped — so this is a latency control, not a quality one.
  */
 const ENRICH_BUDGET_MS = Number.parseInt(
-  process.env.GEMINI_BUDGET_MS ?? "25000",
+  process.env.GROQ_BUDGET_MS ?? "25000",
   10,
 );
 

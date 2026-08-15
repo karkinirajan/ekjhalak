@@ -2,9 +2,9 @@
 // Remembers what the model has already written, for as long as the process
 // lives. Server-only.
 //
-// This exists because of arithmetic, not performance. Gemini's free tier meters
-// requests per model per day (measured: 20/day on this project's key), and the
-// feed regenerates every five minutes — 288 times a day. Without a memory, every
+// This exists because of arithmetic, not performance. Groq's free tier meters
+// requests and tokens per model per day, and the feed regenerates every five
+// minutes — 288 times a day. Without a memory, every
 // regeneration would re-translate stories that were already translated an hour
 // ago and the day's allowance would be gone before breakfast.
 //

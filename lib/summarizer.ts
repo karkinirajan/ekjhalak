@@ -1,5 +1,5 @@
 // lib/summarizer.ts
-// Bilingual enrichment against the Gemini API. Server-only.
+// Bilingual enrichment against the Groq API. Server-only.
 //
 // One request handles a whole batch of stories and returns, for each, a clean
 // summary in the language it was published in *and* a full translation of both
@@ -27,7 +27,7 @@
  * whole brief is on screen, that gets the benefit.
  */
 // Build-time guard: importing this from a client component is a build
-// error rather than a shipped bundle. Holds the model prompts and reads GEMINI_API_KEY.
+// error rather than a shipped bundle. Holds the model prompts and reads GROQ_API_KEY.
 import "server-only";
 
 export const SUMMARY_MAX_CHARS = 1_760;
@@ -45,52 +45,42 @@ export const SUMMARY_MIN_CHARS = 300;
 export const VERBATIM_MAX_CHARS = 2_640;
 
 /** Stories per request. */
-const BATCH_SIZE = clampInt(process.env.GEMINI_BATCH_SIZE, 10, 1, 40);
+const BATCH_SIZE = clampInt(process.env.GROQ_BATCH_SIZE, 10, 1, 40);
 /** Requests in flight at once. */
-const CONCURRENCY = clampInt(process.env.GEMINI_CONCURRENCY, 3, 1, 8);
+const CONCURRENCY = clampInt(process.env.GROQ_CONCURRENCY, 3, 1, 8);
 const REQUEST_TIMEOUT_MS = 45_000;
 
 /**
  * Models tried in order, first to answer wins.
  *
- * This list is a quota strategy, not indecision. Gemini's free tier meters
- * `GenerateRequestsPerDayPerProjectPerModel` — per *model* — so five models is
- * five separate daily allowances rather than one. Measured on this project's own
- * key: gemini-3.6-flash allows 20 requests/day and gemini-2.0-flash allows 0.
- * Twenty requests would enrich two hundred stories a day; the chain plus the
- * batch size above is what turns that into a number a live feed can live on.
+ * This list is a quota strategy, not indecision. Groq meters requests and
+ * tokens per model per minute *and* per day, so keeping this a chain — even a
+ * chain of one, as it is by default — means adding a second Groq model, or a
+ * different one entirely, is a one-line GROQ_MODEL change rather than a
+ * rewrite of the call site.
  *
- * GEMINI_MODEL still wins — set it to a single name to pin one model, or to a
- * comma-separated list to replace the chain outright. Whatever it names is tried
- * first and the defaults follow as fallbacks.
- *
- * Ordered cheapest-and-fastest first. The lite models do not spend tokens on
- * thinking, which for a rewrite-and-translate task buys nothing and costs the
- * entire output budget — see MAX_OUTPUT_TOKENS.
+ * GROQ_MODEL still wins — set it to a single name to pin one model, or to a
+ * comma-separated list to replace the chain outright. Whatever it names is
+ * tried first and the default follows as a fallback.
  */
-const DEFAULT_MODELS = [
-  "gemini-3.5-flash-lite",
-  "gemini-3.1-flash-lite",
-  "gemini-2.5-flash-lite",
-  "gemini-2.5-flash",
-  "gemini-3.6-flash",
-];
+const DEFAULT_MODELS = ["openai/gpt-oss-120b"];
 
 /**
  * Deliberately far above what the answer needs (~300 tokens per story per
  * language).
  *
- * The thinking models bill their reasoning against this same ceiling and spend
- * it first. The previous setting of 380 was consumed entirely by 361 thinking
- * tokens on gemini-3.6-flash: every response came back `finishReason:
- * MAX_TOKENS` holding a 61-character fragment, was rejected as too short,
- * retried twice into the same wall, and the whole feed silently fell through to
- * hard truncation. A ceiling this high cannot be reached by thinking on a task
- * this small, so it works whether or not the configured model reasons.
+ * A reasoning model bills its thinking against this same ceiling and spends it
+ * first, so a tight cap can starve the actual answer before it is written —
+ * the response comes back cut off mid-JSON and fails to parse rather than
+ * arriving short. A ceiling this high, against gpt-oss-120b's completion
+ * budget on Groq, cannot plausibly be reached by a rewrite-and-translate task
+ * this small, so it costs nothing on a normal request and only exists for the
+ * one that would otherwise be truncated.
  */
 const MAX_OUTPUT_TOKENS = 32_000;
 
-const API_KEY = process.env.GEMINI_API_KEY;
+const API_KEY = process.env.GROQ_API_KEY;
+const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 function clampInt(
   raw: string | undefined,
@@ -104,7 +94,7 @@ function clampInt(
 }
 
 function modelChain(): string[] {
-  const configured = (process.env.GEMINI_MODEL ?? "")
+  const configured = (process.env.GROQ_MODEL ?? "")
     .split(",")
     .map((name) => name.trim())
     .filter(Boolean);
@@ -176,7 +166,7 @@ function isInLanguage(text: string, lang: "en" | "np"): boolean {
 
 // ── Per-model cooldowns ─────────────────────────────────────────────────────
 //
-// A 429 means one model is out, not that Gemini is down, so the cooldown is
+// A 429 means one model is out, not that Groq is down, so the cooldown is
 // keyed by model and the chain simply moves on to the next one.
 
 const cooldownUntil = new Map<string, number>();
@@ -195,21 +185,29 @@ const MIN_COOLDOWN_MS = 30 * 1_000;
 /**
  * How long to shelve a model after a 429.
  *
- * Google reports two different exhaustions through the same status code. A
- * per-minute limit clears on its own in under a minute and the response says so
- * in `retryDelay`. A per-day limit does not clear until the quota resets, and
- * retrying it every minute for the rest of the day is pure noise — so those get
- * a much longer shelf regardless of what retryDelay claims.
+ * Groq reports the wait in a standard `Retry-After` header, which is
+ * authoritative when present. Failing that, its error message names which
+ * quota tripped — "requests per day" / "RPD" clears only at the daily reset,
+ * so retrying it every thirty seconds for the rest of the day is pure noise
+ * and gets the long shelf; a per-minute limit clears on its own and gets the
+ * short one.
  */
-function cooldownFor(body: unknown): number {
-  const raw = JSON.stringify(body ?? "");
-  if (/PerDay|per_day|RequestsPerDay/i.test(raw)) return DAILY_QUOTA_COOLDOWN_MS;
+function cooldownFor(res: Response, body: string): number {
+  const retryAfter = Number.parseFloat(res.headers.get("retry-after") ?? "");
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    return Math.max(MIN_COOLDOWN_MS, retryAfter * 1_000);
+  }
 
-  const match = raw.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
-  const seconds = match ? Number.parseFloat(match[1]) : NaN;
-  return Number.isFinite(seconds)
-    ? Math.max(MIN_COOLDOWN_MS, seconds * 1_000)
-    : MIN_COOLDOWN_MS;
+  if (/per[ -]day|\bRPD\b|\bTPD\b/i.test(body)) return DAILY_QUOTA_COOLDOWN_MS;
+
+  const match = body.match(/try again in\s+(?:(\d+)m)?([\d.]+)s/i);
+  if (match) {
+    const minutes = match[1] ? Number.parseInt(match[1], 10) : 0;
+    const seconds = Number.parseFloat(match[2]);
+    return Math.max(MIN_COOLDOWN_MS, (minutes * 60 + seconds) * 1_000);
+  }
+
+  return MIN_COOLDOWN_MS;
 }
 
 // ── Prompt ──────────────────────────────────────────────────────────────────
@@ -230,27 +228,7 @@ const SYSTEM_PROMPT =
   `9. Neutral newsroom tone. One paragraph. No headings, labels, lists, markdown, emoji or first person.\n` +
   `10. Strip publisher chrome: subscription pitches, "read more", bylines, datelines, copyright lines, section tags, navigation words.\n` +
   `11. An item marked "verbatim": true must have its summary in the source language reproduced EXACTLY as supplied, character for character, with no rewriting, trimming or reordering. Only the other language is yours to write. This is the publisher's own text and it is not to be improved.\n` +
-  `12. Return one object per input item, in the same order, echoing the item's id exactly.`;
-
-/**
- * Structured output, so parsing is a `JSON.parse` rather than a set of
- * heuristics over prose. Gemini validates against this before answering, which
- * is also what stops a model dropping one of the four fields on a hard item.
- */
-const RESPONSE_SCHEMA = {
-  type: "ARRAY",
-  items: {
-    type: "OBJECT",
-    properties: {
-      id: { type: "STRING" },
-      titleEn: { type: "STRING" },
-      summaryEn: { type: "STRING" },
-      titleNp: { type: "STRING" },
-      summaryNp: { type: "STRING" },
-    },
-    required: ["id", "titleEn", "summaryEn", "titleNp", "summaryNp"],
-  },
-} as const;
+  `12. Respond with exactly one JSON object of the shape {"items": [{"id", "titleEn", "summaryEn", "titleNp", "summaryNp"}, ...]} — one entry per input item, in the same order, echoing the item's id exactly. No markdown fences, no prose outside the object, no key besides "items".`;
 
 // ── Public shape ────────────────────────────────────────────────────────────
 
@@ -312,14 +290,13 @@ function buildRequestBody(batch: EnrichInput[]) {
   }));
 
   return {
-    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: [{ parts: [{ text: JSON.stringify(payload) }] }],
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      responseMimeType: "application/json",
-      responseSchema: RESPONSE_SCHEMA,
-    },
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: JSON.stringify(payload) },
+    ],
+    temperature: 0.2,
+    max_completion_tokens: MAX_OUTPUT_TOKENS,
+    response_format: { type: "json_object" },
   };
 }
 
@@ -347,23 +324,20 @@ function requestTimeout(deadline: number): number {
 
 async function callModel<T>(
   model: string,
-  requestBody: unknown,
+  requestBody: Record<string, unknown>,
   deadline: number,
 ): Promise<T[] | null> {
   let res: Response;
   try {
-    res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": API_KEY as string,
-        },
-        body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(requestTimeout(deadline)),
+    res = await fetch(GROQ_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_KEY}`,
       },
-    );
+      body: JSON.stringify({ ...requestBody, model }),
+      signal: AbortSignal.timeout(requestTimeout(deadline)),
+    });
   } catch {
     // Timeout or transport failure. Shelve briefly so a flapping model does not
     // eat the whole run's deadline batch after batch.
@@ -374,7 +348,7 @@ async function callModel<T>(
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     if (res.status === 429 || res.status === 503) {
-      coolDown(model, cooldownFor(detail));
+      coolDown(model, cooldownFor(res, detail));
     } else if (res.status === 400 || res.status === 404) {
       // Bad model name or a request shape this model rejects — never going to
       // work, so take it out of the chain for this process.
@@ -387,25 +361,23 @@ async function callModel<T>(
   }
 
   const data = await res.json().catch(() => null);
-  const candidate = data?.candidates?.[0];
-  if (!candidate) return null;
+  const choice = data?.choices?.[0];
+  if (!choice) return null;
 
   // A truncated answer is not a partial answer: the JSON will not parse, and the
   // stories in this batch are better served by the next model than by salvage.
-  if (candidate.finishReason && candidate.finishReason !== "STOP") {
-    console.warn(`[enrich] ${model} stopped early: ${candidate.finishReason}`);
+  if (choice.finish_reason && choice.finish_reason !== "stop") {
+    console.warn(`[enrich] ${model} stopped early: ${choice.finish_reason}`);
     return null;
   }
 
-  const text = (candidate.content?.parts ?? [])
-    .map((part: { text?: string }) => part.text ?? "")
-    .join("")
-    .trim();
+  const text = (choice.message?.content ?? "").trim();
   if (!text) return null;
 
   try {
     const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? (parsed as T[]) : null;
+    const items = Array.isArray(parsed) ? parsed : parsed?.items;
+    return Array.isArray(items) ? (items as T[]) : null;
   } catch {
     return null;
   }
@@ -420,7 +392,10 @@ async function callModel<T>(
  * the parts that took production down when they were wrong — duplicating them
  * for a second caller would have been the obvious way to get them wrong again.
  */
-async function askChain<T>(requestBody: unknown, deadline: number): Promise<T[]> {
+async function askChain<T>(
+  requestBody: Record<string, unknown>,
+  deadline: number,
+): Promise<T[]> {
   for (const model of modelChain()) {
     if (isCoolingDown(model)) continue;
     if (Date.now() >= deadline) break;
@@ -444,7 +419,8 @@ async function askChain<T>(requestBody: unknown, deadline: number): Promise<T[]>
 //
 // Asked as one batched call per ten stories, like enrichment, because the
 // arithmetic only works batched: five stages over ~1,500 new stories a day is
-// 7,500 calls unbatched and 750 batched, against a free tier of roughly 7,500.
+// 7,500 calls unbatched and 750 batched, against a free tier metered per model
+// per day.
 
 const VERIFY_SYSTEM_PROMPT =
   "You are a bilingual news desk fact-checker for Nepali and English. " +
@@ -460,22 +436,11 @@ const VERIFY_SYSTEM_PROMPT =
   "dropped or added, if a number or name changes, if the meaning shifts, or if " +
   "any part was left untranslated. Do not mark it false for natural word order " +
   "or idiom differences between Nepali and English.\n\n" +
-  "Answer with JSON only. Be strict: when genuinely unsure, mark false. A story " +
-  "held back costs a reader nothing; a wrong one costs the publication.";
-
-const VERIFY_SCHEMA = {
-  type: "ARRAY",
-  items: {
-    type: "OBJECT",
-    properties: {
-      id: { type: "STRING" },
-      summaryFaithful: { type: "BOOLEAN" },
-      translationFaithful: { type: "BOOLEAN" },
-      reason: { type: "STRING" },
-    },
-    required: ["id", "summaryFaithful", "translationFaithful"],
-  },
-} as const;
+  "Respond with exactly one JSON object of the shape " +
+  '{"items": [{"id", "summaryFaithful", "translationFaithful", "reason"}, ...]} ' +
+  "— no markdown fences, no prose outside the object, no key besides \"items\". " +
+  "Be strict: when genuinely unsure, mark false. A story held back costs a " +
+  "reader nothing; a wrong one costs the publication.";
 
 /** What verification is asked about one story. */
 export interface VerifyInput {
@@ -524,16 +489,15 @@ function buildVerifyBody(batch: VerifyInput[]) {
   }));
 
   return {
-    system_instruction: { parts: [{ text: VERIFY_SYSTEM_PROMPT }] },
-    contents: [{ parts: [{ text: JSON.stringify(payload) }] }],
-    generationConfig: {
-      // Lower than enrichment. This is a judgement, not a piece of writing, and
-      // the same input should get the same verdict twice.
-      temperature: 0,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      responseMimeType: "application/json",
-      responseSchema: VERIFY_SCHEMA,
-    },
+    messages: [
+      { role: "system", content: VERIFY_SYSTEM_PROMPT },
+      { role: "user", content: JSON.stringify(payload) },
+    ],
+    // Lower than enrichment. This is a judgement, not a piece of writing, and
+    // the same input should get the same verdict twice.
+    temperature: 0,
+    max_completion_tokens: MAX_OUTPUT_TOKENS,
+    response_format: { type: "json_object" },
   };
 }
 
