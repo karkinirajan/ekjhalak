@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { StoryImage } from "@/components/story-image";
 import { SourceMark, TopicPill } from "@/components/topic-pill";
 import { useFeedClock } from "@/components/feed-clock";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { langAttr, storyText } from "@/lib/story-text";
 import { isTruncated, storyExcerpt } from "@/lib/story-excerpt";
 import {
@@ -36,7 +36,7 @@ interface StoryReaderProps {
  * panel is honest about that and puts "read at source" in the primary position.
  */
 export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
-  const { t, language } = useTheme();
+  const { t, language } = useSite();
   const now = useFeedClock();
 
   if (!item) return null;
@@ -113,7 +113,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
               {item.coverageCount > 1 && (
                 <>
                   <span aria-hidden="true" className="h-3 w-px bg-rule" />
-                  <span className="inline-flex items-center gap-1.5 text-(--topic)">
+                  <span className="inline-flex items-center gap-1.5">
                     <Newspaper className="h-3 w-3" aria-hidden="true" />
                     {item.coverageCount} {t.outletsMany}
                   </span>
@@ -146,7 +146,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
                   isNp && "font-np text-[1.125rem] leading-[1.9]",
                   index === 0 &&
                     !isNp &&
-                    "first-letter:float-left first-letter:mt-1 first-letter:mr-2.5 first-letter:font-display first-letter:text-[3.25rem] first-letter:leading-[0.82] first-letter:font-black first-letter:text-(--topic)",
+                    "first-letter:float-left first-letter:mt-1 first-letter:mr-2.5 first-letter:font-display first-letter:text-[3.25rem] first-letter:leading-[0.82] first-letter:font-bold first-letter:text-(--topic-text)",
                 )}
               >
                 {paragraph}
@@ -164,7 +164,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-md bg-red-solid px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90",
+                "inline-flex items-center justify-center gap-2 rounded-md bg-accent-solid px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90",
                 language === "np" && "font-np",
               )}
             >

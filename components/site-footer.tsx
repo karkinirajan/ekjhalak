@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { cn } from "@/lib/utils";
 import { STANDING_PAGES } from "@/lib/site-nav";
 import { OWNER_DISPLAY_NAME, OWNER_URL } from "@/lib/site-pages";
@@ -20,12 +20,12 @@ interface SiteFooterProps {
  * reprints.
  */
 export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
-  const { t, language } = useTheme();
+  const { t, language } = useSite();
   const isNp = language === "np";
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-20 border-t border-rule bg-pitch text-ink-soft">
+    <footer className="on-pitch mt-20 border-t border-rule bg-canvas text-ink-soft">
       <div className="mx-auto w-full max-w-[1400px] px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr]">
           {/* Brand + about */}
@@ -33,7 +33,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
             <p className="leading-none">
               <span
                 className={cn(
-                  "text-2xl font-black tracking-tight text-ink",
+                  "text-2xl font-bold tracking-tight text-ink",
                   isNp ? "font-np" : "font-display",
                 )}
               >
@@ -41,7 +41,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
               </span>
               <span
                 className={cn(
-                  "ml-2.5 text-base font-semibold text-red",
+                  "ml-2.5 text-base font-semibold text-accent",
                   isNp ? "font-display" : "font-np",
                 )}
               >
@@ -60,7 +60,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
 
             <p className="eyebrow mt-5 text-ink-muted">
               {t.footerSourcesText}{" "}
-              <span className="tabular-nums text-red">{sourceCount}</span>{" "}
+              <span className="tabular-nums text-accent">{sourceCount}</span>{" "}
               {t.footerNewsrooms}
             </p>
           </div>
@@ -133,7 +133,7 @@ export function SiteFooter({ sourceCount, onTopicSelect }: SiteFooterProps) {
                 href={OWNER_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-ink-soft underline decoration-rule-strong underline-offset-4 transition-colors hover:text-ink hover:decoration-red"
+                className="font-medium text-ink-soft underline decoration-rule-strong underline-offset-4 transition-colors hover:text-ink hover:decoration-accent"
               >
                 {OWNER_DISPLAY_NAME}
               </a>

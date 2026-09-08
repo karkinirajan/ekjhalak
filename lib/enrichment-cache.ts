@@ -64,7 +64,3 @@ export function writeEnrichment(key: string, value: EnrichResult): void {
   }
 }
 
-/** Diagnostics for the feed-health route and the enrichment script. */
-export function enrichmentCacheSize(): number {
-  return store.size;
-}

@@ -19,7 +19,7 @@ const securityHeaders = [
       // is ISR precisely so a reader gets static HTML, so a nonce would trade
       // the whole caching story for a CSP tightening on a page that has no
       // third-party script and no user-generated HTML. The two inline scripts
-      // are ours: the theme-before-paint shim and the JSON-LD block.
+      // are ours: the language-before-paint shim and the JSON-LD block.
       `script-src 'self' 'unsafe-inline'${
         process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"
       }`,
@@ -94,6 +94,27 @@ const nextConfig: NextConfig = {
     // the same question at render time and fall back to a plain <img> for hosts
     // that are not on it, rather than throwing and showing a broken card.
     remotePatterns: [...remoteImagePatterns],
+
+    // story-image.tsx asks for `quality={70}`, and without this every image was
+    // still being served at 75. Next.js 16 only honours quality values named
+    // here and silently falls back to the default otherwise, so the prop was
+    // dead: 243 images on the homepage, every one of them q=75.
+    qualities: [70],
+
+    // The generated srcset ran to 3840w for frames that paint at most 400px on
+    // desktop and one viewport width on mobile. `sizes` meant a browser never
+    // chose those rungs, so they cost no bandwidth — but every one of them is a
+    // URL the optimizer will transcode if anything ever requests it, and a
+    // 4K re-encode of a publisher's photograph is not a variant this site has a
+    // use for. The ladder now stops at 1920.
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [64, 96, 128, 256, 384],
+
+    // Publisher photographs are immutable once fetched — the URL changes when
+    // the picture does. A day is the floor Next.js would otherwise take from
+    // whatever Cache-Control the origin happened to send, which for several of
+    // these CDNs is no header at all.
+    minimumCacheTTL: 86400,
   },
 };
 

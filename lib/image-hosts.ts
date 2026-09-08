@@ -26,56 +26,85 @@
  * gain optimization.
  */
 export const OPTIMIZABLE_IMAGE_HOSTS = [
+  // Publisher domains are listed as `**.` wildcards rather than as the one
+  // hostname that happened to be observed serving photographs.
+  //
+  // Every exact-match entry here had needed a follow-up fix: Ratopati serves
+  // from npcdn., France 24 from s., the NYT from static01., the BBC from
+  // ichef. Measuring a live feed found eight more still unlisted —
+  // assets-cdn.kathmandupost.com, c.ndtvimg.com, images.nagariknewscdn.com,
+  // static.dw.com and www.onlinekhabar.com among them — together carrying
+  // about a third of the feed's images past the optimizer. The Kathmandu Post
+  // one was the homepage's LCP element: a 375 KiB JPEG, 180 KiB of which was
+  // the cost of not being WebP.
+  //
+  // A wildcard per publisher domain ends that class of miss. It widens what may
+  // be optimized to any subdomain of a newsroom already trusted enough to be a
+  // source, which is the same trust boundary — and an unlisted host was never
+  // blocked, only unoptimized, so this trades no safety for the coverage.
+  //
+  // `**.example.com` is matched by `.example.com` suffix, so the leading dot is
+  // load-bearing: `notkathmandupost.com` and `kathmandupost.com.attacker.net`
+  // both fail it. An apex is listed separately only where the apex itself was
+  // measured serving images, which is why most publishers appear once.
+  //
+  // Keep this under 50 entries. `images.remotePatterns` is capped there by
+  // Next.js, and the cap is enforced at server start rather than at build —
+  // a 53-entry list compiled cleanly and then refused to boot.
+
   // ── Nepal ───────────────────────────────────────────────────────────────
-  "kathmandupost.com",
-  "english.onlinekhabar.com",
+  "**.kathmandupost.com",
+  "**.onlinekhabar.com",
+  "**.risingnepaldaily.com",
   "risingnepaldaily.com",
-  "ekantipur.com",
-  "www.gorkhapatraonline.com",
-  "myrepublica.nagariknetwork.com",
-  "thehimalayantimes.com",
-  "en.setopati.com",
-  "www.setopati.com",
-  "ratopati.com",
-  // Ratopati serves article photos from a separate CDN host, not from
-  // ratopati.com. Measured as the second-heaviest image host in a live feed
-  // while it was unlisted, so every one of its photos was being served raw.
-  "npcdn.ratopati.com",
-  "nagariknews.nagariknetwork.com",
-  // DC Nepal is a WordPress install serving unresized originals — the 2.4 MB
-  // JPEG that was the homepage's LCP element came from here, painted into a
-  // 378x236 slot. See audit/baseline/summary.md.
-  "www.dcnepal.com",
+  "**.ekantipur.com",
+  "**.gorkhapatraonline.com",
+  "**.nagariknetwork.com",
+  // Nagarik's photo CDN is a separate domain, not a subdomain of the above.
+  "**.nagariknewscdn.com",
+  "**.thehimalayantimes.com",
+  "**.setopati.com",
+  "**.ratopati.com",
+  "**.dcnepal.com",
+  "**.bizmandu.com",
+  "bizmandu.com",
+  "**.nepalkhabar.com",
+  "**.thahakhabar.com",
+  "**.himalkhabar.com",
+  "**.rssnepal.org.np",
 
   // ── International ───────────────────────────────────────────────────────
-  "feeds.reuters.com",
-  "www.aljazeera.com",
-  "ichef.bbci.co.uk",
-  "ichef.bbc.co.uk",
-  "www.dw.com",
-  "www.france24.com",
-  // France 24's feed images come from s.france24.com, not www.
-  "s.france24.com",
-  "i.guim.co.uk",
-  "www.thehindu.com",
-  "th-i.thgim.com",
-  "static.toiimg.com",
-  "feeds.feedburner.com",
-  "static.ndtv.com",
-  "rss.nytimes.com",
-  // nytimes.com feeds link photos on static01, never on the rss host.
-  "static01.nyt.com",
-  "www.politico.eu",
-  "cdn.cnn.com",
-  "rss.cnn.com",
-  "www.cnn.com",
-  "www.scmp.com",
-  "cdn.i-scmp.com",
+  "**.aljazeera.com",
+  "**.bbci.co.uk",
+  "**.bbc.co.uk",
+  "**.dw.com",
+  "**.france24.com",
+  "**.guim.co.uk",
+  "**.thehindu.com",
+  "**.thgim.com",
+  "**.toiimg.com",
+  "**.ndtvimg.com",
+  "**.ndtv.com",
+  "**.nyt.com",
+  "**.politico.eu",
+  "**.cnn.com",
+  "**.scmp.com",
+  "**.i-scmp.com",
+  "**.reuters.com",
+  "**.apnews.com",
+  "**.washingtonpost.com",
+  "**.wsj.net",
+  "**.bwbx.io",
 
   // ── Generic CDNs news sites sit behind ──────────────────────────────────
+  // Nepal Khabar's photographs are on Prixa, a third-party CDN, rather than on
+  // any subdomain of nepalkhabar.com — so the publisher wildcard does not reach
+  // them and this is a separate entry.
+  "**.prixacdn.net",
   "**.cloudfront.net",
   "**.cloudinary.com",
   "**.wp.com",
+  "**.feedburner.com",
 ] as const;
 
 /** The same list in the shape `next.config.ts` wants. */

@@ -2,7 +2,7 @@
 
 import { TrendingUp } from "lucide-react";
 import { StoryCard } from "@/components/story-card";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { cn } from "@/lib/utils";
 import type { NewsItem } from "@/lib/news-pipeline";
 
@@ -21,14 +21,14 @@ interface TrendingRailProps {
  * next to real journalism.
  */
 export function TrendingRail({ items, onOpen }: TrendingRailProps) {
-  const { t, language } = useTheme();
+  const { t, language } = useSite();
   const isNp = language === "np";
 
   if (items.length === 0) return null;
 
   return (
     <aside className="lg:sticky lg:top-32">
-      <div className="rounded-sm border border-rule/20 bg-surface p-5 shadow-card">
+      <div className="rounded-sm border border-rule/20 bg-surface p-5">
         <div className="mb-5 border-b border-rule/20 pb-4">
           <h2
             className={cn(
@@ -36,7 +36,7 @@ export function TrendingRail({ items, onOpen }: TrendingRailProps) {
               isNp ? "font-np" : "font-display",
             )}
           >
-            <TrendingUp className="h-4 w-4 text-red" aria-hidden="true" />
+            <TrendingUp className="h-4 w-4 text-accent" aria-hidden="true" />
             {t.trendingSection}
           </h2>
           <p className={cn("mt-1.5 text-xs text-ink-muted", isNp && "font-np")}>

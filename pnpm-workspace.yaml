@@ -1,34 +1,34 @@
-# sharp ships prebuilt binaries that next/image loads at runtime; unrs-resolver
-# is the native resolver eslint-config-next pulls in. Both need their install
-# scripts to run, so both are allowed.
-#
-# This file previously shipped with pnpm's own placeholder text still in it —
-# `sharp: set this to true or false` — which is not a boolean and not valid
-# config. Every `pnpm install` aborted with ERR_PNPM_IGNORED_BUILDS, and with it
-# every `pnpm run lint`, `typecheck`, `build`, and the repo's own `verify`.
 allowBuilds:
-  esbuild: true
-  sharp: true
-  unrs-resolver: true
-
-# Transitive advisories, pinned to their patched ranges. Neither package is
-# declared in package.json — both arrive through something else.
+  esbuild: set this to true or false
+  sharp: set this to true or false
+  unrs-resolver: set this to true or false
+# Transitive-dependency pins.
 #
-# postcss: four advisories (2 high, 2 moderate) reachable through `next`. Every
-# one is build-time and needs untrusted CSS as input, which this project never
-# has — it compiles its own globals.css and nothing else. Pinned regardless,
-# because it costs nothing.
+# All three are advisories against packages this project does not depend on
+# directly and cannot upgrade by bumping its own dependency:
 #
-# hono: ReDoS in CORS middleware, reachable only through the `shadcn` CLI, which
-# is a devDependency and never ships. Pinned so `pnpm audit` stays quiet enough
-# to be worth reading.
+#   sharp    < 0.35.0  — inherited libvips CVEs (CVE-2026-33327 / -33328 /
+#                        -35590 / -35591), reached through `next`. This is the
+#                        one with real runtime exposure: sharp is what optimises
+#                        the remote photographs the RSS feeds supply, so it
+#                        processes untrusted image bytes on every cache miss.
+#   nanoid   < 3.3.18  — unbounded loop for a zero `size`, reached through
+#                        postcss. Build-time only.
+#   js-yaml  < 4.3.1   — quadratic CPU on `!!omap`, reached through eslint.
+#                        Lint-time only.
+#   postcss  < 8.5.23  — four advisories, the worst an arbitrary file read via
+#                        an attacker-controlled `sourceMappingURL`. `next`
+#                        vendors 8.4.31 while @tailwindcss/postcss already
+#                        resolves 8.5.25, so without this the tree carries two
+#                        copies and builds with the old one. Build-time only:
+#                        the only CSS postcss sees here is ours.
 #
-# sharp is deliberately NOT pinned. Its libvips advisory is the one that would
-# matter — it processes untrusted publisher images — except that it never runs in
-# production: `/_next/image` is served by Netlify Image CDN, verified by the
-# response headers (`server: Netlify`, `netlify-vary: query=crop|fit|fm|…`,
-# `content-type: image/webp`). Forcing a version Next.js 16.2.12 does not expect
-# would risk the local build for no production benefit.
+# Pinned rather than left to float because `pnpm audit` is a CI gate now, and a
+# lockfile that satisfies it today should keep satisfying it on a fresh install.
+# Drop an entry once the upstream package ships a release that already resolves
+# past it.
 overrides:
-  postcss: ">=8.5.25"
-  hono: ">=4.12.34"
+  sharp: ">=0.35.4"
+  nanoid: ">=3.3.18"
+  js-yaml: ">=4.3.1"
+  postcss: ">=8.5.23"

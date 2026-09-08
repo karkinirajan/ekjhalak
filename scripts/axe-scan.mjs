@@ -5,10 +5,12 @@
 //
 //   node scripts/axe-scan.mjs https://ekjhalak.news/ [--out audit/baseline/axe-home.json]
 //
-// Deliberately dependency-free. @axe-core/cli wants chromedriver and a devDependency
-// for something that runs a handful of times a release; this drives the Chrome that
-// is already installed over the DevTools protocol, using the WebSocket global Node 22
-// ships, and reads axe-core out of whichever npx cache Lighthouse populated.
+// Drives the Chrome that is already installed over the DevTools protocol, using
+// the WebSocket global Node 22 ships. @axe-core/cli would additionally want
+// chromedriver; this needs only axe-core itself, which is a devDependency so a
+// CI runner resolves the same pinned version every time. (It used to take
+// whatever axe-core an npx cache happened to hold — fine on a laptop that had
+// run Lighthouse, and nowhere else.)
 //
 // Companion to check-contrast.mjs, and it catches what that script structurally
 // cannot: check-contrast reads the token pairs as authored, so a ratio broken at
@@ -19,6 +21,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 
 const args = process.argv.slice(2);
 const url = args.find((a) => !a.startsWith("--"));
@@ -37,9 +40,32 @@ if (!url) {
 const PORT = 9333;
 const CHROME = process.env.CHROME_PATH ?? "google-chrome-stable";
 
-/** axe.min.js, from wherever npx last unpacked Lighthouse. */
+/**
+ * axe.min.js.
+ *
+ * Resolved from node_modules first. This used to scavenge it out of whichever
+ * npx cache Lighthouse had last populated, which worked on a machine that had
+ * run Lighthouse and nowhere else — so the moment this became a CI gate it
+ * would have failed on every fresh runner, for a missing cache rather than for
+ * an accessibility problem.
+ *
+ * axe-core is a devDependency now. That gives up the script's dependency-free
+ * property, and the trade is worth making once a gate depends on it: a
+ * pinned version in the lockfile is also a scan that cannot silently change
+ * its findings when someone else's npx cache moves on.
+ *
+ * The npx cache is still searched as a fallback, and AXE_PATH still overrides
+ * both, so an existing local setup keeps working.
+ */
 function findAxe() {
   if (process.env.AXE_PATH) return process.env.AXE_PATH;
+
+  try {
+    return createRequire(import.meta.url).resolve("axe-core/axe.min.js");
+  } catch {
+    // Fall through to the cache scan below.
+  }
+
   const cache = join(homedir(), ".npm", "_npx");
   if (!existsSync(cache)) return null;
   for (const dir of readdirSync(cache)) {
@@ -52,8 +78,7 @@ function findAxe() {
 const axePath = findAxe();
 if (!axePath) {
   console.error(
-    "axe-core not found. Run `npx lighthouse --version` once to populate the npx\n" +
-      "cache, or point AXE_PATH at an axe.min.js.",
+    "axe-core not found. Run `pnpm install`, or point AXE_PATH at an axe.min.js.",
   );
   process.exit(2);
 }

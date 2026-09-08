@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ArrowRight, Check, Loader2, Mail, MailCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { checkEmail } from "@/lib/email-address";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ type SubmitState =
  * rather than being shown a confirmation nobody can act on.
  */
 export function NewsletterCta() {
-  const { t, language } = useTheme();
+  const { t, language } = useSite();
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
   const [state, setState] = useState<SubmitState>("idle");
@@ -134,18 +134,18 @@ export function NewsletterCta() {
           <p
             role="status"
             className={cn(
-              "mt-8 inline-flex items-start gap-2.5 rounded-md border border-green/40 bg-green-soft px-5 py-3 text-left text-sm font-medium text-ink",
+              "mt-8 inline-flex items-start gap-2.5 rounded-md border border-support/40 bg-support-soft px-5 py-3 text-left text-sm font-medium text-ink",
               isNp && "font-np",
             )}
           >
             {state === "check-inbox" ? (
               <MailCheck
-                className="mt-0.5 h-4 w-4 shrink-0 text-green"
+                className="mt-0.5 h-4 w-4 shrink-0 text-support"
                 aria-hidden="true"
               />
             ) : (
               <Check
-                className="mt-0.5 h-4 w-4 shrink-0 text-green"
+                className="mt-0.5 h-4 w-4 shrink-0 text-support"
                 aria-hidden="true"
               />
             )}
@@ -179,13 +179,13 @@ export function NewsletterCta() {
                 placeholder={t.newsletterPlaceholder}
                 aria-invalid={state === "invalid"}
                 aria-describedby={message ? "newsletter-message" : undefined}
-                className="h-12 flex-1 rounded-md border-rule-strong bg-surface px-5 text-base text-ink placeholder:text-ink-muted focus-visible:border-red focus-visible:ring-red/30"
+                className="h-12 flex-1 rounded-md border-rule-strong bg-surface px-5 text-base text-ink placeholder:text-ink-muted focus-visible:border-accent focus-visible:ring-accent/30"
               />
               <button
                 type="submit"
                 disabled={state === "sending"}
                 className={cn(
-                  "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-red-solid px-6 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-100 disabled:opacity-60",
+                  "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-accent-solid px-6 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-100 disabled:opacity-60",
                   isNp && "font-np",
                 )}
               >
@@ -225,7 +225,7 @@ export function NewsletterCta() {
               <p
                 id="newsletter-message"
                 role="alert"
-                className={cn("mt-3 text-sm text-red", isNp && "font-np")}
+                className={cn("mt-3 text-sm text-accent", isNp && "font-np")}
               >
                 {message}
               </p>

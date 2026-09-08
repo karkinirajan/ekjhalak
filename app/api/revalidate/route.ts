@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
+import { secretsMatch } from "@/lib/secret-compare";
 
 /**
  * On-demand cache invalidation for the news feed.
@@ -25,7 +26,7 @@ function isAuthorized(method: "GET" | "POST", presented: string | null) {
   const expected =
     method === "GET" ? process.env.CRON_SECRET : process.env.REVALIDATE_SECRET;
 
-  if (expected) return presented === expected;
+  if (expected) return secretsMatch(presented, expected);
 
   // No secret configured: allowed only outside production, where there is
   // nothing to protect and requiring one would make local work tedious.

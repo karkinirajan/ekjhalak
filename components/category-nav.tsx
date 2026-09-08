@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { cn } from "@/lib/utils";
 import { TOPIC_ORDER, topicLabel, type TopicId } from "@/lib/taxonomy";
 import type { RangeKey } from "@/lib/news-pipeline";
@@ -38,7 +38,7 @@ export function CategoryNav({
   topicCounts,
   resultCount,
 }: CategoryNavProps) {
-  const { t, language } = useTheme();
+  const { t, language } = useSite();
   const activeRef = useRef<HTMLButtonElement>(null);
   const isNp = language === "np";
 
@@ -79,24 +79,28 @@ export function CategoryNav({
     > 
       <div className="mx-auto w-full max-w-350 px-4 sm:px-6 lg:px-8">
         {/* ── Topic rail ─────────────────────────────────────────────────── */}
-        <div className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 py-2 scrollbar-none sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="-mx-4 flex items-center gap-5 overflow-x-auto px-4 scrollbar-none sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <button
             type="button"
             ref={topic === "all" ? activeRef : undefined}
             onClick={() => setTopic("all")}
             aria-current={topic === "all" ? "true" : undefined}
             className={cn(
-              "shrink-0 rounded-md px-4 py-1.5 transition-all duration-300 sm:px-4 text-[1.08rem] leading-[1.32] font-semibold tracking-[-0.015em]",
+              // Underlined when active, not filled. A row of solid chips is a
+              // filter bar; a row of words with a rule under the current one is
+              // a section nav, which is what this is. The Kathmandu Post, the
+              // Guardian and the NYT all mark the current section this way.
+              "shrink-0 border-b-2 px-1 py-2 text-[1.02rem] font-semibold transition-colors sm:px-1",
               topic === "all"
-                ? "bg-ink text-canvas shadow-md"
-                : "text-ink-muted hover:bg-raised hover:text-ink",
+                ? "border-b-ink text-ink"
+                : "border-b-transparent text-ink-muted hover:text-ink",
               isNp ? "font-np leading-[1.5]" : "font-display",
             )}
           >
             {t.allTopics}
           </button>
 
-          <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-rule" />
+          <span aria-hidden="true" className="mx-2 h-4 w-px shrink-0 self-center bg-rule" />
 
           {availableTopics.map((id) => {
             const isActive = topic === id;
@@ -109,21 +113,19 @@ export function CategoryNav({
                 onClick={() => setTopic(id)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "shrink-0 rounded-md px-4 py-1.5 transition-all duration-300 text-[1.08rem] leading-[1.32] font-semibold tracking-[-0.015em]",
+                  "shrink-0 border-b-2 px-1 py-2 text-[1.02rem] font-semibold transition-colors",
                   isActive
-                    ? "bg-[var(--topic)] text-topic-ink shadow-[0_0_12px_color-mix(in_srgb,var(--topic)_50%,transparent)]"
-                    : "text-ink-muted hover:bg-[color-mix(in_srgb,var(--topic)_15%,transparent)] hover:text-[var(--topic)]",
+                    ? "border-b-[var(--topic)] text-[var(--topic-text)]"
+                    : "border-b-transparent text-ink-muted hover:text-ink",
                   isNp ? "font-np leading-[1.5]" : "font-display",
                 )}
               >
                 {topicLabel(id, language)}
-                {/* The count is rendered slightly muted when inactive, but must match the active ink color (with slight opacity) when the pill is solid to maintain WCAG contrast against the vibrant background. */}
-                <span 
-                  className={cn(
-                    "ml-1.5 tabular-nums",
-                    isActive ? "text-topic-ink opacity-90" : "text-ink-muted"
-                  )}
-                >
+                {/* The count rides alongside the label in the muted ink at all
+                    times now. It used to flip to --topic-ink so it would stay
+                    legible on the solid pill; there is no solid pill any more,
+                    so it no longer has to. */}
+                <span className="ml-1.5 tabular-nums text-ink-muted">
                   {topicCounts[id]}
                 </span>
               </button>
@@ -133,7 +135,7 @@ export function CategoryNav({
 
         {/* ── Region + range rail ────────────────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-rule/60 py-2">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-4">
             {buckets.map((option) => (
               <button
                 key={option.key}
@@ -141,10 +143,10 @@ export function CategoryNav({
                 onClick={() => setBucket(option.key)}
                 aria-pressed={bucket === option.key}
                 className={cn(
-                  "rounded-md px-4 py-1.5 text-xs font-semibold transition-all duration-300",
+                  "border-b-2 px-1 py-1.5 text-xs font-semibold transition-colors",
                   bucket === option.key
-                    ? "bg-red text-white shadow-[0_0_12px_color-mix(in_srgb,var(--red)_50%,transparent)]"
-                    : "text-ink-muted hover:bg-raised/50 hover:text-ink",
+                    ? "border-b-accent text-accent"
+                    : "border-b-transparent text-ink-muted hover:text-ink",
                   isNp && "font-np",
                 )}
               >
@@ -162,9 +164,9 @@ export function CategoryNav({
                   onClick={() => setRange(option.key)}
                   aria-pressed={range === option.key}
                   className={cn(
-                    "eyebrow rounded-md px-2.5 py-1 transition-colors",
+                    "eyebrow px-2 py-1 transition-colors",
                     range === option.key
-                      ? "text-ink underline decoration-red decoration-2 underline-offset-4"
+                      ? "text-ink underline decoration-accent decoration-2 underline-offset-4"
                       : "text-ink-muted hover:text-ink",
                     isNp && "font-np tracking-normal",
                   )}

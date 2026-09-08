@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 
 interface PaginationBarProps {
   page: number;
@@ -44,7 +44,7 @@ export function PaginationBar({
   totalPages,
   onPageChange,
 }: PaginationBarProps) {
-  const { t, language } = useTheme();
+  const { t, language } = useSite();
   const safeTotal = Math.max(totalPages, 1);
   const pageWindow = buildPageWindow(page, safeTotal);
   const isNp = language === "np";

@@ -23,7 +23,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { StoryCard } from "@/components/story-card";
 import { StoryReader } from "@/components/story-reader";
 import { TrendingRail } from "@/components/trending-rail";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { cn } from "@/lib/utils";
 import {
   diversifyBySource,
@@ -38,7 +38,19 @@ const PAGE_SIZE = 12;
 const REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 
 /** Cards in the first row are above the fold and load their photo eagerly. */
-const EAGER_CARDS = 3;
+// How many cards load eagerly, with a preload link and no lazy attribute.
+//
+// One, not three. The grid is a single column at the width Lighthouse measures
+// and at the width most readers arrive on, so exactly one card's photograph is
+// above the fold — and each extra eager image is another request racing the
+// real LCP element for a throttled connection's bandwidth. Measured on the
+// production build under Lighthouse's mobile profile: 5.4s LCP at three,
+// 5.0s at one.
+//
+// Cards two and three are lazy rather than absent. They sit inside or just
+// below the viewport on a desktop layout, where the browser starts them
+// immediately anyway.
+const EAGER_CARDS = 1;
 
 /** Nothing is held back from the rail now that the feed has no hero block. */
 const NOTHING_EXCLUDED: ReadonlySet<string> = new Set();
@@ -73,7 +85,7 @@ function ReadingProgress() {
   return (
     <div className="pointer-events-none fixed inset-x-0 top-0 z-50 h-1 bg-transparent">
       <div
-        className="h-full bg-red transition-[width] duration-150"
+        className="h-full bg-accent transition-[width] duration-150"
         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
       />
     </div>
@@ -111,7 +123,7 @@ interface NewsFeedProps {
 }
 
 export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
-  const { t, language } = useTheme();
+  const { t, language } = useSite();
   const isNp = language === "np";
 
   const [range, setRange] = useState<RangeKey>("day");
@@ -378,7 +390,6 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
           applySearch={applySearch}
           onRefresh={() => fetchFeed(false)}
           isRefreshing={loadState === "refreshing"}
-          fetchedAt={meta?.fetchedAt ?? 0}
           onSubscribe={() =>
             newsletterRef.current?.scrollIntoView({
               behavior: "smooth",

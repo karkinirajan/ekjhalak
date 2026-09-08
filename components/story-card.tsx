@@ -5,7 +5,7 @@ import { Newspaper } from "lucide-react";
 import { StoryImage } from "@/components/story-image";
 import { SourceMark, TopicPill } from "@/components/topic-pill";
 import { useFeedClock } from "@/components/feed-clock";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { langAttr, storyText } from "@/lib/story-text";
 import {
   cn,
@@ -67,18 +67,27 @@ const THUMB_FRAME =
   "overflow-hidden rounded-sm bg-raised/60 border border-rule/20";
 
 /**
- * The card's border, at rest and on hover.
+ * The card's rule.
  *
- * Mixed into `--rule` rather than used neat. A full-strength topic hairline
- * around every card turned a page of eleven categories into a colour chart and
- * shouted louder than the headlines it framed. At 15% the colour is barely a
- * tint on the ordinary rule — enough to categorise a card once you look for it,
- * gone while you read. Hover resolves it most of the way toward the real
- * colour, which is where a category cue belongs: on the card you are pointing
- * at, not on all twelve at once.
+ * A 2px top rule in the story's own topic colour, and nothing else: no box, no
+ * shadow, no rounded corner, no hover lift, no glow.
+ *
+ * What this replaced was a bordered, tinted, blurred panel with a coloured
+ * bottom border, a 32px coloured shadow on hover and a 4px translate. That is
+ * the vocabulary of a product card, and it is the reason the feed read as an
+ * app rather than a paper whatever colours went into it.
+ *
+ * Every newsroom this site aggregates from separates stories the same way. The
+ * Kathmandu Post renders a 1px #e9e9e9 hairline sixty-two times on its homepage
+ * and five one-off shadows in total; the Guardian and the NYT use no shadow at
+ * all and mark the section with a coloured rule above the headline. The rule
+ * carries the category, the hairline carries the separation, and the headline
+ * is left as the loudest thing in its own card — which on a news page it should
+ * be.
  */
-const CARD_BORDER =
-  "border border-rule/20 border-b-2 border-b-[var(--topic)] hover:border-[var(--topic)] hover:shadow-[0_8px_32px_color-mix(in_srgb,var(--topic)_20%,transparent)] transition-all duration-500 hover:-translate-y-1";
+const CARD_RULE =
+  "border-t-2 border-t-[var(--topic)] transition-colors duration-200";
+
 
 /**
  * One story, in two editorial weights.
@@ -100,7 +109,7 @@ export function StoryCard({
   rank,
   priority = false,
 }: StoryCardProps) {
-  const { t, language } = useTheme();
+  const { t, language } = useSite();
   const now = useFeedClock();
 
   const text = storyText(item, language);
@@ -112,7 +121,7 @@ export function StoryCard({
     return (
       <article
         data-topic={item.topic}
-        className="group relative flex gap-3.5 p-2 rounded-sm transition-all duration-300 hover:bg-surface/50 hover:-translate-y-0.5"
+        className="group relative flex gap-3.5 py-3.5 transition-colors duration-200"
       >
         {/* `self-start` is load-bearing, not alignment taste. This <article> is
             a row flex container, so the default `align-items: stretch` gives the
@@ -134,7 +143,7 @@ export function StoryCard({
 
         <span
           aria-hidden="true"
-          className="font-display text-2xl leading-none font-semibold text-ink-muted transition-colors group-hover:text-(--topic)"
+          className="font-display text-2xl leading-none font-semibold text-ink-muted transition-colors group-hover:text-(--topic-text)"
         >
           {String(rank ?? 0).padStart(2, "0")}
         </span>
@@ -143,7 +152,7 @@ export function StoryCard({
           <h3
             lang={langAttr(text.lang)}
             className={cn(
-              "text-sm font-semibold leading-snug text-ink transition-colors group-hover:text-(--topic)",
+              "text-sm font-semibold leading-snug text-ink transition-colors group-hover:text-(--topic-text)",
               isNp && "font-np",
             )}
           >
@@ -164,7 +173,7 @@ export function StoryCard({
             {item.coverageCount > 1 && (
               <>
                 <span aria-hidden="true">·</span>
-                <span className="text-(--topic)">
+                <span>
                   {item.coverageCount} {t.outletsMany}
                 </span>
               </>
@@ -194,11 +203,11 @@ export function StoryCard({
     <article
       data-topic={item.topic}
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-sm bg-surface/80 backdrop-blur-sm transition-all duration-300 hover:bg-surface",
-        CARD_BORDER,
+        "group relative flex h-full flex-col overflow-hidden",
+        CARD_RULE,
       )}
     >
-      <div className="aspect-16/10 w-full shrink-0 overflow-hidden bg-raised/60">
+      <div className="mt-4 aspect-16/10 w-full shrink-0 overflow-hidden rounded-sm bg-raised">
         <StoryImage
           src={item.imageUrl}
           alt={title}
@@ -209,11 +218,11 @@ export function StoryCard({
           // viewport the xl card paints about 350px, so 400px is the ceiling
           // rather than a guess.
           sizes="(min-width: 1280px) 400px, (min-width: 1024px) 45vw, (min-width: 640px) 50vw, 100vw"
-          className="h-full w-full transition-transform duration-700 ease-out group-hover:scale-105"
+          className="h-full w-full"
         />
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col pt-4">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <TopicPill topic={item.topic} lang={language} tone="quiet" />
           <span className="eyebrow text-ink-muted">{relative}</span>
@@ -222,8 +231,8 @@ export function StoryCard({
         <h3
           lang={langAttr(text.lang)}
           className={cn(
-            "mt-3 text-[1.08rem] leading-[1.32] font-semibold tracking-[-0.015em] text-ink transition-colors group-hover:text-(--topic)",
-            isNp ? "font-np leading-[1.5]" : "font-display",
+            "mt-2.5 text-[1.1rem] leading-[1.24] font-semibold text-ink transition-colors group-hover:text-(--topic-text)",
+            isNp ? "font-np leading-[1.45]" : "font-display",
           )}
         >
           <Link
@@ -243,8 +252,8 @@ export function StoryCard({
           <p
             lang={langAttr(text.lang)}
             className={cn(
-              "mt-2.5 text-[0.9rem] leading-[1.7] text-ink-soft",
-              isNp && "font-np leading-[1.8]",
+              "mt-2 text-[0.875rem] leading-[1.55] text-ink-muted",
+              isNp && "font-np leading-[1.75]",
             )}
           >
             {summary}
@@ -257,8 +266,8 @@ export function StoryCard({
             the summary on exactly the tallest card in each row — the one most
             in need of the breathing room. Padding on a wrapper is a floor the
             auto margin cannot eat. */}
-        <div className="mt-auto pt-5">
-          <div className="eyebrow flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-t border-rule/60 pt-3.5 text-ink-muted">
+        <div className="mt-auto pt-4">
+          <div className="eyebrow flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-t border-rule pt-3 text-ink-muted">
             <SourceMark name={item.sourceName} className="min-w-0" />
             <span aria-hidden="true" className="h-3 w-px shrink-0 bg-rule" />
             <time
@@ -270,7 +279,7 @@ export function StoryCard({
             {item.coverageCount > 1 && (
               <>
                 <span aria-hidden="true" className="h-3 w-px shrink-0 bg-rule" />
-                <span className="inline-flex items-center gap-1.5 text-(--topic)">
+                <span className="inline-flex items-center gap-1.5">
                   <Newspaper className="h-3 w-3" aria-hidden="true" />
                   {item.coverageCount} {t.outletsMany}
                 </span>

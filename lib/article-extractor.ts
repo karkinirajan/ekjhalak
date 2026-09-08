@@ -190,7 +190,3 @@ export async function extractMany(
   return out;
 }
 
-/** Diagnostics for the aggregator's source-health reporting. */
-export function extractionCacheSize(): number {
-  return cache.size;
-}

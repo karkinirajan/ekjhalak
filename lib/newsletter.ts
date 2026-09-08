@@ -188,15 +188,28 @@ function confirmationHtml(url: string, copy: ConfirmationCopy): string {
   const escape = (value: string) =>
     value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+  // Literal hexes, and inline styles, because an email client has neither
+  // custom properties nor a stylesheet. Every value here is the same palette
+  // step the site paints, named in the comment so the two stay in step:
+  //
+  //   #e6ebf6  alice_blue_500   the wrapper the card floats on
+  //   #ffffff  white_500        the card itself
+  //   #d3d5d7  alabaster_500    its hairline, --rule
+  //   #192746  alice_blue_100   body type, --ink
+  //   #51565a  alabaster_200    secondary type, --ink-muted
+  //   #d60b19  flag_red_500     the wordmark and the button, --accent-solid
+  //
+  // White on #d60b19 runs 5.36:1, and #192746 on white 14.79:1 — the same
+  // figures check-contrast.mjs asserts for the page.
   return `<!doctype html>
-<html><body style="margin:0;padding:32px 16px;background:#fdfcf9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#111111;">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e5e5e5;border-radius:6px;padding:32px;">
-    <p style="margin:0 0 24px;font-size:20px;font-weight:700;letter-spacing:-0.02em;">EkJhalak <span style="color:#dc2626;">एक झलक</span></p>
+<html><body style="margin:0;padding:32px 16px;background:#e6ebf6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#192746;">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #d3d5d7;border-radius:6px;padding:32px;">
+    <p style="margin:0 0 24px;font-size:20px;font-weight:700;letter-spacing:-0.02em;">EkJhalak <span style="color:#d60b19;">एक झलक</span></p>
     <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;font-weight:600;">${escape(copy.heading)}</h1>
-    <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#525252;">${escape(copy.body)}</p>
-    <a href="${escape(url)}" style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 24px;border-radius:6px;">${escape(copy.cta)}</a>
-    <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#737373;">${escape(copy.ignore)}</p>
-    <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#737373;word-break:break-all;">${escape(url)}</p>
+    <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#51565a;">${escape(copy.body)}</p>
+    <a href="${escape(url)}" style="display:inline-block;background:#d60b19;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 24px;border-radius:6px;">${escape(copy.cta)}</a>
+    <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#51565a;">${escape(copy.ignore)}</p>
+    <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#51565a;word-break:break-all;">${escape(url)}</p>
   </div>
 </body></html>`;
 }

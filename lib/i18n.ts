@@ -4,7 +4,6 @@ const en = {
   // ── Masthead ───────────────────────────────────────────────────────────────
   wordmark: "EkJhalak",
   wordmarkNp: "एक झलक",
-  tagline: "Nepal & World, at a glance",
   // Short on purpose. The field is narrow at every width the masthead gives it,
   // and a placeholder that gets clipped mid-word reads as a broken control.
   searchPlaceholder: "Search for…",
@@ -12,22 +11,13 @@ const en = {
   refreshFeed: "Refresh feed",
   langButton: "नेपाली",
   langToggleLabel: "Switch to Nepali",
-  themeDark: "Switch to dark theme",
-  themeLight: "Switch to light theme",
-  openMenu: "Open menu",
-  closeMenu: "Close menu",
 
   // ── Ticker ─────────────────────────────────────────────────────────────────
   liveLabel: "Live",
-  updatedAt: "Updated",
 
-  // ── Filters ────────────────────────────────────────────────────────────────
-  statTimelineTitle: "Range",
-  statFeedTitle: "Region",
   rangeDay: "Today",
   rangeWeek: "This Week",
   rangeMonth: "This Month",
-  rangeSuffix: "briefing",
   feedAll: "Top Stories",
   feedNational: "Nepal",
   feedInternational: "World",
@@ -38,16 +28,10 @@ const en = {
   latestSection: "Latest",
   trendingSection: "Worth your time",
   trendingHint: "Ranked by newsroom coverage, source weight and freshness",
-  briefingDesc:
-    "No clutter. No chaos. No ads. Just short, accurate news in one place.",
   filtered: "stories",
 
-  // ── Story metadata ─────────────────────────────────────────────────────────
-  readBrief: "Read brief",
   readFull: "Read at source",
-  permalink: "Story link",
   excerptNotice: "A short excerpt — EkJhalak links out rather than reproducing other newsrooms' work.",
-  outletsOne: "1 outlet",
   outletsMany: "outlets covering",
   minRead: "min read",
   translatedNotice: "Machine translated",
@@ -72,7 +56,6 @@ const en = {
   newsletterFailed: "Something went wrong. Please try again in a moment.",
   newsletterPrivacy: "No spam. Unsubscribe any time.",
   subscribe: "Subscribe",
-  close: "Close",
 
   // ── Pagination ─────────────────────────────────────────────────────────────
   pagePre: "Page",
@@ -86,7 +69,6 @@ const en = {
     "EkJhalak aggregates trusted Nepali and international newsrooms into one calm, ad-free briefing. Summaries stay in the language they were published in.",
   footerSections: "Sections",
   topicNav: "Topics",
-  footerSources: "Sources",
   footerSourcesText: "Reading from",
   footerNewsrooms: "newsrooms",
   footerRights: "All rights reserved.",
@@ -103,7 +85,6 @@ const en = {
 
   // ── States ─────────────────────────────────────────────────────────────────
   noStories: "No stories match this filter. Try a different range or topic.",
-  loadingStories: "Loading stories…",
   errorFeed: "Could not load news feed. Check your connection or try again.",
   retryLabel: "Retry",
 };
@@ -113,26 +94,17 @@ export type I18nDict = typeof en;
 const np: I18nDict = {
   wordmark: "एक झलक",
   wordmarkNp: "EkJhalak",
-  tagline: "नेपाल र विश्व, एकै झलकमा",
   searchPlaceholder: "खोज्नुहोस्…",
   searchLabel: "शीर्षक र सारांश खोज्नुहोस्",
   refreshFeed: "फिड रिफ्रेस गर्नुहोस्",
   langButton: "English",
   langToggleLabel: "अंग्रेजीमा स्विच गर्नुहोस्",
-  themeDark: "डार्क मोडमा जानुहोस्",
-  themeLight: "उज्यालो मोडमा जानुहोस्",
-  openMenu: "मेनु खोल्नुहोस्",
-  closeMenu: "मेनु बन्द गर्नुहोस्",
 
   liveLabel: "प्रत्यक्ष",
-  updatedAt: "अद्यावधिक",
 
-  statTimelineTitle: "समय",
-  statFeedTitle: "क्षेत्र",
   rangeDay: "आजको",
   rangeWeek: "यो हप्ताको",
   rangeMonth: "यो महिनाको",
-  rangeSuffix: "ब्रिफिङ",
   feedAll: "मुख्य समाचार",
   feedNational: "स्वदेश",
   feedInternational: "विश्व",
@@ -142,15 +114,10 @@ const np: I18nDict = {
   latestSection: "पछिल्लो",
   trendingSection: "पढ्नै पर्ने",
   trendingHint: "सञ्चारगृहको समेटाइ, स्रोतको भार र नयाँपनका आधारमा",
-  briefingDesc:
-    "अनावश्यक कुरा छैन, विज्ञापनको झन्झट छैन — छोटो र सही समाचार, सबै एकै ठाउँमा।",
   filtered: "खबर",
 
-  readBrief: "पूरा पढ्नुहोस्",
   readFull: "स्रोतमा पढ्नुहोस्",
-  permalink: "कथाको लिंक",
   excerptNotice: "छोटो अंश मात्र — एक झलकले अरू समाचारकक्षको सामग्री नक्कल नगरी स्रोतमै पठाउँछ।",
-  outletsOne: "१ सञ्चारगृह",
   outletsMany: "सञ्चारगृहले समेटे",
   minRead: "मिनेट",
   translatedNotice: "मेसिन अनुवाद",
@@ -174,7 +141,6 @@ const np: I18nDict = {
   newsletterFailed: "केही गडबड भयो। केही बेरपछि पुनः प्रयास गर्नुहोस्।",
   newsletterPrivacy: "स्प्याम छैन। जुनसुकै बेला बन्द गर्न सक्नुहुन्छ।",
   subscribe: "सदस्यता",
-  close: "बन्द गर्नुहोस्",
 
   pagePre: "पृष्ठ",
   pageOf: "/",
@@ -186,7 +152,6 @@ const np: I18nDict = {
     "एक झलकले भरपर्दा नेपाली र अन्तर्राष्ट्रिय सञ्चारगृहका समाचार एकै ठाउँमा, विज्ञापनरहित रूपमा प्रस्तुत गर्छ। सारांश प्रकाशित भएकै भाषामा राखिन्छ।",
   footerSections: "विषय",
   topicNav: "विषयहरू",
-  footerSources: "स्रोत",
   footerSourcesText: "हाल",
   footerNewsrooms: "सञ्चारगृहबाट",
   footerRights: "सर्वाधिकार सुरक्षित।",
@@ -202,7 +167,6 @@ const np: I18nDict = {
   backToNews: "समाचारमा फर्कनुहोस्",
 
   noStories: "यो फिल्टरमा कुनै समाचार भेटिएन। अर्कै दायरा वा विषय हेर्नुहोस्।",
-  loadingStories: "समाचार लोड गर्दैछौं…",
   errorFeed:
     "समाचार लोड गर्न सकिएन। इन्टरनेट जाँच्नुहोस् वा पुनः प्रयास गर्नुहोस्।",
   retryLabel: "पुनः प्रयास",

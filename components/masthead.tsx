@@ -1,11 +1,10 @@
 "use client";
 
-import { startTransition, useEffect, useState } from "react";
-import { Languages, MoonStar, RefreshCw, Search, Sun } from "lucide-react";
+import { Languages, RefreshCw, Search } from "lucide-react";
 import { BrandBanner } from "@/components/brand-banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { cn } from "@/lib/utils";
 
 interface MastheadProps {
@@ -15,18 +14,17 @@ interface MastheadProps {
   onRefresh: () => void;
   isRefreshing: boolean;
   /** When the feed was last fetched — the timestamp shown is real, not decorative */
-  fetchedAt: number;
   onSubscribe: () => void;
 }
 
-const KATHMANDU_TZ = "Asia/Kathmandu";
 
 /**
  * The nameplate.
  *
- * Laid out as a broadsheet masthead: rules above and below, dateline on the
- * left, wordmark centred, utilities on the right. The centring is what makes it
- * read as a publication — a left-aligned logo with a nav bar reads as an app.
+ * Laid out as a broadsheet masthead: brand mark on the left, wordmark beside
+ * it, search in the middle and utilities on the right, over a single rule. It
+ * scrolls away and leaves the section nav stuck to the top — see the note on
+ * the return below.
  */
 export function Masthead({
   searchDraft,
@@ -34,45 +32,24 @@ export function Masthead({
   applySearch,
   onRefresh,
   isRefreshing,
-  fetchedAt,
   onSubscribe,
 }: MastheadProps) {
-  const { t, language, toggleLanguage, themeMode, toggleTheme } = useTheme();
-  const [dateline, setDateline] = useState<string | null>(null);
-
-  // Rendered client-side only: the date depends on the reader's calendar
-  // rolling over in Kathmandu, which cached server HTML cannot track.
-  // Deferred as a transition so it never blocks the masthead's first paint.
-  useEffect(() => {
-    const formatted = new Date().toLocaleDateString(
-      language === "np" ? "ne-NP" : "en-US",
-      {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        timeZone: KATHMANDU_TZ,
-      },
-    );
-    startTransition(() => setDateline(formatted));
-  }, [language]);
-
+  const { t, language, toggleLanguage } = useSite();
   const isNp = language === "np";
 
-  // An em dash until the first fetch lands, rather than 05:45 — the epoch
-  // rendered in Kathmandu time, which is what formatting 0 would print.
-  const updatedLabel =
-    fetchedAt > 0
-      ? new Date(fetchedAt).toLocaleTimeString(isNp ? "ne-NP" : "en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-          timeZone: KATHMANDU_TZ,
-        })
-      : "—";
-
+  // Not sticky. The masthead and the section nav were both `sticky top-0`, and
+  // the header — 65px tall and z-50 against the nav's z-30 — painted over the
+  // top of the nav, so the section rail was unusable the moment the page
+  // scrolled. The translucent blur that used to be on `.glass` hid it.
+  //
+  // The masthead scrolls away and the section nav sticks, which is what the
+  // Kathmandu Post and the Guardian both do: once you are reading, the rail that
+  // moves you between sections is worth the strip at the top of the screen and
+  // the wordmark is not. A fixed offset on the nav would have been the other
+  // fix, and it breaks the moment the header wraps to two rows on mobile, which
+  // it does.
   return (
-    <header className="sticky top-0 z-50 w-full transition-all duration-300 glass border-b border-rule/20 shadow-sm">
+    <header className="relative z-50 w-full glass">
       <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
         
         {/* Brand */}
@@ -81,7 +58,7 @@ export function Masthead({
           <h1 className="leading-none">
             <span
               className={cn(
-                "block text-xl md:text-2xl font-bold tracking-tight text-ink",
+                "block text-2xl md:text-[1.75rem] font-bold tracking-normal text-ink",
                 isNp ? "font-np" : "font-display",
               )}
             >
@@ -111,7 +88,7 @@ export function Masthead({
               placeholder={t.searchPlaceholder}
               aria-label={t.searchLabel}
               className={cn(
-                "h-10 w-full rounded-md border-none bg-surface/50 shadow-inner pl-10 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-red",
+                "h-10 w-full rounded-sm border border-rule bg-surface pl-10 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-accent",
                 isNp && "font-np",
               )}
             />
@@ -136,20 +113,6 @@ export function Masthead({
 
           <Button
             variant="ghost"
-            size="icon-sm"
-            onClick={toggleTheme}
-            aria-label={themeMode === "dark" ? t.themeLight : t.themeDark}
-            className="rounded-md text-ink-muted hover:text-ink hover:bg-surface/50"
-          >
-            {themeMode === "dark" ? (
-              <Sun className="h-4 w-4" aria-hidden="true" />
-            ) : (
-              <MoonStar className="h-4 w-4" aria-hidden="true" />
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
             size="sm"
             onClick={toggleLanguage}
             aria-label={t.langToggleLabel}
@@ -166,7 +129,7 @@ export function Masthead({
             size="sm"
             onClick={onSubscribe}
             className={cn(
-              "h-8 rounded-md bg-red-solid px-4 text-xs font-bold text-white shadow-md hover:opacity-90 transition-opacity",
+              "h-8 rounded-md bg-accent-solid px-4 text-xs font-bold text-white hover:opacity-90 transition-opacity",
               isNp && "font-np",
             )}
           >
@@ -196,7 +159,7 @@ export function Masthead({
             placeholder={t.searchPlaceholder}
             aria-label={t.searchLabel}
             className={cn(
-              "h-12 w-full rounded-sm bg-surface/60 backdrop-blur-xl shadow-card border border-rule/20 pl-11 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-red",
+              "h-12 w-full rounded-sm bg-surface border border-rule pl-11 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-accent",
               isNp && "font-np",
             )}
           />

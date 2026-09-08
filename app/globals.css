@@ -1,64 +1,137 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    EkJhalak News — editorial design system
 
-   Four colours: black, grey, red, green.
+   One palette, one theme.
 
-     black   the stock the paper is printed on
-     grey    every neutral: type, rules, surfaces, soft categories
-     red     urgency — breaking, politics, world, and the brand accent
-     green   growth and measurement — business, sports, health, environment
+   The palette is the Nepali flag reduced to six ramps: the crimson of the
+   pennants, the blue of their border, and the papers those two print on.
 
-   That is the entire palette. No blues, no purples, no ambers. Components read
-   semantic tokens and never name a colour directly, so the constraint is
-   enforced in one place rather than in forty class strings.
+     flag red        urgency and the brand accent
+     egyptian blue   the flag's border — the second voice, for calm and data
+     pacific blue    the cool end of that same border, for measurement
+     alice blue      blue-cast paper: the stock, the panels, and the ink
+     alabaster grey  the true neutral: rules, dividers, quiet metadata
+     white           the page
 
-   Two themes over one set of names:
+   Every ramp runs 100 (darkest) to 900 (lightest); 500 is the family's
+   nominal value. Nothing outside these thirty-odd values is painted anywhere
+   on the site — components read semantic tokens and never name a colour
+   directly, so the constraint is enforced in one place rather than in forty
+   class strings.
 
-     Dark  "Press Night"  the four colours as printed
-     Light "Press Day"    the same four, reversed
-
-   The theme is set by `data-theme` on <html>, written by an inline script in
-   the document head before paint so there is never a flash of the wrong one.
+   The site is light only. There was a dark theme and a toggle in the masthead;
+   both are gone, along with the `data-theme` attribute, the pre-paint script
+   that set it, and the `dark:` variants in the shadcn primitives. A news page
+   that is always the same paper is one fewer thing to get wrong, and every
+   contrast figure below is now a fact rather than a fact per theme.
    ───────────────────────────────────────────────────────────────────────── */
 
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
-
 @theme inline {
+  /* ── The raw palette ─────────────────────────────────────────────────────
+     Exposed as utilities (`bg-flag-red-500`, `text-egyptian-blue-300`) so a
+     one-off can reach a specific step without inventing a hex. Prefer the
+     semantic tokens below for anything that appears more than once. */
+
+  --color-flag-red-100: #2b0205;
+  --color-flag-red-200: #55040a;
+  --color-flag-red-300: #80070f;
+  --color-flag-red-400: #ab0914;
+  --color-flag-red-500: #d60b19;
+  --color-flag-red-600: #f42634;
+  --color-flag-red-700: #f65c66;
+  --color-flag-red-800: #f99299;
+  --color-flag-red-900: #fcc9cc;
+
+  --color-alice-blue-100: #192746;
+  --color-alice-blue-200: #324f8b;
+  --color-alice-blue-300: #597bc3;
+  --color-alice-blue-400: #9fb2dc;
+  --color-alice-blue-500: #e6ebf6;
+  --color-alice-blue-600: #eaeef7;
+  --color-alice-blue-700: #eff2f9;
+  --color-alice-blue-800: #f5f7fb;
+  --color-alice-blue-900: #fafbfd;
+
+  --color-egyptian-blue-100: #000c20;
+  --color-egyptian-blue-200: #00173f;
+  --color-egyptian-blue-300: #00235f;
+  --color-egyptian-blue-400: #002e7e;
+  --color-egyptian-blue-500: #003a9f;
+  --color-egyptian-blue-600: #0054e4;
+  --color-egyptian-blue-700: #2c79ff;
+  --color-egyptian-blue-800: #72a6ff;
+  --color-egyptian-blue-900: #b9d2ff;
+
+  --color-pacific-blue-100: #002023;
+  --color-pacific-blue-200: #004045;
+  --color-pacific-blue-300: #005f68;
+  --color-pacific-blue-400: #007f8b;
+  --color-pacific-blue-500: #009faf;
+  --color-pacific-blue-600: #00ddf1;
+  --color-pacific-blue-700: #35eeff;
+  --color-pacific-blue-800: #78f4ff;
+  --color-pacific-blue-900: #bcf9ff;
+
+  --color-alabaster-100: #292b2d;
+  --color-alabaster-200: #51565a;
+  --color-alabaster-300: #7a8187;
+  --color-alabaster-400: #a7abb0;
+  --color-alabaster-500: #d3d5d7;
+  --color-alabaster-600: #dddee0;
+  --color-alabaster-700: #e5e7e8;
+  --color-alabaster-800: #eeefef;
+  --color-alabaster-900: #f6f7f7;
+
+  --color-paper-100: #333333;
+  --color-paper-200: #666666;
+  --color-paper-300: #999999;
+  --color-paper-400: #cccccc;
+  --color-paper-500: #ffffff;
+
+  /* ── The semantic layer ──────────────────────────────────────────────── */
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
   --color-raised: var(--raised);
+  --color-pitch: var(--pitch);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-ink-muted: var(--ink-muted);
+  --color-ink-inverse: var(--ink-inverse);
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);
-  --color-red: var(--red);
-  --color-red-solid: var(--red-solid);
-  --color-red-soft: var(--red-soft);
-  --color-green: var(--green);
-  --color-green-soft: var(--green-soft);
-  --color-pitch: var(--pitch);
+
+  /* `--accent` and `--support`, not `--red` and `--green`. The names this
+     replaced were inherited from a palette that had a green in it; this one
+     does not, and a token called `--green` holding an egyptian blue is the
+     kind of thing that survives for years. Accent is the flag's crimson —
+     brand, breaking, calls to action. Support is the flag's blue — the second
+     voice, used where a page needs a colour that is not urgency. */
+  --color-accent: var(--accent);
+  --color-accent-solid: var(--accent-solid);
+  --color-accent-soft: var(--accent-soft);
+  --color-support: var(--support);
+  --color-support-solid: var(--support-solid);
+  --color-support-soft: var(--support-soft);
+
   --color-topic-ink: var(--topic-ink);
+  --color-topic-text: var(--topic-text);
 
   --font-sans: var(--font-display);
   --font-display: var(--font-display);
   --font-body: var(--font-body);
   --font-devanagari: var(--font-devanagari);
-  --font-mono: var(--font-mono-custom);
 
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -71,6 +144,13 @@
   --color-card: var(--card);
 
   /* ── Corners ────────────────────────────────────────────────────────────
+     Almost none. A newspaper has no rounded corners, and the sources this site
+     aggregates barely have any either — the Kathmandu Post tops out at 3px, the
+     Guardian and the NYT at 0. The scale below is what is left after the round
+     card look was removed: 2px is the default, which reads as "cut cleanly"
+     rather than as a component, and the larger steps exist only so a photo or a
+     chip has somewhere to go.
+
      One corner, used everywhere.
 
      `--radius` was originally 9999px so the shadcn buttons would render as
@@ -88,168 +168,246 @@
      The other steps are kept, close together, so a component that genuinely
      needs to differ has somewhere to go without writing a literal. Anything
      that must be a circle asks for `rounded-full`, which this does not touch. */
-  --radius-sm: 4px;
+  --radius-sm: 2px;
   --radius-md: var(--radius);
-  --radius-lg: 8px;
-  --radius-xl: 10px;
-  --radius-2xl: 12px;
-  --radius-3xl: 14px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 6px;
 }
 
-/* ── Shared ────────────────────────────────────────────────────────────────
-   Everything that is not a colour, plus the aliases the shadcn primitives
-   read. Both themes assign the same semantic names, so no component ever
-   branches on which one is active.                                        */
+/* ── Press Day ─────────────────────────────────────────────────────────────
+   The whole palette, assigned once.
+
+   The neutral ramp runs from --canvas (the page) through --surface and
+   --raised to --pitch, which is the far end: the near-navy the footer and the
+   inverted panels print in. It is drawn from alice blue rather than from black
+   so the dark blocks carry the same blue cast as the light ones and the page
+   reads as one stock.
+
+   Type is alice_blue_100 rather than black for the same reason — 14.79:1 on
+   white, so nothing is lost, and a page of pure #000 next to a crimson always
+   looks slightly harder than it means to.
+
+   Every figure in the comments below is checked by `pnpm check:contrast`,
+   which parses these values out of this file. If you change one and the
+   comment goes stale, the script fails before the comment lies.            */
 
 :root {
+  /* Stock */
+  --canvas: #ffffff; /* white_500 */
+  --surface: #fafbfd; /* alice_blue_900 — cards, one step off the page */
+  --raised: #e6ebf6; /* alice_blue_500 — insets, hovers, quiet chips */
+  --pitch: #192746; /* alice_blue_100 — inverted panels: footer, ribbons */
+
+  /* Type */
+  --ink: #192746; /* alice_blue_100 · 14.79:1 on canvas */
+  --ink-soft: #324f8b; /* alice_blue_200 · 7.72:1 on surface */
+  --ink-muted: #51565a; /* alabaster_200 · 7.17:1 on surface */
+  --ink-inverse: #ffffff; /* type on --pitch · 14.79:1 */
+
+  /* Rules */
+  --rule: #d3d5d7; /* alabaster_500 — hairlines */
+  --rule-strong: #7a8187; /* alabaster_300 · 3.95:1 on canvas, clears 1.4.11 */
+
+  /* Accent — the flag's crimson.
+     Two steps, because one cannot do both jobs: 500 is the fill a white
+     label sits on (5.36:1), 400 is the same red as type on paper (7.55:1).
+     Using 500 for text would land at 5.17:1 on surface, which passes, but
+     drops under 4.5 the moment it sits on a tinted panel. */
+  --accent: #ab0914; /* flag_red_400 */
+  --accent-solid: #d60b19; /* flag_red_500 */
+  --accent-soft: color-mix(in srgb, #d60b19 10%, transparent);
+
+  /* Support — the flag's border blue. Where a page needs a second colour
+     that does not shout: subscription confirmations, data, quiet emphasis. */
+  --support: #003a9f; /* egyptian_blue_500 · 9.63:1 on surface */
+  --support-solid: #002e7e; /* egyptian_blue_400 */
+  --support-soft: color-mix(in srgb, #003a9f 10%, transparent);
+
+  /* Defaults for the topic contract below, used by anything that paints a
+     topic colour without sitting inside a [data-topic] subtree. */
+  --topic: #ab0914;
+  --topic-ink: #ffffff;
+  --topic-text: #ab0914;
+
+  /* One shadow, and only genuinely floating layers may ask for it.
+     Newsprint does not float: the Kathmandu Post renders five one-off shadows
+     across an entire homepage and separates everything else with a 1px #e9e9e9
+     hairline it uses sixty-two times; the Guardian and the NYT use none at all.
+     There was a second token, `--shadow-card`, for things sitting *in* the
+     page — it ended up set to `none` with no element left asking for it, which
+     is a token whose only job was to be invisible. */
+  --shadow-lift:
+    0 2px 4px rgba(25, 39, 70, 0.06), 0 8px 24px -6px rgba(25, 39, 70, 0.12);
+
+  /* shadcn aliases. Both layers assign the same semantic names, so no
+     primitive ever reaches past this block for a colour. */
   --background: var(--canvas);
   --foreground: var(--ink);
   --card: var(--surface);
   --card-foreground: var(--ink);
   --popover: var(--surface);
   --popover-foreground: var(--ink);
-  --primary: var(--red-solid);
+  --primary: var(--accent-solid);
   --primary-foreground: #ffffff;
   --secondary: var(--raised);
   --secondary-foreground: var(--ink);
   --muted: var(--raised);
   --muted-foreground: var(--ink-muted);
-  --accent: var(--raised);
   --accent-foreground: var(--ink);
-  --destructive: var(--red-solid);
+  --destructive: var(--accent-solid);
   --border: var(--rule);
   --input: var(--rule-strong);
-  --ring: var(--red);
+  --ring: var(--accent);
   /* The base step every shadcn primitive reaches for by default. See the
-     corner scale in @theme inline above for why this is 6px and not 9999px. */
-  --radius: 6px;
-}
-
-/* ── Dark: Press Night ─────────────────────────────────────────────────────
-   The four colours: black, grey, red, green.
-
-   The neutral ramp runs from --pitch (furthest from the type) through canvas
-   and surface to --raised (closest). The light theme mirrors that ordering
-   rather than the literal values, which is what lets one set of components
-   read correctly in both.                                                 */
-
-:root,
-[data-theme="dark"] {
-  /* Dark Mode: GitHub Default */
-  --pitch: #0d1117;
-  --canvas: #0d1117;
-  --surface: #161b22;
-  --raised: #21262d;
-  --ink: #e6edf3;
-  --ink-soft: #848d97;
-  --ink-muted: #848d97;
-  
-  --rule: #30363d;
-  --rule-strong: #30363d;
-  
-  --red: #c084fc;
-  --red-solid: #9333ea;
-  --red-soft: rgba(147, 51, 234, 0.15);
-  --green: #c084fc;
-  --green-soft: rgba(147, 51, 234, 0.15);
-  --topic-ink: #111111;
-
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 0 3px rgba(255, 255, 255, 0.05);
-  --shadow-lift: 0 10px 40px -4px rgba(0, 0, 0, 0.6), 0 0 4px rgba(255, 255, 255, 0.1);
-
-  /* Monokai Accent Palette */
-  --topic-breaking: #2ddc87; /* Emerald Green */
-  --topic-politics: #fdac47; /* Orange */
-  --topic-world: #66d9ef; /* Blue */
-  --topic-business: #a6e22e; /* Green */
-  --topic-sports: #e6db74; /* Yellow */
-  --topic-health: #45ffb8; /* Cyan-Green */
-  --topic-environment: #7ab317; /* Lime */
-  --topic-technology: #ae81ff; /* Purple */
-  --topic-society: #e0a6ff; /* Lavender */
-}
-
-/* ── Light: Press Day ──────────────────────────────────────────────────────
-   The same four colours, reversed.
-
-   The ramp inverts direction but keeps its meaning: --pitch is still the step
-   furthest from the type, so the panels that were the blackest on dark are the
-   whitest here, and cards still separate from the page by one step. The two
-   accents darken just enough to clear 4.5:1 on paper while staying the same
-   red and the same green — a hue shift would make it a different brand, not a
-   different theme.                                                         */
-
-[data-theme="light"] {
-  /* Light Mode: GitHub Default */
-  --pitch: #ffffff;
-  --canvas: #ffffff;
-  --surface: #f6f8fa;
-  --raised: #ffffff;
-  --ink: #1F2328;
-  --ink-soft: #656d76;
-  --ink-muted: #656d76;
-  
-  --rule: #d0d7de;
-  --rule-strong: #d0d7de;
-  
-  --red: #7e22ce;
-  --red-solid: #4c1d95;
-  --red-soft: rgba(126, 34, 206, 0.1);
-  --green: #6b21a8;
-  --green-soft: rgba(107, 33, 168, 0.1);
-  --topic-ink: #ffffff;
-
-  --shadow-card: 0 2px 8px -2px rgba(0, 0, 0, 0.05), 0 1px 3px -1px rgba(0, 0, 0, 0.02);
-  --shadow-lift: 0 12px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
-
-  /* Deepened Accents for WCAG on Light */
-  --topic-breaking: #006600;
-  --topic-politics: #75015d;
-  --topic-world: #0150dd;
-  --topic-business: #00326e;
-  --topic-sports: #6a5d03;
-  --topic-health: #024d4f;
-  --topic-environment: #1c4000;
-  --topic-technology: #036488;
-  --topic-society: #4a05b0;
+     corner scale in @theme inline above for why this is 2px. */
+  --radius: 2px;
 }
 
 /* ── Topic binding ─────────────────────────────────────────────────────────
-   Any element carrying data-topic exposes `--topic` to its subtree, so cards,
-   pills and rules all colour themselves from one attribute.               */
+   Any element carrying data-topic exposes three tokens to its subtree, and
+   cards, pills, rules and drop caps colour themselves from that one attribute.
+
+   Three, not one, because a category colour has three jobs and no single value
+   does all of them on white paper:
+
+     --topic       the identity. What the reader recognises the section by:
+                   fills, borders, glows, cover art. Free to be the palette's
+                   real colour rather than a darkened version of it.
+     --topic-ink   the label printed *on* that fill. White for the seven deep
+                   topics; egyptian_blue_100 for health and technology, whose
+                   identities are light enough that white would run at 2:1.
+     --topic-text  the identity as *type on paper*. Headline hovers, drop caps,
+                   quiet pills. Always ≥4.5:1 on the page and on its own 15%
+                   wash, which is what the light identities cannot be.
+
+   The single --topic-ink this replaced forced every category to be dark enough
+   for white type, which on a four-hue palette collapsed pacific blue and the
+   lighter alice steps out of the set entirely.
+
+   These nine sit within 0.069 OKLab of each other at the closest pair
+   (business/environment). That is the honest ceiling for a palette with four
+   hue families, and check-contrast.mjs holds the line there — it is a
+   regression gate, not an aspiration. Categories are additionally distinguished
+   by their label and glyph, which is what actually names a section. */
 
 [data-topic="breaking"] {
-  --topic: var(--topic-breaking);
+  --topic: #d60b19; /* flag_red_500 */
+  --topic-ink: #ffffff; /* 5.36:1 */
+  --topic-text: #ab0914; /* flag_red_400 · 7.55:1 on paper */
 }
 [data-topic="politics"] {
-  --topic: var(--topic-politics);
+  --topic: #80070f; /* flag_red_300 */
+  --topic-ink: #ffffff; /* 10.74:1 */
+  --topic-text: #80070f;
 }
 [data-topic="world"] {
-  --topic: var(--topic-world);
-}
-[data-topic="business"] {
-  --topic: var(--topic-business);
+  --topic: #003a9f; /* egyptian_blue_500 */
+  --topic-ink: #ffffff; /* 9.97:1 */
+  --topic-text: #003a9f;
 }
 [data-topic="sports"] {
-  --topic: var(--topic-sports);
-}
-[data-topic="culture"] {
-  --topic: var(--topic-culture);
-}
-[data-topic="technology"] {
-  --topic: var(--topic-technology);
-}
-[data-topic="health"] {
-  --topic: var(--topic-health);
-}
-[data-topic="environment"] {
-  --topic: var(--topic-environment);
+  --topic: #0054e4; /* egyptian_blue_600 */
+  --topic-ink: #ffffff; /* 6.20:1 */
+  --topic-text: #002e7e; /* egyptian_blue_400 · 12.41:1 */
 }
 [data-topic="society"] {
-  --topic: var(--topic-society);
+  --topic: #324f8b; /* alice_blue_200 */
+  --topic-ink: #ffffff; /* 7.99:1 */
+  --topic-text: #324f8b;
 }
-[data-topic="opinion"] {
-  --topic: var(--topic-opinion);
+[data-topic="business"] {
+  --topic: #005f68; /* pacific_blue_300 */
+  --topic-ink: #ffffff; /* 7.40:1 */
+  --topic-text: #005f68;
+}
+[data-topic="health"] {
+  --topic: #009faf; /* pacific_blue_500 */
+  --topic-ink: #000c20; /* egyptian_blue_100 · 6.13:1 */
+  --topic-text: #004045; /* pacific_blue_200 · 11.54:1 */
+}
+[data-topic="technology"] {
+  --topic: #597bc3; /* alice_blue_300 */
+  --topic-ink: #000c20; /* egyptian_blue_100 · 4.70:1 */
+  --topic-text: #324f8b; /* alice_blue_200 · 7.99:1 */
+}
+[data-topic="environment"] {
+  --topic: #51565a; /* alabaster_200 */
+  --topic-ink: #ffffff; /* 7.42:1 */
+  --topic-text: #51565a;
+}
+
+/* ── Inverted panels ───────────────────────────────────────────────────────
+   `.on-pitch` re-points the semantic tokens for a subtree that sits on
+   --pitch, the near-navy at the far end of the neutral ramp: the footer, and
+   anything else printed as a dark block on a light page.
+
+   This is a token override rather than a set of one-off classes because the
+   footer already asks for --ink, --ink-soft, --ink-muted, --rule and --accent
+   by name, fifteen times. When there were two themes those names flipped with
+   the theme and the footer read correctly by accident — --pitch was the
+   blackest stock and --ink was already light. On a light-only site they stopped
+   flipping, and the footer rendered navy type on a navy block: legible in the
+   HTML, invisible on the page, and passing every gate because no gate knew the
+   footer was inverted.
+
+   So the inversion is declared once, here, and measured by check-contrast.mjs
+   alongside everything else. Any panel that wants it adds one class and its
+   existing markup is correct.
+
+   The panel paints `bg-canvas`, not `bg-pitch`: the scope declares what its own
+   page colour is, so nothing inside has to know it is the inverted one.     */
+
+.on-pitch {
+  --canvas: #192746; /* alice_blue_100 */
+  --surface: #192746;
+  /* The step *up* from pitch, for chips and inputs nested in the dark block.
+     Only --ink reads on it: --ink-muted lands at 3.76:1 here and --accent at
+     2.53:1, so a chip in this panel takes white type and nothing else. Two
+     dark steps apart is all this palette has between the panel and the chip.
+     --ink-inverse is deliberately not overridden — it stays white, which is
+     correct on both #192746 and this. */
+  --raised: #324f8b; /* alice_blue_200 · white on it runs 7.99:1 */
+  --ink: #ffffff; /* 14.79:1 on pitch */
+  --ink-soft: #e6ebf6; /* alice_blue_500 · 12.38:1 */
+  --ink-muted: #b9d2ff; /* egyptian_blue_900 · 9.67:1 on pitch, 5.23:1 on a raised chip */
+  --rule: #324f8b; /* alice_blue_200 — a hairline, not a boundary */
+  --rule-strong: #597bc3; /* alice_blue_300 · 3.55:1, clears 1.4.11 */
+  --accent: #f65c66; /* flag_red_700 · 4.68:1 — the crimson, lifted */
+  --accent-solid: #d60b19;
+  --support: #72a6ff; /* egyptian_blue_800 · 6.07:1 */
+  --support-solid: #003a9f;
+  --border: var(--rule);
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --muted-foreground: var(--ink-muted);
+}
+
+/* `.on-accent` does the same job for the breaking ticker, which is a solid
+   crimson band across the top of the page.
+
+   The focus ring is the reason this exists. It is declared once, globally, as
+   `2px solid var(--accent)` — which is correct everywhere on paper and
+   invisible on a band painted in that same crimson. Every headline in the
+   ticker is a link, so that was every ticker link focusing with no visible
+   ring at all. Flipping --accent to white inside the band restores it at
+   7.55:1 without the ring rule having to know where it is.                  */
+
+.on-accent {
+  --canvas: #ab0914; /* flag_red_400 */
+  --surface: #ab0914;
+  --raised: #d60b19; /* flag_red_500 — the step up */
+  --ink: #ffffff; /* 7.55:1 */
+  --ink-soft: #ffffff;
+  --ink-muted: #fcc9cc; /* flag_red_900 · 5.17:1 */
+  --rule-strong: #f99299; /* flag_red_800 · 3.45:1, clears 1.4.11 */
+  --rule: #f99299;
+  --accent: #ffffff; /* the focus ring on this band · 7.55:1 */
+  --border: var(--rule);
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --muted-foreground: var(--ink-muted);
 }
 
 @layer base {
@@ -258,12 +416,8 @@
   }
 
   html {
-    @apply antialiased;
-    font-family:
-      var(--font-display),
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
+    @apply bg-canvas antialiased;
+    font-family: var(--font-body), ui-sans-serif, system-ui, -apple-system,
       sans-serif;
     font-feature-settings:
       "kern" 1,
@@ -281,28 +435,38 @@
     @apply bg-canvas text-ink;
     font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
     font-size: 16px;
-    line-height: 1.6;
-    letter-spacing: -0.011em;
+    line-height: 1.55;
+    letter-spacing: normal;
     text-rendering: optimizeLegibility;
   }
 
+  /* Headlines.
+     `letter-spacing: normal`, not -0.025em. Negative tracking is a geometric-
+     sans mannerism that came in with Outfit; a serif is drawn with its spacing
+     already correct and tightening it closes the counters. The Guardian sets
+     its headlines at `normal`, so does the NYT, so does the Kathmandu Post.
+
+     Weight 600 rather than 700+. The Guardian sets headlines at 500 and the
+     Kathmandu Post at 400 in a bold-cut face — display serifs carry a headline
+     by shape, and reaching for black weight is how a page starts shouting. */
   h1,
   h2,
   h3,
   h4 {
-    font-family: var(--font-display), "Segoe UI", sans-serif;
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
     font-weight: 600;
-    letter-spacing: -0.025em;
+    letter-spacing: normal;
+    line-height: 1.18;
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--red) 26%, transparent);
+    background: color-mix(in oklab, var(--accent) 26%, transparent);
     color: var(--ink);
   }
 
   /* Consistent focus ring across custom interactive elements */
   :focus-visible {
-    outline: 2px solid var(--red);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
@@ -323,14 +487,6 @@
 @layer utilities {
   /* ── Typefaces ─────────────────────────────────────────────────────────── */
 
-  .font-body {
-    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  }
-
-  .font-ui {
-    font-family: var(--font-display), "Segoe UI", sans-serif;
-  }
-
   /* Mukta, as on ekantipur.com. The fallback chain lists what a Nepali reader's
      machine is most likely to already have installed before giving up to a
      generic sans, so a failed webfont still renders Devanagari rather than
@@ -346,28 +502,30 @@
     letter-spacing: 0;
   }
 
+  /* The headline serif. Anything set in this is a headline, a standfirst or a
+     drop cap — never a label, a button or a number. */
   .font-display {
-    font-family: var(--font-display), "Segoe UI", sans-serif;
-  }
-
-  .font-display-soft {
-    font-family: var(--font-display), "Segoe UI", sans-serif;
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    letter-spacing: normal;
   }
 
   /* ── Editorial primitives ──────────────────────────────────────────────── */
 
-  /* All-caps metadata: kickers, timestamps, source names */
+  /* All-caps metadata: kickers, timestamps, source names.
+
+     Inter at 11px/600, tracked 0.06em. It was JetBrains Mono at 0.12em, and
+     both halves of that were wrong: monospace on a news page reads as a
+     terminal rather than a masthead, and 0.12em is roughly double what anyone
+     actually sets. The NYT runs this exact material at 11px/500 and 0.05em in
+     its own sans, the Guardian at similar values in Guardian Text Sans. 0.06em
+     keeps caps legible at 11px without the word turning into loose letters. */
   .eyebrow {
-    font-family: var(--font-mono-custom), ui-monospace, monospace;
+    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
     font-size: 0.6875rem;
-    /* 600, not 500. This class is the entire voice of the masthead and the
-       section nav — kickers, pills, timestamps, counters — and at 11px,
-       uppercase and letterspaced by 0.12em, 500 reads as thin rather than
-       quiet. The weight exists in both faces that render it (JetBrains Mono
-       and, for Nepali, Mukta), so nothing is synthesized. */
     font-weight: 600;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
+    font-feature-settings: "kern" 1;
   }
 
   /* Headline balance — stops one-word orphan lines in large display type */
@@ -379,60 +537,8 @@
     text-wrap: pretty;
   }
 
-  /* Clamp helpers used across card sizes */
-  .clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .clamp-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .clamp-4 {
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .shadow-card {
-    box-shadow: var(--shadow-card);
-  }
   .shadow-lift {
     box-shadow: var(--shadow-lift);
-  }
-
-  /* Generated cover art for stories whose feed shipped no photograph.
-     Built from the story's own topic colour so a photo-less grid still
-     reads as a coloured, categorised page rather than a row of grey boxes. */
-  /* Mixed up from --raised, not from black. Four of the eleven topics are grey,
-     and a grey tint over black is just black — those cards were rendering as
-     holes in the grid. Starting from the raised step guarantees every card has
-     a floor of visible tone whatever hue it carries.
-
-     The mix runs at 55% rather than 30%. At 30% the four grey topics — culture,
-     technology, society, opinion — landed within about 2:1 of the card they sat
-     on, so half a photo-less grid read as broken images rather than as art.
-     Since 51% of stories ship no photograph, this is the common case, not the
-     edge case. 55% separates every topic from the card while still reading as a
-     tint of the stock rather than a flat colour swatch. */
-  .cover-art {
-    background-color: color-mix(
-      in oklab,
-      var(--topic, var(--red)) 55%,
-      var(--raised)
-    );
-  }
-
-  /* Knocked out in the same near-black the solid pills use, so the glyph is
-     legible against every topic in both themes rather than only the dark one. */
-  .cover-glyph {
-    color: var(--topic-ink);
-    opacity: 0.5;
   }
 
   /* ── Whole-card hit target ─────────────────────────────────────────────────
@@ -464,24 +570,25 @@
     outline: none;
   }
   .card-focus:focus-visible::after {
-    outline: 2px solid var(--red);
+    outline: 2px solid var(--accent);
     outline-offset: 3px;
   }
 
   /* Diagonal hatch over hero photography so white headlines stay legible
      regardless of what the publisher's image happens to look like. */
   .photo-scrim {
-    background-color: rgb(8 8 14 / 0.65);
+    background-color: color-mix(in srgb, var(--pitch) 72%, transparent);
   }
 
-  /* Fully opaque. A translucent sticky nav let headlines scroll through it and
-     collide with the nav's own labels — on a dark stock that reads as a
-     rendering fault, not as depth. The bar is separated by a rule and a shadow
-     instead, which does the same job without costing legibility. */
+  /* The sticky masthead bar.
+     Opaque, with a hairline under it and nothing else. It was a blurred,
+     75%-translucent panel with a soft drop shadow — the standard app-header
+     treatment, and the thing that made the top of the page read as chrome
+     rather than as a masthead. A newspaper's nav sits on the paper and is
+     separated by a rule. */
   .glass {
-    @apply backdrop-blur-xl border-b border-rule/50;
-    background: color-mix(in srgb, var(--canvas) 75%, transparent);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+    background: var(--canvas);
+    border-bottom: 1px solid var(--rule);
   }
 
   /* ── Motion ────────────────────────────────────────────────────────────── */

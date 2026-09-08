@@ -55,7 +55,7 @@ export default async function SubscribeConfirmedPage({
 
         <div
           aria-hidden="true"
-          className={`mx-auto mt-8 h-1 w-14 rounded-md ${good ? "bg-green" : "bg-red"}`}
+          className={`mx-auto mt-8 h-1 w-14 rounded-md ${good ? "bg-support" : "bg-accent"}`}
         />
 
         <h1

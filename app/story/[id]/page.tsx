@@ -110,6 +110,16 @@ export default async function StoryPage({ params }: PageProps) {
   const capped = isTruncated(fullSummary);
   const paragraphs = splitIntoParagraphs(excerpt, 3);
 
+  // A separate, short summary for the structured data below.
+  //
+  // The JSON-LD used `excerpt`, which is the rendered page body and runs to
+  // EXCERPT_MAX_CHARS — 2500. schema.org `description` is a summary, not the
+  // article, and every consumer of it truncates: `pnpm run check:seo` caps it
+  // at 400 and caught this at 2354. 200 matches what `generateMetadata` already
+  // computes for the og and twitter descriptions, so all three surfaces now
+  // quote the same sentence rather than three different lengths of it.
+  const schemaDescription = storyExcerpt(fullSummary, 200);
+
   const translatedTitle = item.titleTranslated
     ? sanitizeTextForDisplay(item.titleTranslated)
     : null;
@@ -129,7 +139,7 @@ export default async function StoryPage({ params }: PageProps) {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     headline: title,
-    description: excerpt,
+    description: schemaDescription,
     datePublished: published.toISOString(),
     dateModified: published.toISOString(),
     inLanguage: lang,
@@ -319,7 +329,7 @@ export default async function StoryPage({ params }: PageProps) {
                   <span
                     lang={langAttr(other.originalLang)}
                     className={cn(
-                      "flex-1 text-[0.98rem] leading-snug text-ink transition-colors group-hover:text-(--topic)",
+                      "flex-1 text-[0.98rem] leading-snug text-ink transition-colors group-hover:text-(--topic-text)",
                       other.originalLang === "np"
                         ? "font-np leading-[1.5]"
                         : "font-display",

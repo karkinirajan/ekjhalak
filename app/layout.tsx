@@ -1,23 +1,45 @@
 import type { Metadata } from "next";
-import {
-  JetBrains_Mono,
-  Inter,
-  Mukta,
-  Outfit,
-} from "next/font/google";
+import { Inter, Mukta, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
+import { SiteProvider } from "@/components/site-provider";
 import { SITE_NAME, SITE_URL } from "@/lib/site-url";
 
-// Premium English UI and headlines use Outfit for a vibrant, modern tech-forward voice.
-const outfit = Outfit({
+// Headlines are set in Source Serif 4.
+//
+// They were set in Outfit, a geometric sans, under a comment describing it as a
+// "vibrant, modern tech-forward voice" — which is exactly what it reads as, and
+// exactly what a news site must not. Every newsroom this site aggregates from
+// sets its headlines in a serif: the Kathmandu Post in Merriweather, the
+// Guardian in Guardian Headline, the NYT in Cheltenham, the BBC in Reith Serif,
+// the SCMP in Mixta Pro and Source Serif. A geometric sans headline is the
+// single strongest signal that a page is a product rather than a publication,
+// and no palette put behind it changes that.
+//
+// Source Serif 4 rather than a text serif like Merriweather because this is a
+// briefing: headlines here run 15-26px, not 40px, and Source Serif was drawn
+// for screen at exactly that range with a variable optical size. It also has a
+// genuine 600, so a headline can be set in medium-bold without the smeared
+// look a synthesized weight gives a serif.
+//
+// 400 is not loaded. Headlines resolve to 600 through the h1-h4 rule in
+// globals.css and to 700 at the two display sizes (the 404 numeral and the
+// reader's drop cap); walking every route in both languages found no element
+// rendering this family at 400, so the file was one more preloaded weight
+// competing with the LCP image for a throttled connection's first second.
+const sourceSerif = Source_Serif_4({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["600", "700"],
   display: "swap",
 });
 
-// English body copy uses Inter for ultra-clean digital legibility.
+// English body copy, UI chrome and all metadata use Inter.
+//
+// Metadata included: the kickers, timestamps and source names were set in
+// JetBrains Mono, and monospace on a news page reads as a terminal, not a
+// masthead. The NYT sets the same material in its own sans at 11px/500, the
+// Guardian in Guardian Text Sans. One sans doing body, UI and metadata is also
+// one fewer family on the wire.
 const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
@@ -39,35 +61,36 @@ const inter = Inter({
 // on every visit, and Devanagari has no safe system fallback to swap from — the
 // chain below it ends in a generic sans that renders the matras wrong.
 //
-// 300 dropped; nothing sets a light weight on Devanagari. 500 dropped too, for a
-// narrower reason: it is reached only by `.eyebrow`, which is nav pills and
-// timestamps, and CSS weight matching resolves a missing 500 down to 400 rather
-// than synthesizing anything. That is a barely visible change to secondary text
-// in exchange for 65 KiB off a preload block that competes with the lead image
-// for a throttled connection's first second — Devanagari weights are the four
-// heaviest files on the page at roughly 65 KiB each.
+// 300 dropped; nothing sets a light weight on Devanagari. 500 dropped too, and
+// the reason has moved: it used to be reached only by `.eyebrow`, which is now
+// set in Inter. What reaches it today is the breaking ticker, whose headlines
+// are `font-medium` — about seventeen of them on a first paint. CSS weight
+// matching resolves a missing 500 down to 400 rather than synthesizing
+// anything, so those render one step lighter and nothing else happens. That is
+// a barely visible change to a scrolling strip in exchange for 65 KiB off a
+// preload block that competes with the lead image for a throttled connection's
+// first second — Devanagari weights are the heaviest files on the page at
+// roughly 65 KiB each.
+//
+// 700 is loaded and must stay. It looks unused when the site is walked in
+// English, because the Nepali UI headings that reach for it only render once a
+// reader switches language; measured in Nepali it is on five elements of the
+// homepage alone. Dropping it would leave the browser synthesizing bold
+// Devanagari, which is the conjunct-breaking failure Mukta was chosen to avoid.
 //
 // 600 and 700 both stay: headlines are font-semibold, and the trending rail and
 // newsletter headings are font-bold in Nepali. Synthesized bold breaks Devanagari
 // conjuncts apart, which is exactly the failure Mukta was chosen to avoid.
+// Preloaded, and the measurement backs it. Dropping the preload to win back
+// bandwidth for the LCP image made the page slower, not faster: first
+// contentful paint went 1.2s to 2.5s, layout shift appeared where there had
+// been none, and the Lighthouse score fell from 82 to 78. Devanagari has no
+// system fallback worth swapping from, so deferring it defers the headline.
 const mukta = Mukta({
   variable: "--font-devanagari",
   subsets: ["devanagari", "latin"],
   weight: ["400", "600", "700"],
   display: "swap",
-});
-
-// Metadata voice — kickers, timestamps, source names, counters.
-//
-// Not preloaded. Every one of those is small, secondary text; a monospace swap
-// is the least noticeable one on the page, and none of it is what a reader is
-// waiting for.
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono-custom",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  display: "swap",
-  preload: false,
 });
 
 const SITE_DESCRIPTION =
@@ -170,32 +193,25 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      data-theme="light"
-      className={`${outfit.variable} ${inter.variable} ${mukta.variable} ${jetbrainsMono.variable}`}
+      className={`${sourceSerif.variable} ${inter.variable} ${mukta.variable}`}
     >
       <head>
-        {/* Lets the browser paint form controls and scrollbars to match
-            whichever theme the script below settles on. */}
-        <meta name="color-scheme" content="light dark" />
-        {/* Browser chrome matches the page instead of defaulting to white, which
-            on mobile is the difference between the app looking like it ends at
-            the viewport and looking like it was pasted into the browser. Both
-            values are --canvas, per theme. */}
-        <meta
-          name="theme-color"
-          content="#fdfcf9"
-          media="(prefers-color-scheme: light)"
-        />
-        <meta
-          name="theme-color"
-          content="#0a0a0a"
-          media="(prefers-color-scheme: dark)"
-        />
-        {/* Runs before first paint so the correct theme is painted once.
-            Falls back to the OS preference when the reader has no saved choice. */}
+        {/* The site is light only, so the browser paints form controls and
+            scrollbars light too rather than inverting them on a reader whose
+            OS is set to dark. */}
+        <meta name="color-scheme" content="light" />
+        {/* Browser chrome matches the page instead of defaulting to white,
+            which on mobile is the difference between the app looking like it
+            ends at the viewport and looking like it was pasted into the
+            browser. One value, because there is one theme: --canvas. */}
+        <meta name="theme-color" content="#ffffff" />
+        {/* Runs before first paint so a Nepali reader's saved language is on
+            <html lang> before the first headline renders, rather than being
+            corrected by React a frame later. There is no theme half to this
+            script any more — the palette is unconditional. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('cfn-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t);var l=localStorage.getItem('cfn-lang');if(l==='np'){document.documentElement.lang='ne'}}catch(e){}})()`,
+            __html: `(function(){try{if(localStorage.getItem('cfn-lang')==='np'){document.documentElement.lang='ne'}}catch(e){}})()`,
           }}
         />
         <script
@@ -206,13 +222,13 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-100 focus:rounded-md focus:bg-red-solid focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lift"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-100 focus:rounded-md focus:bg-accent-solid focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lift"
         >
           Skip to main content
         </a>
-        <ThemeProvider>
+        <SiteProvider>
           <main id="main-content">{children}</main>
-        </ThemeProvider>
+        </SiteProvider>
       </body>
     </html>
   );

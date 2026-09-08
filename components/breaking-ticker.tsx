@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { cn } from "@/lib/utils";
 import type { NewsItem } from "@/lib/news-pipeline";
 
@@ -25,7 +25,7 @@ const KATHMANDU_TZ = "Asia/Kathmandu";
  * mismatch every single request.
  */
 export function BreakingTicker({ items }: BreakingTickerProps) {
-  const { language, t } = useTheme();
+  const { language, t } = useSite();
   const [clock, setClock] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,12 +51,16 @@ export function BreakingTicker({ items }: BreakingTickerProps) {
   const headlines = items.slice(0, 8);
 
   return (
-    <div className="relative z-40 flex w-full items-stretch overflow-hidden bg-[#8b0000] text-white">
+    // `on-accent` declares this band's own token scope — see globals.css. The
+    // band paints `bg-canvas`, which that scope defines as flag_red_400, so
+    // the crimson comes from the same place its type and focus ring do rather
+    // than from the literal #8b0000 this replaced, which was in no palette.
+    <div className="on-accent relative z-40 flex w-full items-stretch overflow-hidden bg-canvas text-ink">
       {/* Label block — stays pinned while headlines scroll past it */}
-      <div className="relative z-10 flex shrink-0 items-center gap-2 bg-[#8b0000] py-2 pr-4 pl-4 shadow-[8px_0_12px_-4px_#8b0000] sm:pl-6">
-        <span className="relative flex h-2 w-2 text-white">
+      <div className="relative z-10 flex shrink-0 items-center gap-2 bg-canvas py-2 pr-4 pl-4 shadow-[8px_0_12px_-4px_var(--canvas)] sm:pl-6">
+        <span className="relative flex h-2 w-2 text-ink">
           <span className="pulse-dot absolute inline-flex h-full w-full" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-ink" />
         </span>
         <span className="eyebrow font-semibold">{t.liveLabel}</span>
         {clock && (
@@ -91,7 +95,7 @@ export function BreakingTicker({ items }: BreakingTickerProps) {
                   )}
                   lang={item.originalLang === "np" ? "ne" : "en"}
                 >
-                  <span aria-hidden="true" className="text-white/60">
+                  <span aria-hidden="true" className="text-ink-muted">
                     ◆
                   </span>
                   <span className="font-medium">{item.title}</span>

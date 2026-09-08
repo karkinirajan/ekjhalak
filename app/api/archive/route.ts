@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { archiveStatus, countArticles } from "@/lib/article-store";
+import { secretsMatch } from "@/lib/secret-compare";
 
 /**
  * Is the archive actually working?
@@ -31,7 +32,7 @@ export const dynamic = "force-dynamic";
 
 function isAuthorized(presented: string | null): boolean {
   const expected = process.env.REVALIDATE_SECRET;
-  if (expected) return presented === expected;
+  if (expected) return secretsMatch(presented, expected);
 
   // No secret configured: allowed only outside production, where there is
   // nothing to protect and requiring one would make local work tedious. The

@@ -1,7 +1,7 @@
 /**
  * Route-level loading UI.
  *
- * Rendered before the client ThemeProvider exists, so it uses only the CSS
+ * Rendered before the client SiteProvider exists, so it uses only the CSS
  * custom properties set by the head script — meaning it is already in the
  * reader's chosen theme. Mirrors the real layout (ticker, masthead, nav, then
  * one uniform card grid beside the trending rail) so hydration doesn't shift
@@ -24,7 +24,7 @@ export default function Loading() {
   return (
     <div className="min-h-screen bg-canvas">
       {/* Ticker */}
-      <div className="h-9 w-full bg-red-solid opacity-90" />
+      <div className="h-9 w-full bg-accent-solid opacity-90" />
 
       {/* Masthead */}
       <header className="border-b border-rule">

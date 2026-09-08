@@ -38,14 +38,6 @@ export interface Source {
   credibilityScore?: number;
 }
 
-export interface SourceFetchStatus {
-  sourceId: string;
-  ok: boolean;
-  itemCount: number;
-  fetchedAt: number;
-  error?: string;
-}
-
 export const SOURCES: Source[] = [
   // ── NATIONAL (Nepal) ───────────────────────────────────────────────────────
 
@@ -598,12 +590,6 @@ export const SOURCES: Source[] = [
 export const ACTIVE_SOURCES = SOURCES.filter(
   (s) => s.active && s.rssUrl !== null,
 );
-
-/** Backward-compatible map used by the sidebar */
-export const sourceRegistry = {
-  national: SOURCES.filter((s) => s.bucket === "national"),
-  international: SOURCES.filter((s) => s.bucket === "international"),
-};
 
 /** Look up a source by id */
 export function getSourceById(id: string): Source | undefined {

@@ -34,7 +34,7 @@ export function BrandBanner({ className }: { className?: string }) {
       {/* ── Mark ─────────────────────────────────────────────────────────── */}
 
       {/* Masthead flag — the coloured bar a paper puts beside its nameplate. */}
-      <rect x="34" y="36" width="5" height="68" rx="2.5" fill="var(--red)" />
+      <rect x="34" y="36" width="5" height="68" rx="2.5" fill="var(--accent)" />
 
       {/* The shared horizon. Doubles as the rule between mark and lockup. */}
       <line
@@ -52,10 +52,10 @@ export function BrandBanner({ className }: { className?: string }) {
         fill="var(--rule-strong)"
       />
       {/* Summit, lit — the lead story of the day. */}
-      <path d="M146 34 L160 52 L132 52 Z" fill="var(--red)" />
+      <path d="M146 34 L160 52 L132 52 Z" fill="var(--accent)" />
 
       {/* Dispatches, stacked newest-first. */}
-      <rect x="216" y="56" width="64" height="4" rx="2" fill="var(--red)" />
+      <rect x="216" y="56" width="64" height="4" rx="2" fill="var(--accent)" />
       <rect
         x="216"
         y="72"
@@ -75,7 +75,7 @@ export function BrandBanner({ className }: { className?: string }) {
       />
 
       {/* The world, rising on the same line as the mountains. */}
-      <g fill="none" stroke="var(--green)" strokeLinecap="round">
+      <g fill="none" stroke="var(--support)" strokeLinecap="round">
         <path d="M332 104 A44 44 0 0 1 420 104" strokeWidth="2.5" />
         <path
           d="M347 104 A29 44 0 0 1 405 104"

@@ -13,9 +13,26 @@ interface TopicPillProps {
 }
 
 /**
- * Category label. Colour comes from `--topic`, which the nearest ancestor
- * carrying `data-topic` supplies — so the pill matches whatever story it sits on
- * without any per-topic class list here.
+ * The category kicker.
+ *
+ * Two tones, and they are now genuinely different things rather than two
+ * treatments of a chip:
+ *
+ *   quiet  — on paper, this is a kicker: uppercase, tracked, in the category's
+ *            reading colour, with no fill, no border and no chip around it.
+ *            That is how the Kathmandu Post sets OPINION, how the Guardian sets
+ *            its section labels and how the NYT sets its own. The filled,
+ *            bordered, tinted pill this replaced was the single most
+ *            product-looking element on the feed, repeated once per story.
+ *
+ *   solid  — over photography, where a kicker in any colour is illegible
+ *            against whatever the publisher shipped. Here it stays a small
+ *            solid chip printing `--topic-ink` on `--topic`, which is exactly
+ *            what Setopati does with its red kicker chip.
+ *
+ * Colour comes from the three-token topic contract that the nearest ancestor
+ * carrying `data-topic` supplies, so the kicker matches whatever story it sits
+ * on without any per-topic class list here.
  */
 export function TopicPill({
   topic,
@@ -27,15 +44,14 @@ export function TopicPill({
     <span
       data-topic={topic}
       className={cn(
-        "eyebrow inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 leading-none",
-        // `text-topic-ink`, not `text-white`: on the dark stock every topic is a
-        // bright tint, and white on it ran between 1.73:1 (culture) and 4.09:1
-        // (world) — all eleven below the 4.5:1 this 11px type needs. The token
-        // is near-black on dark and white on light, so one class reads correctly
-        // in both themes.
+        "eyebrow inline-flex shrink-0 items-center gap-1.5 leading-none",
         tone === "solid"
-          ? "bg-[var(--topic)] text-topic-ink shadow-[0_0_16px_color-mix(in_srgb,var(--topic)_50%,transparent)]"
-          : "bg-[color-mix(in_srgb,var(--topic)_15%,transparent)] text-[var(--topic)] border border-[color-mix(in_srgb,var(--topic)_30%,transparent)]",
+          ? // `text-topic-ink` is declared per category, so this one class
+            // prints white on the seven deep fills and near-navy on the two
+            // light ones. At 11px the 4.5:1 floor is not negotiable, and no
+            // single literal meets it for both.
+            "rounded-sm bg-[var(--topic)] px-1.5 py-1 text-topic-ink"
+          : "text-[var(--topic-text)]",
         className,
       )}
     >
@@ -72,7 +88,7 @@ export function SourceMark({
     <span className={cn("inline-flex min-w-0 items-center gap-2", className)}>
       <span
         aria-hidden="true"
-        className="eyebrow flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--topic,var(--red))] text-[9px] tracking-normal text-topic-ink shadow-[0_2px_8px_color-mix(in_srgb,var(--topic,var(--red))_40%,transparent)]"
+        className="eyebrow flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-[var(--topic)] text-[9px] tracking-normal text-topic-ink"
       >
         {sourceMonogram(name)}
       </span>

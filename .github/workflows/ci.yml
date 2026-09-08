@@ -51,6 +51,15 @@ jobs:
       - name: Contrast (WCAG AA)
         run: pnpm run check:contrast
 
+      # Dependency advisories. Three highs (sharp, nanoid, js-yaml) and four
+      # postcss advisories were open in the tree with nothing in CI to say so;
+      # they are pinned in pnpm-workspace.yaml, and this is what keeps them
+      # pinned. `--audit-level=high` rather than `low` so a moderate advisory
+      # in a build-time package does not block a newsroom's deploy at 6am —
+      # raise it once the tree is quiet enough to stay that way.
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high
+
       - name: Build
         run: pnpm run build
         env:
@@ -58,7 +67,34 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://www.ekjhalak.news
           REVALIDATE_SECRET: stub
           CRON_SECRET: stub
-          # GEMINI_API_KEY is deliberately absent. With no key the enrichment
+          # GROQ_API_KEY is deliberately absent. With no key the enrichment
           # pass is skipped entirely, so the build stays fast and deterministic
           # and CI never spends the project's daily model quota. A stub value
           # would be worse than none: it would send real requests that 401.
+          # (This said GEMINI_API_KEY until the pipeline moved to Groq.)
+
+      # Everything above this line checks source. These two check the running
+      # site, which is where a whole class of failure lives: `next start`
+      # refused to boot on an images.remotePatterns list that had compiled
+      # cleanly, and axe found a 1.6:1 contrast failure on the 404 page that
+      # check-contrast structurally cannot see, because the ratio is broken by
+      # an opacity utility rather than by the token pair.
+      - name: Start production server
+        run: |
+          NEXT_PUBLIC_SITE_URL=http://localhost:3000 pnpm run start &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:3000/ && exit 0
+            sleep 1
+          done
+          echo "server did not come up"; exit 1
+
+      - name: Accessibility (axe-core, every route)
+        run: |
+          set -e
+          for route in / /about /contact /editorial-standards /privacy /terms /nonexistent-page; do
+            echo "── $route"
+            node scripts/axe-scan.mjs "http://localhost:3000$route"
+          done
+
+      - name: SEO
+        run: pnpm run check:seo http://localhost:3000

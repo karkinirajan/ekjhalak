@@ -78,12 +78,31 @@ gate(
 );
 
 // ── a story page ────────────────────────────────────────────────────────────
-const feed = await fetch(`${base}/api/news?range=day&limit=1`).then((r) => r.json());
-const id = feed.items?.[0]?.id;
+//
+// The story with the longest summary in the feed, not the top one.
+//
+// This used to take `limit=1` and check whichever story happened to be ranked
+// first, which made the description-length gate pass or fail on the luck of the
+// draw: it reported 189 characters on one run and 2354 on the next, against a
+// 400 cap, for the same code. Summaries run to EXCERPT_MAX_CHARS, so the
+// longest one present is the case that actually tests the cap — and every other
+// gate here is satisfied by any real story equally well.
+const feed = await fetch(`${base}/api/news?range=day&limit=100`).then((r) =>
+  r.json(),
+);
+const items = feed.items ?? [];
+const worst = items.reduce(
+  (a, b) => ((b.summary?.length ?? 0) > (a?.summary?.length ?? 0) ? b : a),
+  items[0],
+);
+const id = worst?.id;
 if (!id) {
   console.error("feed returned no items — cannot check a story page");
   process.exit(1);
 }
+console.log(
+  `  (story sample: longest summary of ${items.length}, ${worst.summary?.length ?? 0} chars)`,
+);
 
 const story = await text(`/story/${id}`);
 gate("a real story page serves 200", story.status === 200, `HTTP ${story.status}`, "200");

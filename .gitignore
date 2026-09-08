@@ -14,6 +14,11 @@
 ./claude
 # testing
 /coverage
+# Playwright MCP writes screenshots, console logs and page snapshots here during
+# a browser-driven QA pass. They are throwaway evidence for one session, not
+# fixtures — and the directory is created in the repo root, so without this it
+# shows up as untracked noise after every visual check.
+/.playwright-mcp/
 
 # next.js
 /.next/

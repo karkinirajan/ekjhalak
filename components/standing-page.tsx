@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
+import { useSite } from "@/components/site-provider";
 import { cn } from "@/lib/utils";
 import { SITE_PAGES, type PageSlug } from "@/lib/site-pages";
 import { STANDING_PAGES } from "@/lib/site-nav";
@@ -20,7 +20,7 @@ import { STANDING_PAGES } from "@/lib/site-nav";
  * single column at a readable measure answers faster than a designed layout.
  */
 export function StandingPage({ slug }: { slug: PageSlug }) {
-  const { language, t } = useTheme();
+  const { language, t } = useSite();
   const isNp = language === "np";
   const content = SITE_PAGES[slug][language];
 
@@ -55,7 +55,7 @@ export function StandingPage({ slug }: { slug: PageSlug }) {
       <article className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
         <p
           className={cn(
-            "eyebrow text-red",
+            "eyebrow text-accent",
             isNp && "font-np tracking-normal",
           )}
         >
@@ -75,7 +75,7 @@ export function StandingPage({ slug }: { slug: PageSlug }) {
         <p
           lang={isNp ? "ne" : "en"}
           className={cn(
-            "copy mt-6 border-l border-red pl-5 text-[1.08rem] leading-[1.75] text-ink-soft",
+            "copy mt-6 border-l border-accent pl-5 text-[1.08rem] leading-[1.75] text-ink-soft",
             isNp && "font-np leading-[1.9]",
           )}
         >
