@@ -20,7 +20,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 
 const args = process.argv.slice(2);
@@ -38,7 +38,52 @@ if (!url) {
 }
 
 const PORT = 9333;
-const CHROME = process.env.CHROME_PATH ?? "google-chrome-stable";
+
+/**
+ * The Chrome to drive.
+ *
+ * A list rather than one name because the binary is called something different
+ * almost everywhere: `google-chrome-stable` on Arch and Debian, `google-chrome`
+ * on the GitHub Actions runner images, `chromium` on Alpine and most Nix
+ * setups. Hard-coding the first of those meant this script worked on the
+ * machine it was written on and would have failed on the CI runner it was about
+ * to become a gate for.
+ *
+ * CHROME_PATH still wins outright, so an unusual install needs no change here.
+ */
+const CHROME_CANDIDATES = [
+  process.env.CHROME_PATH,
+  "google-chrome-stable",
+  "google-chrome",
+  "chromium",
+  "chromium-browser",
+].filter(Boolean);
+
+function resolveChrome() {
+  for (const candidate of CHROME_CANDIDATES) {
+    // An absolute path is taken at its word; a bare name is looked up on PATH.
+    if (candidate.includes("/")) {
+      if (existsSync(candidate)) return candidate;
+      continue;
+    }
+    // `command -v` rather than `which`: it is POSIX, built into every shell,
+    // and present on minimal images where `which` is a package that may not be.
+    const found = spawnSync("sh", ["-c", `command -v ${candidate}`], {
+      encoding: "utf8",
+    });
+    if (found.status === 0 && found.stdout.trim()) return candidate;
+  }
+  return null;
+}
+
+const CHROME = resolveChrome();
+if (!CHROME) {
+  console.error(
+    `no Chrome found. Tried: ${CHROME_CANDIDATES.join(", ")}.\n` +
+      "Install Chrome or Chromium, or set CHROME_PATH.",
+  );
+  process.exit(2);
+}
 
 /**
  * axe.min.js.

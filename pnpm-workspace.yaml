@@ -1,7 +1,25 @@
+# Packages allowed to run install scripts.
+#
+# pnpm 11 refuses to run a dependency's postinstall unless it is named here, and
+# exits non-zero rather than skipping quietly — which is what failed CI at the
+# install step, before a single check had run. The stub pnpm writes says
+# "set this to true or false"; leaving that in place is the same as not
+# answering, so each one is decided below.
+#
+# All three genuinely need their scripts, and all three would fail loudly rather
+# than subtly without them:
+#
+#   esbuild        fetches the platform-specific binary. `tsx` runs the test
+#                  suite through it, so no binary means no tests.
+#   sharp          links libvips. This is what next/image uses to resize the
+#                  publisher photographs; without it image optimisation falls
+#                  back or fails at runtime, in production only.
+#   unrs-resolver  napi bindings for the TypeScript import resolver that
+#                  eslint-config-next uses.
 allowBuilds:
-  esbuild: set this to true or false
-  sharp: set this to true or false
-  unrs-resolver: set this to true or false
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
 # Transitive-dependency pins.
 #
 # All three are advisories against packages this project does not depend on
