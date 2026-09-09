@@ -270,8 +270,27 @@ export async function fetchRssFeed(
         Accept:
           "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
       },
-      // Next.js Data Cache: revalidate every 5 minutes per source URL
-      next: { revalidate: 300 },
+      // Not cached per source, and this is the single most expensive line the
+      // pipeline ever had.
+      //
+      // It was `next: { revalidate: 300 }`. On Vercel that turns every feed
+      // response into a Data Cache round trip — twenty-three payloads, several
+      // over 100 KB, read and written over the network on every pass. Measured:
+      // the same twenty-three feeds fetched with a plain `fetch` and the same
+      // 7.5s abort complete in 3.3s wall clock; production was reporting
+      // `rss 25468ms` for identical work.
+      //
+      // And it bought nothing. `aggregateAllSources` only runs on a miss of the
+      // outer `unstable_cache`, which revalidates on the same 300s window — so
+      // the per-source entry expired at the same moment as the pass that would
+      // have read it, and the hit rate was approximately zero. The cost was
+      // real and the caching was not.
+      //
+      // The consequence was the whole pipeline downstream: RSS alone overran
+      // AGGREGATE_BUDGET_MS, `slice()` then returned 4–16ms for enrichment, and
+      // stage 3 was skipped silently because `enrichMs > 0` was false. The feed
+      // shipped with zero translations and the logs blamed the archive.
+      cache: "no-store",
     });
 
     if (!response.ok) {

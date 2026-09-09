@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   bestCandidate,
   jsonLdBody,
+  looksLikeBoilerplate,
   looksLikeNavigation,
   paragraphText,
   parseArticle,
@@ -192,4 +193,85 @@ test("paragraph accumulation stops at the character cap", () => {
   const one = `<p>${"A perfectly ordinary sentence about the news. ".repeat(4)}</p>`;
   const text = paragraphText(page("", one.repeat(200)));
   assert.ok(text.length <= 6_400, `got ${text.length} chars past the cap`);
+});
+
+// ── Extraction gate ─────────────────────────────────────────────────────────
+//
+// These lock down the fix for the pipeline's largest accuracy defect: a
+// 126-character og:description used to satisfy `MIN_USABLE_CHARS` and return
+// immediately, so `paragraphText` was never reached and sources whose RSS
+// truncates mid-word kept the truncated copy on every pass.
+
+/**
+ * Filler that reads like prose to every filter in this module.
+ *
+ * Sentences every eight words on purpose: `looksLikeNavigation` rejects
+ * anything running more than forty words without a terminator, so a single long
+ * run of one word is treated as a menu — which is correct behaviour, and made
+ * the first version of these fixtures fail for the right reason.
+ */
+const longParagraph = (n: number) => {
+  let out = "";
+  let i = 0;
+  while (out.length < n) {
+    out += "the minister told the committee on Wednesday" + (i % 2 ? " again" : "") + ". ";
+    i++;
+  }
+  return out.slice(0, n - 1).trim() + ".";
+};
+
+test("a thin og:description no longer beats the article body", () => {
+  const thin = longParagraph(200);
+  const body = longParagraph(900);
+  const html = `<html><head><meta property="og:description" content="${thin}"></head><body><p>${body}</p></body></html>`;
+
+  const found = bestCandidate(html, parseMetaTags(html));
+  assert.equal(found?.via, "paragraphs");
+  assert.ok(
+    (found?.text.length ?? 0) > thin.length,
+    "paragraphs should win when metadata is only a teaser",
+  );
+});
+
+test("a substantial og:description still wins without scanning paragraphs", () => {
+  // The original concern, kept honest: paragraph scraping once beat a good
+  // 2,063-character og:description with 3,658 characters of site menu.
+  const good = longParagraph(1200);
+  const html = `<html><head><meta property="og:description" content="${good}"></head><body><p>${longParagraph(3000)}</p></body></html>`;
+
+  const found = bestCandidate(html, parseMetaTags(html));
+  assert.equal(found?.via, "og");
+});
+
+test("paywall furniture is dropped even though it is real prose", () => {
+  // The Hindu's rail passes every shape test: complete sentences, normal
+  // word-to-terminator ratio. Only naming it catches it.
+  assert.equal(
+    looksLikeBoilerplate("Account subscription benefits alongside Premium Stories."),
+    true,
+  );
+  assert.equal(looksLikeBoilerplate("Logout and Login with that one."), true);
+  assert.equal(
+    looksLikeBoilerplate("The minister said the licences should be revoked."),
+    false,
+  );
+});
+
+test("short promotional blurbs are excluded from the body", () => {
+  // Measured lengths from The Hindu's newsletter rail (70-110 chars) against
+  // its opening paragraph (195).
+  const promo = "The View From India Looking at World Affairs from the Indian perspective.";
+  const real = longParagraph(195);
+  const html = `<body><p>${promo}</p><p>${real}</p></body>`;
+
+  const text = paragraphText(html);
+  assert.ok(!text.includes("The View From India"), "promo blurb survived");
+  assert.ok(text.length >= 120, "the real paragraph should survive");
+});
+
+test("a share widget welded to the first paragraph is trimmed", () => {
+  // Nepal Khabar renders its share bar inside the same <p> as the lede.
+  const html = `<body><p>Shares ${longParagraph(300)}</p></body>`;
+  const text = paragraphText(html);
+  assert.ok(!text.startsWith("Shares"), `got: ${text.slice(0, 30)}`);
 });

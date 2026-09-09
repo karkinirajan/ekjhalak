@@ -111,12 +111,16 @@ function normalizeText(text: string): string {
     .replace(/[ \t]{2,}/g, " ");
 }
 
-const BOILERPLATE =
-  /unlock these with subscription|subscription benefits|already a subscriber|to continue reading|sign up (?:to|for) (?:our|the)|all rights reserved/i;
+// Owned by lib/article-parse.ts, used here and re-exported for existing callers.
+//
+// It used to be declared in both places. Two copies of a boilerplate regex is
+// two copies that drift, and the parse module is the one that can hold it: this
+// module is `server-only`, so the project's plain-Node test runner cannot
+// import it, while article-parse.ts is deliberately pure for exactly that
+// reason.
+import { looksLikeBoilerplate } from "./article-parse";
 
-export function looksLikeBoilerplate(text: string): boolean {
-  return BOILERPLATE.test(text);
-}
+export { looksLikeBoilerplate };
 
 export function hardTruncateSummary(
   text: string,

@@ -209,6 +209,66 @@ export function looksLikeNavigation(text: string): boolean {
   return words / Math.max(1, sentences) > 40;
 }
 
+/**
+ * Paywall and subscription furniture.
+ *
+ * Distinct from `looksLikeNavigation`, which catches a menu by its shape — no
+ * terminators, or twenty words between them. This catches text that is
+ * perfectly well-formed prose and still not the article: The Hindu opens its
+ * paragraph list with "Subscribed with another email? Logout and Login with
+ * that one. Account subscription benefits alongside Premium Stories," which is
+ * three real sentences and sails through the shape test.
+ *
+ * Lives here rather than in lib/summarizer.ts because this module is the pure
+ * half of the parse — no `server-only`, so the project's plain-Node runner can
+ * test it — and because one pattern used at two granularities is better than
+ * two copies drifting apart. The summarizer imports it for whole-summary
+ * checks; `paragraphText` applies it per paragraph, which is where the
+ * furniture actually is.
+ */
+export const BOILERPLATE =
+  /unlock these with subscription|subscription benefits|already a subscriber|to continue reading|sign up (?:to|for) (?:our|the)|all rights reserved|logout and login|premium stories|subscribe to continue|create a free account|newsletter signup|accept (?:all )?cookies|manage preferences/i;
+
+export function looksLikeBoilerplate(text: string): boolean {
+  return BOILERPLATE.test(text);
+}
+
+/**
+ * Shortest paragraph counted as article prose.
+ *
+ * 120, having been 60. A promotional blurb and a paragraph of reporting differ
+ * reliably in length, and 60 sat below both. Measured on The Hindu, whose
+ * newsletter rail survives every shape-based filter because it is written in
+ * complete sentences: "The View From India Looking at World Affairs from the
+ * Indian perspective." is 72 characters, and its four neighbours run 70 to 110,
+ * while the article's own opening paragraph is 195. At 60 all five promos led
+ * the extraction; at 120 none of them do.
+ *
+ * The cost is that genuine one-line paragraphs — an isolated quote, a single
+ * short sentence of attribution — are dropped too. For this pipeline that is
+ * the right trade: the extracted text is a corpus to summarise from, not a
+ * reproduction of the article, and dropping the shortest fragments makes it
+ * denser rather than poorer.
+ */
+const MIN_PARAGRAPH_CHARS = 120;
+
+/**
+ * Social-widget labels welded onto the front of the first paragraph.
+ *
+ * Nepal Khabar renders its share bar inside the same <p> as the opening
+ * sentence, so the body arrives as "Shares उद्योग, वाणिज्य तथा…". No length or
+ * shape test can catch that — the paragraph is real prose with three junk
+ * characters in front — so it is trimmed by name. Anchored to the start and
+ * requiring what follows to be a word boundary, so an article that genuinely
+ * opens on the word "Share" is untouched.
+ */
+function stripWidgetPrefix(text: string): string {
+  return text.replace(
+    /^(?:shares?|tweet|share this|follow us|advertisement|listen to this article)\s+(?=\S)/i,
+    "",
+  );
+}
+
 export function paragraphText(html: string): string {
   const scannable =
     html.length > MAX_PARAGRAPH_SCAN_BYTES
@@ -219,9 +279,10 @@ export function paragraphText(html: string): string {
   let length = 0;
 
   for (const match of scannable.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
-    const text = htmlToText(match[1]);
-    if (text.length < 60) continue;
+    const text = stripWidgetPrefix(htmlToText(match[1]));
+    if (text.length < MIN_PARAGRAPH_CHARS) continue;
     if (looksLikeNavigation(text)) continue;
+    if (looksLikeBoilerplate(text)) continue;
     paragraphs.push(text);
     // Tracked rather than re-joined. The old loop called `paragraphs.join(" ")`
     // on every accepted paragraph purely to test its length, which is quadratic
@@ -305,20 +366,53 @@ export function bestCandidate(
     ...cheap,
   ];
 
+  // Structured metadata wins outright only when it is *substantial*.
+  //
+  // The bar used to be MIN_USABLE_CHARS — 120 — and that one constant was the
+  // largest accuracy defect in the pipeline. A 126-character og:description
+  // cleared it, returned immediately, and `paragraphText` was never reached.
+  // Measured against live pages: Nepal Khabar returned 347 chars via og where
+  // its paragraphs hold 1,578; Ratopati 126 against 1,061; Onlinekhabar 156
+  // against 2,016. The aggregator then only replaces feed text with page text
+  // when the page's is longer, so Nepal Khabar — whose RSS hard-cuts at 500
+  // mid-word — kept the truncated feed copy on every pass. Twenty of twenty of
+  // its stories ended mid-sentence in production.
+  //
+  // 600 is the bar because it is roughly where a description stops being a
+  // teaser and starts being a précis. Above it, the publisher's own summary is
+  // preferred and nothing expensive runs. Below it, paragraphs are consulted
+  // and the longer of the two wins — which is the original ordering's intent
+  // ("substantial enough to summarise") with a threshold that actually means it.
+  const SUBSTANTIAL_METADATA_CHARS = 600;
+
   for (const [via, text] of ordered) {
-    if (text.length >= MIN_USABLE_CHARS) {
+    if (text.length >= SUBSTANTIAL_METADATA_CHARS) {
       return { text: text.slice(0, MAX_EXTRACTED_CHARS), via };
     }
   }
 
+  // Thin metadata: the page body may say considerably more. The comparison is
+  // what keeps the original concern honest — paragraph scraping was once
+  // beating a good 2,063-char og:description with 3,658 chars of site menu, so
+  // paragraphs have to *earn* it on length after the navigation and paywall
+  // filters have had their say, rather than winning by being tried last.
+  const best = ordered.find(([, text]) => text.length >= MIN_USABLE_CHARS);
+
   if (inTime()) {
     const paragraphs = paragraphText(html);
-    if (paragraphs.length >= MIN_USABLE_CHARS) {
+    if (
+      paragraphs.length >= MIN_USABLE_CHARS &&
+      paragraphs.length > (best?.[1].length ?? 0)
+    ) {
       return {
         text: paragraphs.slice(0, MAX_EXTRACTED_CHARS),
         via: "paragraphs",
       };
     }
+  }
+
+  if (best) {
+    return { text: best[1].slice(0, MAX_EXTRACTED_CHARS), via: best[0] };
   }
 
   // Nothing structured cleared the bar — take the longest short candidate
