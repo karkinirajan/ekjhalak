@@ -8,6 +8,7 @@ import "server-only";
 
 import { XMLParser } from "fast-xml-parser";
 import { htmlToText } from "./html-entities";
+import { readWithDeadline } from "./fetch-deadline";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -247,60 +248,29 @@ export async function fetchRssFeed(
   url: string,
   deadline?: number,
 ): Promise<RawStory[]> {
-  const controller = new AbortController();
   const budget =
     deadline === undefined
       ? FETCH_TIMEOUT_MS
       : Math.max(1, Math.min(FETCH_TIMEOUT_MS, deadline - Date.now()));
-  const timeout = setTimeout(() => controller.abort(), budget);
 
-  // The abort has to survive until the body is read, not just until the headers
-  // land. Clearing it the moment `fetch` resolved left `response.text()` with no
-  // timeout at all, so a source that answered promptly and then dribbled its
-  // body held the whole parallel fan-out open for as long as it liked — and
-  // because every source is awaited together, one such outlet set the cost of
-  // the entire stage.
-  let xml: string;
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "EkJhalak-NewsAggregator/1.0 (+https://ekjhalak.news)",
-        Accept:
-          "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
-      },
-      // Not cached per source, and this is the single most expensive line the
-      // pipeline ever had.
-      //
-      // It was `next: { revalidate: 300 }`. On Vercel that turns every feed
-      // response into a Data Cache round trip — twenty-three payloads, several
-      // over 100 KB, read and written over the network on every pass. Measured:
-      // the same twenty-three feeds fetched with a plain `fetch` and the same
-      // 7.5s abort complete in 3.3s wall clock; production was reporting
-      // `rss 25468ms` for identical work.
-      //
-      // And it bought nothing. `aggregateAllSources` only runs on a miss of the
-      // outer `unstable_cache`, which revalidates on the same 300s window — so
-      // the per-source entry expired at the same moment as the pass that would
-      // have read it, and the hit rate was approximately zero. The cost was
-      // real and the caching was not.
-      //
-      // The consequence was the whole pipeline downstream: RSS alone overran
-      // AGGREGATE_BUDGET_MS, `slice()` then returned 4–16ms for enrichment, and
-      // stage 3 was skipped silently because `enrichMs > 0` was false. The feed
-      // shipped with zero translations and the logs blamed the archive.
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} for ${url}`);
-    }
-
-    xml = await response.text();
-  } finally {
-    clearTimeout(timeout);
-  }
+  // The budget is enforced by `readWithDeadline`, not by an AbortSignal alone —
+  // see lib/fetch-deadline.ts for the measurements that made that necessary.
+  const xml = await readWithDeadline(url, budget, {
+    headers: {
+      "User-Agent": "EkJhalak-NewsAggregator/1.0 (+https://ekjhalak.news)",
+      Accept:
+        "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+    },
+    // Next.js Data Cache, revalidated on the same window as the feed.
+    //
+    // Restored after being removed on the theory that it was the cost. It was
+    // not: dropping it moved the stage from 25s to 34s, because these entries
+    // are shared across every concurrent invocation and not merely across
+    // passes — and `/story/[id]` is `force-dynamic`, so several lambdas run
+    // their own aggregation at once and would otherwise each pay full network
+    // price for the same 23 feeds.
+    next: { revalidate: 300 },
+  });
 
   if (!xml || xml.length < 50) {
     throw new Error(`Empty or invalid response from ${url}`);
