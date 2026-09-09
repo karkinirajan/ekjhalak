@@ -90,11 +90,18 @@ export function CategoryNav({
               // filter bar; a row of words with a rule under the current one is
               // a section nav, which is what this is. The Kathmandu Post, the
               // Guardian and the NYT all mark the current section this way.
-              "shrink-0 border-b-2 px-1 py-2 text-[1.02rem] font-semibold transition-colors sm:px-1",
+              "shrink-0 border-b-2 px-1 py-2 text-[0.95rem] font-semibold transition-colors sm:px-1",
               topic === "all"
                 ? "border-b-ink text-ink"
                 : "border-b-transparent text-ink-muted hover:text-ink",
-              isNp ? "font-np leading-[1.5]" : "font-display",
+              // Uppercase only on the Latin side. Devanagari has no case, so
+              // `uppercase` is a no-op on it — but `.font-np` sets
+              // `letter-spacing: 0` deliberately, because tracking a Devanagari
+              // word pulls its conjuncts apart, and the tracking that caps need
+              // would fight it.
+              isNp
+                ? "font-np leading-[1.5]"
+                : "font-display uppercase tracking-[0.05em]",
             )}
           >
             {t.allTopics}
@@ -113,11 +120,13 @@ export function CategoryNav({
                 onClick={() => setTopic(id)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "shrink-0 border-b-2 px-1 py-2 text-[1.02rem] font-semibold transition-colors",
+                  "shrink-0 border-b-2 px-1 py-2 text-[0.95rem] font-semibold transition-colors",
                   isActive
                     ? "border-b-[var(--topic)] text-[var(--topic-text)]"
                     : "border-b-transparent text-ink-muted hover:text-ink",
-                  isNp ? "font-np leading-[1.5]" : "font-display",
+                  isNp
+                    ? "font-np leading-[1.5]"
+                    : "font-display uppercase tracking-[0.05em]",
                 )}
               >
                 {topicLabel(id, language)}
