@@ -16,14 +16,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # CI used to run `npm ci` against a package-lock.json while Vercel built
-      # the same commit with pnpm, so the two resolved dependencies
+      # CI used to run `npm ci` against a package-lock.json while the deploy
+      # built the same commit with pnpm, so the two resolved dependencies
       # independently and a green run here said nothing about the deploy.
       # pnpm-lock.yaml is now the only lockfile in the repo, and this matches it.
+      #
+      # No `version:` here on purpose. pnpm/action-setup@v4 reads
+      # `packageManager` from package.json, and refuses outright when a version
+      # is given in both places:
+      #
+      #   Error: Multiple versions of pnpm specified
+      #
+      # It was pinned to 11.9.0 while package.json moved to 12.10.1, which is
+      # exactly that conflict. Leaving it out keeps the version declared once,
+      # in package.json, which is also where Corepack reads it for the Netlify
+      # build — so CI and the deploy cannot drift apart again.
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 11.9.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
