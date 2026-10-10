@@ -77,9 +77,7 @@ export function isNewsletterConfigured(): boolean {
  * arrives from a stranger's address is a briefing that lands in spam.
  */
 function fromAddress(): string {
-  return (
-    process.env.NEWSLETTER_FROM ?? "EkJhalak <brief@ekjhalak.news>"
-  );
+  return process.env.NEWSLETTER_FROM ?? "EkJhalak <support@ekjhalak.news>";
 }
 
 async function resendFetch(
@@ -226,6 +224,18 @@ function confirmationText(url: string, copy: ConfirmationCopy): string {
  * That is stated rather than hidden: `sendConfirmation` reporting
  * `not-configured` is what tells the route to fall back to single opt-in.
  */
+/**
+ * Where a reply actually lands.
+ *
+ * Separate from the From address because the two are allowed to differ and
+ * usually should: From is a brand identity, Reply-To is a staffed mailbox.
+ * They are the same address here today, and this exists so pointing them apart
+ * later is a config change rather than a code change.
+ */
+function replyToAddress(): string {
+  return process.env.NEWSLETTER_REPLY_TO ?? "support@ekjhalak.news";
+}
+
 export async function sendConfirmation(
   email: string,
   confirmUrl: string,
@@ -239,6 +249,11 @@ export async function sendConfirmation(
     body: JSON.stringify({
       from: fromAddress(),
       to: [email],
+      // Readers answer confirmation mail — to ask what the brief is, to report
+      // that they never signed up, to unsubscribe in prose. Without a Reply-To
+      // those replies bounce off a send-only address and the first thing the
+      // list ever does is ignore someone.
+      reply_to: replyToAddress(),
       subject: copy.subject,
       html: confirmationHtml(confirmUrl, copy),
       text: confirmationText(confirmUrl, copy),

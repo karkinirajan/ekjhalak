@@ -196,22 +196,37 @@ export default function RootLayout({
       className={`${sourceSerif.variable} ${inter.variable} ${mukta.variable}`}
     >
       <head>
-        {/* The site is light only, so the browser paints form controls and
-            scrollbars light too rather than inverting them on a reader whose
-            OS is set to dark. */}
-        <meta name="color-scheme" content="light" />
+        {/* Both, so the browser paints form controls and scrollbars to match
+            whichever theme the page settles on instead of inverting them. */}
+        <meta name="color-scheme" content="light dark" />
         {/* Browser chrome matches the page instead of defaulting to white,
             which on mobile is the difference between the app looking like it
             ends at the viewport and looking like it was pasted into the
-            browser. One value, because there is one theme: --canvas. */}
-        <meta name="theme-color" content="#ffffff" />
-        {/* Runs before first paint so a Nepali reader's saved language is on
-            <html lang> before the first headline renders, rather than being
-            corrected by React a frame later. There is no theme half to this
-            script any more — the palette is unconditional. */}
+            browser. Both values are --canvas, per theme. */}
+        <meta
+          name="theme-color"
+          content="#ffffff"
+          media="(prefers-color-scheme: light)"
+        />
+        <meta
+          name="theme-color"
+          content="#303030"
+          media="(prefers-color-scheme: dark)"
+        />
+        {/* Runs before first paint, and both halves have to.
+            `lang` so a Nepali reader's headline is not corrected a frame later,
+            and `data-theme` so a reader who chose dark never sees a white
+            flash — the stylesheet has already been parsed by the time React
+            hydrates, so setting the attribute any later means painting the
+            wrong theme first.
+
+            A stored choice stamps the attribute; its absence deliberately
+            leaves <html> unstamped so the `prefers-color-scheme` block in
+            globals.css decides. That un-stamped state is the default and is
+            why "system" is a real option rather than a synonym for light. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(localStorage.getItem('cfn-lang')==='np'){document.documentElement.lang='ne'}}catch(e){}})()`,
+            __html: `(function(){try{var d=document.documentElement;if(localStorage.getItem('cfn-lang')==='np'){d.lang='ne'}var t=localStorage.getItem('cfn-theme');if(t==='light'||t==='dark'){d.setAttribute('data-theme',t)}}catch(e){}})()`,
           }}
         />
         <script
@@ -222,7 +237,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-100 focus:rounded-md focus:bg-accent-solid focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lift"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-100 focus:rounded-md focus:bg-accent-solid focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-on-accent focus:shadow-lift"
         >
           Skip to main content
         </a>

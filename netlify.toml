@@ -1,0 +1,69 @@
+# netlify.toml
+# Netlify's build configuration, in the repo rather than only in the dashboard.
+#
+# The settings here were previously set in the Netlify UI, which meant a commit
+# could not be reviewed alongside the build that would run it, and a change made
+# in the dashboard left no trace in history. Values set here win over the UI.
+
+[build]
+  # `--webpack`, not Turbopack.
+  #
+  # Next.js 16 builds with Turbopack by default, and the Netlify Next Runtime
+  # (v5.16.2) cannot resolve Turbopack's internal font module. Every build died
+  # with 28 copies of:
+  #
+  #   Module not found: Can't resolve
+  #   '@vercel/turbopack-next/internal/font/google/font'
+  #
+  # — one per @font-face that next/font/google generates for Inter, Source Serif
+  # and Mukta. Nothing in app/layout.tsx was wrong; the bundler simply is not
+  # supported by the runtime that has to deploy its output.
+  #
+  # Measured locally: `next build --webpack` completes and emits the same 16
+  # routes. `pnpm run build:turbo` keeps the fast path available for local work,
+  # where no Netlify runtime is involved.
+  #
+  # Revisit when the Netlify Next Runtime announces Turbopack support — this is
+  # a compatibility pin, not a preference.
+  command = "pnpm run build"
+  publish = ".next"
+
+[build.environment]
+  # Pinned so a Netlify image upgrade cannot move Node underneath the build.
+  # 22 matches the version .github/workflows/ci.yml tests against; a build that
+  # passes CI on one major and ships on another is a gap, not a convenience.
+  NODE_VERSION = "22"
+  # Corepack reads `packageManager` from package.json, so the pnpm version is
+  # declared in exactly one place.
+  NETLIFY_USE_PNPM = "true"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# ── Security headers ─────────────────────────────────────────────────────────
+#
+# next.config.ts already sets these through Next's `headers()`, and on Netlify
+# that covers rendered routes. It does not cover responses Netlify serves
+# directly — static assets out of the CDN, and anything the runtime short
+# circuits — so the baseline is repeated here at the edge.
+#
+# Deliberately a subset: only the headers that are safe to apply to every
+# response regardless of content type. The full CSP stays in next.config.ts,
+# where it can vary by route.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+
+# Next.js emits content-hashed filenames under /_next/static, so those are
+# immutable for as long as they exist. Anything else keeps whatever
+# Cache-Control the framework chose for it.
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

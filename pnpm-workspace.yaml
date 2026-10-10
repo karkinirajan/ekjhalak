@@ -34,6 +34,24 @@ allowBuilds:
 #                        postcss. Build-time only.
 #   js-yaml  < 4.3.1   — quadratic CPU on `!!omap`, reached through eslint.
 #                        Lint-time only.
+#   source-map-js < 1.2.2 — ReDoS, reached through postcss. Build-time only.
+#   brace-expansion is NOT pinned, and the attempt is worth recording: the
+#   advisory spans two disjoint ranges (<1.1.20 and >=4.0.0 <5.0.11) and the
+#   tree holds both majors, because minimatch@3 wants ^1 and minimatch@10 wants
+#   ^5. A pnpm override replaces a dependency's spec rather than intersecting
+#   with it, so any single range — including a "1.x || 5.x" union — forces one
+#   major on both and resolves minimatch@3 against v5, whose export shape
+#   differs. eslint then dies with `TypeError: expand is not a function` before
+#   linting a file. Upgrading eslint-config-next to 16.4.0 made the question
+#   moot: the tree now resolves 1.1.21 and 5.0.12 on its own.
+#
+#   braces is NOT pinned, deliberately: its advisory lists no patched version
+#   (3.0.3 is the latest published), so an override would fail the install
+#   rather than fix anything. It is reached only through
+#   eslint-config-next > @next/eslint-plugin-next > fast-glob, so it runs at
+#   lint time against this repo's own file paths and never sees input a reader
+#   controls. Revisit when upstream publishes a fix.
+#
 #   postcss  < 8.5.23  — four advisories, the worst an arbitrary file read via
 #                        an attacker-controlled `sourceMappingURL`. `next`
 #                        vendors 8.4.31 while @tailwindcss/postcss already
@@ -46,7 +64,25 @@ allowBuilds:
 # Drop an entry once the upstream package ships a release that already resolves
 # past it.
 overrides:
-  sharp: ">=0.35.4"
+  sharp: ">=0.35.5"
   nanoid: ">=3.3.18"
   js-yaml: ">=4.3.1"
   postcss: ">=8.5.23"
+  source-map-js: ">=1.2.2"
+# One advisory is ignored, by id, with its reason.
+#
+# GHSA-vfj7-8cjw-p6xm (braces, stack exhaustion on deeply nested patterns) has
+# no published fix — the advisory's `patched_versions` is null and 3.0.3 remains
+# the latest release, so an override cannot resolve it and `pnpm install` fails
+# outright if one is written.
+#
+# It is reached only through eslint-config-next > @next/eslint-plugin-next >
+# fast-glob, which means it runs at lint time over this repository's own file
+# paths. Nothing a reader sends ever reaches it.
+#
+# Ignored by id rather than by lowering `--audit-level`, so every other advisory
+# at high and critical still fails the build. Delete this block the moment
+# braces publishes a fix.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm

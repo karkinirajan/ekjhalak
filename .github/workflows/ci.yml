@@ -120,9 +120,15 @@ jobs:
           # Every route, not just the homepage. The 404 page was the one
           # carrying a contrast failure, and it is the page least likely to be
           # opened by hand.
-          for route in / /about /contact /editorial-standards /privacy /terms /nonexistent-page; do
-            echo "── $route"
-            node scripts/axe-scan.mjs "http://localhost:3000$route"
+          # Both themes. They are two different sets of painted colours, and a
+          # ratio broken by an opacity utility in one proves nothing about the
+          # other — which is the class of failure this scan exists to catch and
+          # check-contrast.mjs structurally cannot.
+          for theme in light dark; do
+            for route in / /about /contact /editorial-standards /privacy /terms /nonexistent-page; do
+              echo "── $theme $route"
+              node scripts/axe-scan.mjs "http://localhost:3000$route" --theme="$theme"
+            done
           done
 
           pnpm run check:seo http://localhost:3000

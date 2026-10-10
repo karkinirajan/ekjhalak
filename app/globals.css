@@ -119,6 +119,7 @@
   --color-support-solid: var(--support-solid);
   --color-support-soft: var(--support-soft);
 
+  --color-on-accent: var(--on-accent);
   --color-topic-ink: var(--topic-ink);
   --color-topic-text: var(--topic-text);
 
@@ -194,42 +195,59 @@
    comment goes stale, the script fails before the comment lies.            */
 
 :root {
-  /* Stock */
-  --canvas: #ffffff; /* white_500 */
-  --surface: #fafbfd; /* alice_blue_900 — cards, one step off the page */
-  --raised: #e6ebf6; /* alice_blue_500 — insets, hovers, quiet chips */
-  --pitch: #192746; /* alice_blue_100 — inverted panels: footer, ribbons */
+  /* Stock — gruvbox, toned.
+     Gruvbox's own paper is #fbf1c7, a strong cream, and at full strength it
+     read as yellow rather than as warm. Every stock and type token here is that
+     palette with its saturation halved and its lightness lifted by 1.2, which
+     keeps the warmth as a cast rather than a colour and takes the page to
+     white. The accents and the nine category colours are untouched gruvbox —
+     they are what carries the palette's identity, and they do it better against
+     a quieter ground.
+
+     --canvas and --surface would both have clipped to #ffffff under that lift,
+     collapsing the step between the page and a card, so --surface keeps one
+     whisper of tone below white. The cards are separated by hairlines in any
+     case. */
+  --canvas: #ffffff;
+  --surface: #fbfaf7;
+  --raised: #f2f0ea;
+  --pitch: #464443;
 
   /* Type */
-  --ink: #192746; /* alice_blue_100 · 14.79:1 on canvas */
-  --ink-soft: #324f8b; /* alice_blue_200 · 7.72:1 on surface */
-  --ink-muted: #51565a; /* alabaster_200 · 7.17:1 on surface */
-  --ink-inverse: #ffffff; /* type on --pitch · 14.79:1 */
+  --ink: #303030;
+  --ink-soft: #5d5856;
+  --ink-muted: #756f6a;
+  --ink-inverse: #ffffff;
 
   /* Rules */
-  --rule: #d3d5d7; /* alabaster_500 — hairlines */
-  --rule-strong: #7a8187; /* alabaster_300 · 3.95:1 on canvas, clears 1.4.11 */
+  --rule: #e6e2db;
+  --rule-strong: #8d8680;
 
-  /* Accent — the flag's crimson.
-     Two steps, because one cannot do both jobs: 500 is the fill a white
-     label sits on (5.36:1), 400 is the same red as type on paper (7.55:1).
-     Using 500 for text would land at 5.17:1 on surface, which passes, but
-     drops under 4.5 the moment it sits on a tinted panel. */
-  --accent: #ab0914; /* flag_red_400 */
-  --accent-solid: #d60b19; /* flag_red_500 */
-  --accent-soft: color-mix(in srgb, #d60b19 10%, transparent);
+  /* Accent — gruvbox red.
+     Two steps, same reason as before: faded_red is the one that survives as
+     *type* on cream (7.83:1), neutral_red is the one a cream label sits on
+     (4.82:1). One value cannot do both jobs on a paper this light. */
+  --accent: #9d0006; /* faded_red */
+  --accent-solid: #cc241d; /* neutral_red */
+  --accent-soft: color-mix(in srgb, #cc241d 10%, transparent);
 
-  /* Support — the flag's border blue. Where a page needs a second colour
-     that does not shout: subscription confirmations, data, quiet emphasis. */
-  --support: #003a9f; /* egyptian_blue_500 · 9.63:1 on surface */
-  --support-solid: #002e7e; /* egyptian_blue_400 */
-  --support-soft: color-mix(in srgb, #003a9f 10%, transparent);
+  /* Support — gruvbox blue. The second voice: confirmations, data, quiet
+     emphasis. Never urgency, which is the red's job. */
+  --support: #076678; /* faded_blue · 5.82:1 on canvas */
+  --support-solid: #076678; /* faded_blue — cream label on it runs 5.82:1 */
+  --support-soft: color-mix(in srgb, #076678 10%, transparent);
 
   /* Defaults for the topic contract below, used by anything that paints a
      topic colour without sitting inside a [data-topic] subtree. */
-  --topic: #ab0914;
-  --topic-ink: #ffffff;
-  --topic-text: #ab0914;
+  /* The label printed on an --accent-solid fill.
+     A token rather than `text-white` in five class strings, because the right
+     answer flips with the theme: cream on gruvbox's neutral_red, dark ink on
+     its bright_red. White on bright_red is 3.44:1 and fails. */
+  --on-accent: #fbf1c7;
+
+  --topic: #9d0006;
+  --topic-ink: #fbf1c7;
+  --topic-text: #9d0006;
 
   /* One shadow, and only genuinely floating layers may ask for it.
      Newsprint does not float: the Kathmandu Post renders five one-off shadows
@@ -250,7 +268,7 @@
   --popover: var(--surface);
   --popover-foreground: var(--ink);
   --primary: var(--accent-solid);
-  --primary-foreground: #ffffff;
+  --primary-foreground: var(--on-accent);
   --secondary: var(--raised);
   --secondary-foreground: var(--ink);
   --muted: var(--raised);
@@ -263,6 +281,95 @@
   /* The base step every shadcn primitive reaches for by default. See the
      corner scale in @theme inline above for why this is 2px. */
   --radius: 2px;
+}
+
+/* ── Press Night ───────────────────────────────────────────────────────────
+   The same palette after dark, and only the tokens move.
+
+   Every value below is a gruvbox step, and the two themes are the palette's
+   own light and dark variants rather than one inverted into the other. Gruvbox
+   ships both; using them as published is why the night theme reads as the same
+   publication after dark instead of a negative of it.
+
+   The ground is gruvbox dark0, #282828 — the palette's own, and deliberately
+   not black. Gruvbox is built around a warm grey ground precisely so its
+   accents do not glare the way saturated colour does against #000, which is
+   the whole reading-comfort argument for using it. Type is light1 #ebdbb2
+   rather than white for the same reason: pure white on near-black is the
+   highest-contrast and least comfortable pairing there is.
+
+   Three states, not two. An explicit choice stamps data-theme on <html>; the
+   default "system" setting stamps nothing, so the media query has to carry the
+   un-stamped case on its own. `:root:not([data-theme="light"])` is what makes
+   an explicit light choice beat a dark OS, and the [data-theme="dark"] block
+   below makes the toggle win in the other direction. Every token is declared
+   in the bare :root above first — a colour whose only definition sits inside
+   one of these blocks is the classic unreadable-page bug.               */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #303030;
+    --surface: #3b3a39;
+    --raised: #464443;
+    --pitch: #242626;
+
+    --ink: #faf9f6;
+    --ink-soft: #e6e2db;
+    --ink-muted: #d0cbc3;
+    --ink-inverse: #303030;
+
+    --rule: #5d5856;
+    --rule-strong: #a39d97;
+
+    --accent: #fb8367;
+    --accent-solid: #fb6c53; /* dark ink on it runs 4.84:1 */
+    --accent-soft: color-mix(in srgb, #fb8367 16%, transparent);
+
+    --support: #8daca0;
+    --support-solid: #83a598; /* dark ink on it runs 5.48:1 */
+    --support-soft: color-mix(in srgb, #8daca0 16%, transparent);
+
+    --on-accent: #282828;
+
+    --topic: #fb4934;
+    --topic-ink: #282828;
+    --topic-text: #fb8367;
+
+    --shadow-lift:
+      0 2px 4px rgba(0, 0, 0, 0.45), 0 8px 24px -6px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  --canvas: #303030;
+  --surface: #3b3a39;
+  --raised: #464443;
+  --pitch: #242626;
+
+  --ink: #faf9f6;
+  --ink-soft: #e6e2db;
+  --ink-muted: #d0cbc3;
+  --ink-inverse: #303030;
+
+  --rule: #5d5856;
+  --rule-strong: #a39d97;
+
+  --accent: #fb8367;
+  --accent-solid: #fb6c53; /* dark ink on it runs 4.84:1 */
+  --accent-soft: color-mix(in srgb, #fb8367 16%, transparent);
+
+  --support: #8daca0;
+  --support-solid: #83a598; /* dark ink on it runs 5.48:1 */
+  --support-soft: color-mix(in srgb, #8daca0 16%, transparent);
+
+  --on-accent: #282828;
+
+  --topic: #fb4934;
+  --topic-ink: #282828;
+  --topic-text: #fb8367;
+
+  --shadow-lift:
+    0 2px 4px rgba(0, 0, 0, 0.45), 0 8px 24px -6px rgba(0, 0, 0, 0.6);
 }
 
 /* ── Topic binding ─────────────────────────────────────────────────────────
@@ -293,49 +400,49 @@
    by their label and glyph, which is what actually names a section. */
 
 [data-topic="breaking"] {
-  --topic: #d60b19; /* flag_red_500 */
-  --topic-ink: #ffffff; /* 5.36:1 */
-  --topic-text: #ab0914; /* flag_red_400 · 7.55:1 on paper */
+  --topic: #9d0006; /* faded_red */
+  --topic-ink: #fbf1c7;
+  --topic-text: #9d0006;
 }
 [data-topic="politics"] {
-  --topic: #80070f; /* flag_red_300 */
-  --topic-ink: #ffffff; /* 10.74:1 */
-  --topic-text: #80070f;
+  --topic: #af3a03; /* faded_orange */
+  --topic-ink: #fbf1c7;
+  --topic-text: #af3a03;
 }
 [data-topic="world"] {
-  --topic: #003a9f; /* egyptian_blue_500 */
-  --topic-ink: #ffffff; /* 9.97:1 */
-  --topic-text: #003a9f;
+  --topic: #076678; /* faded_blue */
+  --topic-ink: #fbf1c7;
+  --topic-text: #076678;
 }
 [data-topic="sports"] {
-  --topic: #0054e4; /* egyptian_blue_600 */
-  --topic-ink: #ffffff; /* 6.20:1 */
-  --topic-text: #002e7e; /* egyptian_blue_400 · 12.41:1 */
+  --topic: #6e6a10; /* faded_green, deepened */
+  --topic-ink: #fbf1c7;
+  --topic-text: #6e6a10;
 }
 [data-topic="society"] {
-  --topic: #324f8b; /* alice_blue_200 */
-  --topic-ink: #ffffff; /* 7.99:1 */
-  --topic-text: #324f8b;
+  --topic: #8f3f71; /* faded_purple */
+  --topic-ink: #fbf1c7;
+  --topic-text: #8f3f71;
 }
 [data-topic="business"] {
-  --topic: #005f68; /* pacific_blue_300 */
-  --topic-ink: #ffffff; /* 7.40:1 */
-  --topic-text: #005f68;
+  --topic: #8a5e18; /* faded_yellow, deepened to clear 4.6:1 as type */
+  --topic-ink: #fbf1c7;
+  --topic-text: #8a5e18;
 }
 [data-topic="health"] {
-  --topic: #009faf; /* pacific_blue_500 */
-  --topic-ink: #000c20; /* egyptian_blue_100 · 6.13:1 */
-  --topic-text: #004045; /* pacific_blue_200 · 11.54:1 */
+  --topic: #3e7253; /* faded_aqua, deepened */
+  --topic-ink: #fbf1c7;
+  --topic-text: #3e7253;
 }
 [data-topic="technology"] {
-  --topic: #597bc3; /* alice_blue_300 */
-  --topic-ink: #000c20; /* egyptian_blue_100 · 4.70:1 */
-  --topic-text: #324f8b; /* alice_blue_200 · 7.99:1 */
+  --topic: #3c6f71; /* faded_blue/aqua midpoint, deepened */
+  --topic-ink: #fbf1c7;
+  --topic-text: #3c6f71;
 }
 [data-topic="environment"] {
-  --topic: #51565a; /* alabaster_200 */
-  --topic-ink: #ffffff; /* 7.42:1 */
-  --topic-text: #51565a;
+  --topic: #665c54; /* dark3 */
+  --topic-ink: #fbf1c7;
+  --topic-text: #665c54;
 }
 
 /* ── Inverted panels ───────────────────────────────────────────────────────
@@ -360,24 +467,18 @@
    page colour is, so nothing inside has to know it is the inverted one.     */
 
 .on-pitch {
-  --canvas: #192746; /* alice_blue_100 */
-  --surface: #192746;
-  /* The step *up* from pitch, for chips and inputs nested in the dark block.
-     Only --ink reads on it: --ink-muted lands at 3.76:1 here and --accent at
-     2.53:1, so a chip in this panel takes white type and nothing else. Two
-     dark steps apart is all this palette has between the panel and the chip.
-     --ink-inverse is deliberately not overridden — it stays white, which is
-     correct on both #192746 and this. */
-  --raised: #324f8b; /* alice_blue_200 · white on it runs 7.99:1 */
-  --ink: #ffffff; /* 14.79:1 on pitch */
-  --ink-soft: #e6ebf6; /* alice_blue_500 · 12.38:1 */
-  --ink-muted: #b9d2ff; /* egyptian_blue_900 · 9.67:1 on pitch, 5.23:1 on a raised chip */
-  --rule: #324f8b; /* alice_blue_200 — a hairline, not a boundary */
-  --rule-strong: #597bc3; /* alice_blue_300 · 3.55:1, clears 1.4.11 */
-  --accent: #f65c66; /* flag_red_700 · 4.68:1 — the crimson, lifted */
-  --accent-solid: #d60b19;
-  --support: #72a6ff; /* egyptian_blue_800 · 6.07:1 */
-  --support-solid: #003a9f;
+  --canvas: #3c3836; /* dark1 */
+  --surface: #3c3836;
+  --raised: #504945; /* dark2 — the step up, for nested chips */
+  --ink: #fbf1c7; /* light0 · 10.22:1 */
+  --ink-soft: #ebdbb2; /* light1 */
+  --ink-muted: #c0b197; /* light3, lifted · 4.60:1 on the toned pitch */
+  --rule: #504945;
+  --rule-strong: #bdae93; /* light3 · 5.32:1, clears 1.4.11 */
+  --accent: #fc9982; /* 4.62:1 on the toned pitch; bright_red is 3.37 and fails */
+  --accent-solid: #cc241d;
+  --support: #a8c0b4; /* lifted blue · 5.44:1 on dark1 */
+  --support-solid: #076678;
   --border: var(--rule);
   --background: var(--canvas);
   --foreground: var(--ink);
@@ -395,15 +496,15 @@
    7.55:1 without the ring rule having to know where it is.                  */
 
 .on-accent {
-  --canvas: #ab0914; /* flag_red_400 */
-  --surface: #ab0914;
-  --raised: #d60b19; /* flag_red_500 — the step up */
-  --ink: #ffffff; /* 7.55:1 */
-  --ink-soft: #ffffff;
-  --ink-muted: #fcc9cc; /* flag_red_900 · 5.17:1 */
-  --rule-strong: #f99299; /* flag_red_800 · 3.45:1, clears 1.4.11 */
-  --rule: #f99299;
-  --accent: #ffffff; /* the focus ring on this band · 7.55:1 */
+  --canvas: #9d0006; /* faded_red — the band */
+  --surface: #9d0006;
+  --raised: #cc241d; /* neutral_red — the step up */
+  --ink: #fbf1c7; /* 7.60:1 */
+  --ink-soft: #fbf1c7;
+  --ink-muted: #ebdbb2;
+  --rule-strong: #d5c4a1;
+  --rule: #cc241d;
+  --accent: #fbf1c7; /* the focus ring on this band */
   --border: var(--rule);
   --background: var(--canvas);
   --foreground: var(--ink);
@@ -507,6 +608,22 @@
   .font-display {
     font-family: var(--font-display), Georgia, "Times New Roman", serif;
     letter-spacing: normal;
+  }
+
+  /* The section rail scrolls sideways on narrow screens; its scrollbar does
+     not need to be seen.
+
+     `scrollbar-none` was already in category-nav.tsx and had never existed:
+     Tailwind ships no such utility, so the class did nothing and the rail was
+     only tidy because the browser was drawing an overlay scrollbar over a white
+     page. Declaring `color-scheme: light dark` for the new themes made the
+     browser paint a real one, and a grey trough appeared under the nav. The
+     class now does what its name always claimed. */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 
   /* ── Editorial primitives ──────────────────────────────────────────────── */
@@ -666,4 +783,113 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* ── Topic binding after dark ──────────────────────────────────────────────
+   The same nine categories, lifted off the night ground.
+
+   Not an inversion of the light values: a colour chosen to be legible as deep
+   type on white is nearly invisible on #0e1729, so each category climbs its own
+   ramp instead. Two had to move further than one step to stay apart — business
+   drops to pacific_blue_500 so it does not collapse into health, and
+   environment to alabaster_300 so it does not collapse into society. Measured
+   separation afterwards: 0.076 at the closest pair (breaking/politics),
+   against the 0.065 gate.
+
+   `--topic-ink` is the night ground itself for seven of the nine, because a
+   lifted accent is light enough that the page colour is what reads on it. Only
+   politics and technology still need pure black.                          */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-topic="breaking"] {
+    --topic: #fb8367; /* bright_red, lifted to clear 4.6:1 as type */
+    --topic-ink: #282828;
+    --topic-text: #fb8367;
+  }
+  :root:not([data-theme="light"]) [data-topic="politics"] {
+    --topic: #fe8420; /* bright_orange, lifted */
+    --topic-ink: #282828;
+    --topic-text: #fe8420;
+  }
+  :root:not([data-theme="light"]) [data-topic="world"] {
+    --topic: #8eac9c; /* bright_blue, lifted */
+    --topic-ink: #282828;
+    --topic-text: #8eac9c;
+  }
+  :root:not([data-theme="light"]) [data-topic="sports"] {
+    --topic: #b8bb26; /* bright_green */
+    --topic-ink: #282828;
+    --topic-text: #b8bb26;
+  }
+  :root:not([data-theme="light"]) [data-topic="society"] {
+    --topic: #d7919f; /* bright_purple, lifted */
+    --topic-ink: #282828;
+    --topic-text: #d7919f;
+  }
+  :root:not([data-theme="light"]) [data-topic="business"] {
+    --topic: #fabd2f; /* bright_yellow */
+    --topic-ink: #282828;
+    --topic-text: #fabd2f;
+  }
+  :root:not([data-theme="light"]) [data-topic="health"] {
+    --topic: #8ec07c; /* bright_aqua */
+    --topic-ink: #282828;
+    --topic-text: #8ec07c;
+  }
+  :root:not([data-theme="light"]) [data-topic="technology"] {
+    --topic: #87af7e; /* bright_aqua/green midpoint, lifted */
+    --topic-ink: #282828;
+    --topic-text: #87af7e;
+  }
+  :root:not([data-theme="light"]) [data-topic="environment"] {
+    --topic: #bdae93; /* light3 */
+    --topic-ink: #282828;
+    --topic-text: #bdae93;
+  }
+}
+
+:root[data-theme="dark"] [data-topic="breaking"] {
+  --topic: #fb8367; /* bright_red, lifted to clear 4.6:1 as type */
+  --topic-ink: #282828;
+  --topic-text: #fb8367;
+}
+:root[data-theme="dark"] [data-topic="politics"] {
+  --topic: #fe8420; /* bright_orange, lifted */
+  --topic-ink: #282828;
+  --topic-text: #fe8420;
+}
+:root[data-theme="dark"] [data-topic="world"] {
+  --topic: #8eac9c; /* bright_blue, lifted */
+  --topic-ink: #282828;
+  --topic-text: #8eac9c;
+}
+:root[data-theme="dark"] [data-topic="sports"] {
+  --topic: #b8bb26; /* bright_green */
+  --topic-ink: #282828;
+  --topic-text: #b8bb26;
+}
+:root[data-theme="dark"] [data-topic="society"] {
+  --topic: #d7919f; /* bright_purple, lifted */
+  --topic-ink: #282828;
+  --topic-text: #d7919f;
+}
+:root[data-theme="dark"] [data-topic="business"] {
+  --topic: #fabd2f; /* bright_yellow */
+  --topic-ink: #282828;
+  --topic-text: #fabd2f;
+}
+:root[data-theme="dark"] [data-topic="health"] {
+  --topic: #8ec07c; /* bright_aqua */
+  --topic-ink: #282828;
+  --topic-text: #8ec07c;
+}
+:root[data-theme="dark"] [data-topic="technology"] {
+  --topic: #87af7e; /* bright_aqua/green midpoint, lifted */
+  --topic-ink: #282828;
+  --topic-text: #87af7e;
+}
+:root[data-theme="dark"] [data-topic="environment"] {
+  --topic: #bdae93; /* light3 */
+  --topic-ink: #282828;
+  --topic-text: #bdae93;
 }

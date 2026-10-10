@@ -31,9 +31,25 @@ const settleMs = Number.parseInt(
   args.find((a) => a.startsWith("--settle="))?.split("=")[1] ?? "12000",
   10,
 );
+/**
+ * Which theme to scan.
+ *
+ * Both are real pages with their own colour tokens, and a contrast failure in
+ * one says nothing about the other — check-contrast.mjs proves the token pairs
+ * on both, but only a render catches a ratio broken by an `opacity-*` utility
+ * sitting on top of a passing pair, which is the whole reason this script
+ * exists. Scanning only the default meant the night theme shipped unscanned.
+ */
+const theme = args.find((a) => a.startsWith("--theme="))?.split("=")[1] ?? "";
+if (theme && theme !== "light" && theme !== "dark") {
+  console.error(`--theme must be "light" or "dark", got "${theme}"`);
+  process.exit(2);
+}
 
 if (!url) {
-  console.error("usage: node scripts/axe-scan.mjs <url> [--out file.json] [--settle=ms]");
+  console.error(
+    "usage: node scripts/axe-scan.mjs <url> [--out file.json] [--settle=ms] [--theme=light|dark]",
+  );
   process.exit(2);
 }
 
@@ -197,6 +213,15 @@ const evaluate = (expression, awaitPromise = false) =>
 
 await send("Page.enable");
 await send("Runtime.enable");
+// The attribute is stamped before the navigation that renders the page, so the
+// scan sees the theme painted from first paint rather than a light page that
+// flips after hydration.
+if (theme) {
+  await send("Page.addScriptToEvaluateOnNewDocument", {
+    source: `try{localStorage.setItem('cfn-theme',${JSON.stringify(theme)})}catch(e){}`,
+  });
+}
+
 await send("Page.navigate", { url });
 // The feed renders client-side after hydration; scanning at load would scan a
 // skeleton and report a clean bill of health for a page nobody sees.
@@ -233,7 +258,9 @@ const order = ["critical", "serious", "moderate", "minor"];
 const counts = Object.fromEntries(order.map((k) => [k, 0]));
 for (const v of report.violations) counts[v.impact ?? "minor"]++;
 
-console.log(`axe-core ${report.testEngine.version} · ${report.url}`);
+console.log(
+  `axe-core ${report.testEngine.version} · ${report.url}${theme ? ` · ${theme}` : ""}`,
+);
 console.log(
   `${report.violations.length} violation(s) — ` +
     order.map((k) => `${k} ${counts[k]}`).join(", "),

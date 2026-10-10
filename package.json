@@ -2,13 +2,13 @@
   "name": "clutterfreenews",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@12.10.1+sha512.ba40a37eb1a370d60fea8c4cf1d364c13bcccef518e98ad2bcee954f539d38da37458e58261a3fa55e06523450ea0ffff9f497b135be41f2c15c1642bacace6c",
   "scripts": {
     "dev": "next dev",
     "dev:clean": "rm -rf .next/dev/cache/turbopack",
     "dev:fresh": "rm -rf .next/dev/cache/turbopack .next/cache && next dev",
     "clean:next": "rm -rf .next",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
@@ -19,7 +19,8 @@
     "check:archive": "node scripts/check-archive.mjs",
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run check:contrast && pnpm audit --audit-level=high && pnpm run build",
     "verify:live": "pnpm run check:feed && pnpm run check:a11y https://ekjhalak.news/ && pnpm run check:seo",
-    "check:seo": "node scripts/check-seo.mjs"
+    "check:seo": "node scripts/check-seo.mjs",
+    "build:turbo": "next build"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -27,7 +28,7 @@
     "clsx": "^2.1.1",
     "fast-xml-parser": "^5.10.1",
     "lucide-react": "^1.28.0",
-    "next": "16.3.4",
+    "next": "16.4.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
@@ -40,7 +41,7 @@
     "@types/react-dom": "^19.2.3",
     "axe-core": "^4.13.0",
     "eslint": "^9.39.5",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "16.4.0",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.20.4",
     "typescript": "^5.9.3"

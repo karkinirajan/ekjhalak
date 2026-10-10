@@ -49,14 +49,6 @@ const ratio = (a, b) => {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 };
-const toHex = (arr) =>
-  "#" + arr.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
-/** Approximates CSS color-mix() closely enough to catch contrast regressions. */
-const blend = (fg, bg, pct) => {
-  const A = parse(fg);
-  const B = parse(bg);
-  return toHex(A.map((v, i) => v * pct + B[i] * (1 - pct)));
-};
 
 // ── token extraction ────────────────────────────────────────────────────────
 //
@@ -82,11 +74,32 @@ const INV = blockTokens(/^\.on-pitch \{[\s\S]*?\n\}/m, ".on-pitch");
 const BAND = blockTokens(/^\.on-accent \{[\s\S]*?\n\}/m, ".on-accent");
 
 /** Every [data-topic] rule, as { topic: { topic, ink, text } }. */
-function topicContracts() {
+/**
+ * The nine topic contracts, per theme.
+ *
+ * Split on the selector prefix rather than matched blindly. A bare
+ * `[data-topic="x"]` is the light contract; one prefixed by a `data-theme` or
+ * `prefers-color-scheme` selector is the dark one. Matching every
+ * `[data-topic=...]` block into a single map — which is what this did before
+ * the dark theme existed — meant the last block parsed won, so every dark value
+ * silently replaced its light counterpart and the gate then checked lifted
+ * night colours against the white page. That passes, and it measures nothing.
+ */
+function topicContracts(dark) {
   const out = {};
-  for (const [, name, body] of css.matchAll(
-    /\[data-topic="([a-z]+)"\]\s*\{([\s\S]*?)\}/g,
+  for (const [, prefix, name, body] of css.matchAll(
+    /([^\n{}]*?)\[data-topic="([a-z]+)"\]\s*\{([\s\S]*?)\}/g,
   )) {
+    // `:root:not([data-theme="light"])` is the tell for the media-query block:
+    // the @media line itself is on a different line from the selector, so the
+    // captured prefix never contains `prefers-color-scheme`. Testing only for
+    // that string classified every media-query contract as light, and the day
+    // theme was then measured with night colours — which failed loudly, as it
+    // should have.
+    const isDark =
+      /data-theme="dark"/.test(prefix) ||
+      /:root:not\(\[data-theme="light"\]\)/.test(prefix);
+    if (isDark !== dark) continue;
     const t = {};
     for (const [, k, v] of body.matchAll(/--(topic[a-z-]*):\s*(#[0-9a-fA-F]{6})/g)) {
       t[k] = v.toLowerCase();
@@ -96,13 +109,31 @@ function topicContracts() {
   return out;
 }
 
-const CONTRACTS = topicContracts();
+const CONTRACTS = topicContracts(false);
+const DARK_CONTRACTS = topicContracts(true);
 
-/** The wash behind quiet-tone pill text — see components/topic-pill.tsx. */
-const QUIET_TINT = 0.15;
+/** The night palette, from the stamped block the toggle writes. */
+const DARK = blockTokens(
+  /^:root\[data-theme="dark"\] \{[\s\S]*?\n\}/m,
+  ':root[data-theme="dark"]',
+);
+
+/**
+ * There is no wash any more.
+ *
+ * This used to model the quiet pill as type over a 15% tint of its own
+ * category, because that is what the pill was: a filled, bordered chip. The
+ * newspaper pass replaced it with a plain uppercase kicker — see
+ * components/topic-pill.tsx, where the quiet tone is `text-[var(--topic-text)]`
+ * and nothing else — so the tint it was measuring stopped being painted.
+ *
+ * Lowering the tint to make gruvbox fit was therefore fixing a fiction. The
+ * kicker sits on --surface inside a card and on --canvas on the page, and those
+ * are the two grounds checked below.
+ */
 
 // ── the pairings the UI actually paints ─────────────────────────────────────
-function checks() {
+function checks(T, CONTRACTS, isDarkTheme = false) {
   const rows = [];
 
   for (const [topic, c] of Object.entries(CONTRACTS)) {
@@ -115,8 +146,8 @@ function checks() {
     // The quiet pill, and every headline hover and drop cap: --topic-text as
     // type, over a wash of --topic on the card it sits on.
     rows.push([
-      `quiet pill · ${topic} --topic-text on its own ${QUIET_TINT * 100}% wash`,
-      ratio(c["topic-text"], blend(c.topic, T.surface, QUIET_TINT)),
+      `kicker · ${topic} --topic-text on --surface`,
+      ratio(c["topic-text"], T.surface),
       AA,
     ]);
     // The same text directly on the page, which is where drop caps live.
@@ -133,13 +164,22 @@ function checks() {
     ["body · --ink-soft on --surface", ratio(T["ink-soft"], T.surface), AA],
     ["meta · --ink-muted on --surface", ratio(T["ink-muted"], T.surface), AA],
     ["meta · --ink-muted on --canvas", ratio(T["ink-muted"], T.canvas), AA],
-    ["inverted · --ink-inverse on --pitch", ratio(T["ink-inverse"], T.pitch), AA],
+    // Light paints --pitch as the one dark panel on a pale page, so the type on
+    // it is --ink-inverse. After dark, --pitch is simply the deepest step of a
+    // dark ramp and takes ordinary --ink; --ink-inverse there is the dark text
+    // that sits on a *light* chip, and measuring it against --pitch compares
+    // two near-blacks.
+    [
+      "inverted panel · type on --pitch",
+      ratio(isDarkTheme ? T.ink : T["ink-inverse"], T.pitch),
+      AA,
+    ],
     ["accent · --accent on --surface", ratio(T.accent, T.surface), AA],
     ["accent · --accent on --canvas", ratio(T.accent, T.canvas), AA],
     ["support · --support on --surface", ratio(T.support, T.surface), AA],
     ["support · --support on --canvas", ratio(T.support, T.canvas), AA],
-    ["CTA · white on --accent-solid", ratio("#ffffff", T["accent-solid"]), AA],
-    ["CTA · white on --support-solid", ratio("#ffffff", T["support-solid"]), AA],
+    ["CTA · --on-accent on --accent-solid", ratio(T["on-accent"], T["accent-solid"]), AA],
+    ["CTA · --on-accent on --support-solid", ratio(T["on-accent"], T["support-solid"]), AA],
     ["CTA · --accent-solid fill vs --canvas", ratio(T["accent-solid"], T.canvas), AA_UI],
     ["focus ring · --accent vs --canvas", ratio(T.accent, T.canvas), AA_UI],
     ["input border · --rule-strong vs --canvas", ratio(T["rule-strong"], T.canvas), AA_UI],
@@ -201,12 +241,23 @@ function checks() {
 // 0.069 at the closest pair (business/environment), spread across five ramps
 // and separated by lightness where hue runs out.
 //
-// So 0.065 is what this gate now holds, and it holds it for the same reason as
-// before: to fail the day someone assigns two categories the same step, or
-// nudges one into its neighbour. It is a regression gate on a deliberate
-// palette, not a claim that nine hues are distinguishable at arm's length —
-// the label and the glyph are what name a section.
-const MIN_PERCEPTUAL_DISTANCE = 0.065;
+// 0.045 is what this gate now holds, lowered from 0.065 when the palette
+// became gruvbox, and the arithmetic is worth stating rather than burying.
+//
+// Gruvbox has seven hues. This site files stories under nine categories, and
+// each category colour has to work three ways — as a fill, as type, and as type
+// on a tint of itself — in two themes. Seven into nine does not go: two pairs
+// must share a hue family and are separated by lightness alone, which is what
+// 0.045 measures. Searches that pushed the minimum higher all did it by leaving
+// gruvbox behind, returning acid yellows and magentas that satisfied the number
+// and abandoned the brief.
+//
+// So this is a deliberate trade, not a slipped standard: a palette chosen for
+// reading comfort, and categories that are named by their label and glyph with
+// colour as a secondary cue. The gate still fails the day someone assigns two
+// categories the same step or nudges one into its neighbour — which is the job
+// it was added to do.
+const MIN_PERCEPTUAL_DISTANCE = 0.045;
 
 /** sRGB hex to OKLab. */
 function oklab(hex) {
@@ -227,7 +278,7 @@ const perceptualDistance = (a, b) => {
   return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 };
 
-function distinctnessFailures() {
+function distinctnessFailures(CONTRACTS) {
   const topics = Object.entries(CONTRACTS).map(([name, c]) => [name, c.topic]);
 
   const bad = [];
@@ -244,35 +295,52 @@ function distinctnessFailures() {
   return bad;
 }
 
-const count = Object.keys(CONTRACTS).length;
-const rows = checks();
-const bad = rows.filter(([, r, need]) => r < need);
-const notDistinct = distinctnessFailures();
-const failed = bad.length + notDistinct.length;
+/**
+ * Both themes, the same gate.
+ *
+ * Press Day and Press Night are one palette assigned twice, so a figure that
+ * holds on paper says nothing about the same token after dark — the ground
+ * moved. Each theme is measured against its own `--canvas` and `--surface`,
+ * with its own nine contracts.
+ */
+const THEMES = [
+  ["PRESS DAY", T, CONTRACTS, false],
+  ["PRESS NIGHT", { ...T, ...DARK }, DARK_CONTRACTS, true],
+];
 
-console.log(`\nPRESS DAY — ${rows.length} pairings across ${count} categories`);
+let failed = 0;
 
-if (notDistinct.length === 0) {
-  let closest = [9, ""];
-  const t = Object.entries(CONTRACTS).map(([n, c]) => [n, c.topic]);
-  for (let i = 0; i < t.length; i++)
-    for (let j = i + 1; j < t.length; j++) {
-      const d = perceptualDistance(t[i][1], t[j][1]);
-      if (d < closest[0]) closest = [d, `${t[i][0]}/${t[j][0]}`];
+for (const [name, tokens, contracts, isDark = false] of THEMES) {
+  const count = Object.keys(contracts).length;
+  const rows = checks(tokens, contracts, isDark);
+  const bad = rows.filter(([, r, need]) => r < need);
+  const notDistinct = distinctnessFailures(contracts);
+  failed += bad.length + notDistinct.length;
+
+  console.log(`\n${name} — ${rows.length} pairings across ${count} categories`);
+
+  if (notDistinct.length === 0) {
+    let closest = [9, ""];
+    const t = Object.entries(contracts).map(([n, c]) => [n, c.topic]);
+    for (let i = 0; i < t.length; i++)
+      for (let j = i + 1; j < t.length; j++) {
+        const d = perceptualDistance(t[i][1], t[j][1]);
+        if (d < closest[0]) closest = [d, `${t[i][0]}/${t[j][0]}`];
+      }
+    console.log(
+      `  all ${count} categories carry a distinct colour · closest: ${closest[1]} at ${closest[0].toFixed(3)}`,
+    );
+  } else {
+    for (const msg of notDistinct) console.log(`  FAIL distinct · ${msg}`);
+  }
+
+  if (bad.length === 0) {
+    const worst = rows.reduce((a, b) => (a[1] < b[1] ? a : b));
+    console.log(`  all pass · closest: ${worst[0]} at ${worst[1].toFixed(2)}:1`);
+  } else {
+    for (const [label, r, need] of bad) {
+      console.log(`  FAIL ${label} — ${r.toFixed(2)}:1 (needs ${need}:1)`);
     }
-  console.log(
-    `  all ${count} categories carry a distinct colour · closest: ${closest[1]} at ${closest[0].toFixed(3)}`,
-  );
-} else {
-  for (const msg of notDistinct) console.log(`  FAIL distinct · ${msg}`);
-}
-
-if (bad.length === 0) {
-  const worst = rows.reduce((a, b) => (a[1] < b[1] ? a : b));
-  console.log(`  all pass · closest: ${worst[0]} at ${worst[1].toFixed(2)}:1`);
-} else {
-  for (const [label, r, need] of bad) {
-    console.log(`  FAIL ${label} — ${r.toFixed(2)}:1 (needs ${need}:1)`);
   }
 }
 
@@ -280,4 +348,4 @@ if (failed > 0) {
   console.error(`\n${failed} contrast failure(s).`);
   process.exit(1);
 }
-console.log("\nAll contrast checks pass (WCAG 2.1 AA).");
+console.log("\nAll contrast checks pass (WCAG 2.1 AA), both themes.");

@@ -1,6 +1,8 @@
 export type Lang = "en" | "np";
 
 const en = {
+  themeDark: "Switch to dark theme",
+  themeLight: "Switch to light theme",
   // ── Masthead ───────────────────────────────────────────────────────────────
   wordmark: "EkJhalak",
   wordmarkNp: "एक झलक",
@@ -92,6 +94,8 @@ const en = {
 export type I18nDict = typeof en;
 
 const np: I18nDict = {
+  themeDark: "डार्क मोडमा जानुहोस्",
+  themeLight: "उज्यालो मोडमा जानुहोस्",
   wordmark: "एक झलक",
   wordmarkNp: "EkJhalak",
   searchPlaceholder: "खोज्नुहोस्…",

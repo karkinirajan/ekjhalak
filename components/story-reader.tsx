@@ -164,7 +164,7 @@ export function StoryReader({ item, open, onOpenChange }: StoryReaderProps) {
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-md bg-accent-solid px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90",
+                "inline-flex items-center justify-center gap-2 rounded-md bg-accent-solid px-5 py-2.5 text-sm font-semibold text-on-accent transition-opacity hover:opacity-90",
                 language === "np" && "font-np",
               )}
             >

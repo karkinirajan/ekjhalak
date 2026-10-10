@@ -15,12 +15,16 @@ export default function NotFound() {
             `aria-hidden` alone would have silenced axe, which is why the
             opacity is fixed rather than the violation hidden: at /25 this
             printed #eac2c4 on white, 1.61:1, which is not a tint a sighted
-            reader can resolve either. /60 is 3.53:1 — past the 3:1 that display
-            type owes under WCAG 1.4.3 — so it reads as deliberate rather than
-            as something that failed to load. */}
+            reader can resolve either. /80, not /60: the old value was 3.53:1
+            against the previous palette and 2.87:1 against this one, which is
+            under the 3:1 that display type owes under WCAG 1.4.3. Gruvbox's
+            accents are mid-tone where the old flag red was dark, so the same
+            opacity buys less separation. /80 runs 4.11:1 on the light ground
+            and 3.96:1 on the dark one, and still reads as a watermark rather
+            than as a headline. */}
         <p
           aria-hidden="true"
-          className="font-display text-[7rem] leading-none font-bold text-accent/60 sm:text-[10rem]"
+          className="font-display text-[7rem] leading-none font-bold text-accent/80 sm:text-[10rem]"
         >
           404
         </p>

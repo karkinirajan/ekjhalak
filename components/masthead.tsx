@@ -1,6 +1,6 @@
 "use client";
 
-import { Languages, RefreshCw, Search } from "lucide-react";
+import { Languages, MoonStar, RefreshCw, Search, Sun } from "lucide-react";
 import { BrandBanner } from "@/components/brand-banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,8 @@ export function Masthead({
   isRefreshing,
   onSubscribe,
 }: MastheadProps) {
-  const { t, language, toggleLanguage } = useSite();
+  const { t, language, toggleLanguage, resolvedTheme, toggleTheme } =
+    useSite();
   const isNp = language === "np";
 
   // Not sticky. The masthead and the section nav were both `sticky top-0`, and
@@ -111,6 +112,26 @@ export function Masthead({
             />
           </Button>
 
+          {/* Labelled by what pressing it does, not by what the page is.
+              `aria-pressed` is deliberately absent: this is not a toggle button
+              in the ARIA sense — it does not turn one named thing on and off,
+              it swaps between two states — so the accessible name changes
+              instead, which is what a screen reader reads out on focus. */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={toggleTheme}
+            aria-label={resolvedTheme === "dark" ? t.themeLight : t.themeDark}
+            title={resolvedTheme === "dark" ? t.themeLight : t.themeDark}
+            className="rounded-md text-ink-muted hover:text-ink hover:bg-surface/50"
+          >
+            {resolvedTheme === "dark" ? (
+              <Sun className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <MoonStar className="h-4 w-4" aria-hidden="true" />
+            )}
+          </Button>
+
           <Button
             variant="ghost"
             size="sm"
@@ -129,7 +150,7 @@ export function Masthead({
             size="sm"
             onClick={onSubscribe}
             className={cn(
-              "h-8 rounded-md bg-accent-solid px-4 text-xs font-bold text-white hover:opacity-90 transition-opacity",
+              "h-8 rounded-md bg-accent-solid px-4 text-xs font-bold text-on-accent hover:opacity-90 transition-opacity",
               isNp && "font-np",
             )}
           >
