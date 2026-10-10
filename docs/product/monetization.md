@@ -39,7 +39,7 @@ Shipped, and directly relevant to everything below:
 
 **Not shipped:** auth, Stripe, the paywall boundary, digest delivery, and the NPR
 payment rail. All of them depend on the archive being provisioned, which is
-currently switched off. See `dev.md`, Phases 7 and 8.
+currently switched off. See `docs/planning/execution-plan.md`, Phases 7 and 8.
 
 ---
 

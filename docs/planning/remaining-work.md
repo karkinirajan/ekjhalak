@@ -2,7 +2,7 @@
 
 Final audit, 2026-08-06, against production deploy `ca9b65b`.
 
-`dev.md` tracks the eleven phases and what each gate returned. **This file is the
+`docs/planning/execution-plan.md` tracks the eleven phases and what each gate returned. **This file is the
 other half: what is left.** Everything below is either verified as still open or
 was found during the audit that produced this document.
 
@@ -31,7 +31,7 @@ verification gates passing.
 The three migrations are applied to `wfmurwsagrosxgcihbgw` and the table is
 writing. `pnpm check:archive` passes; rows grew 472 → 478 → 490 → 512 across four
 aggregation passes, `first_seen_at` moved on none of them, and anon still reads
-`[]`. Phase 2's section in `dev.md` has the full gate output.
+`[]`. Phase 2's section in `docs/planning/execution-plan.md` has the full gate output.
 
 ### What took the time, so nobody re-derives it
 
@@ -204,13 +204,13 @@ for the model queue — one job, two payoffs. Bound the parse first (§4).
 
 **d. Phase 7 (auth + personalization)** — Supabase Auth, followed sources, a
 personalized homepage with the anonymous experience unchanged, reading history.
-Specified in `dev.md`, entirely unbuilt, and no longer blocked.
+Specified in `docs/planning/execution-plan.md`, entirely unbuilt, and no longer blocked.
 
 **d. Phase 8 (monetization)** — Stripe Checkout + Billing Portal +
 signature-verified webhook, a paywall boundary at the story-page and digest level
 that never touches the free homepage feed, digest delivery on the existing
 Netlify scheduled-function pattern, and an NPR rail (eSewa/Khalti) alongside USD.
-See `MONETIZATION.md`.
+See `docs/product/monetization.md`.
 
 ---
 
@@ -503,14 +503,14 @@ continuing to intercept `/_next/image`.
 
 ## 7. Smaller, genuinely optional
 
-- **Next.js 16.2.12 → 16.3.0** is available. No reason to rush; may clear the
-  sharp advisory on its own.
-- **`vercel.json` is dead code** on Netlify and documented as such. Kept only so a
-  Vercel deploy would still schedule its cron. Delete it if that possibility is
-  gone.
+- ~~**Next.js 16.2.12 → 16.3.0**~~ — done. On 16.4.0 as of 2026-10-10, which
+  also cleared a critical advisory and let the brace-expansion overrides go.
+- ~~**`vercel.json` is dead code**~~ — done. Deleted 2026-10-10; the Vercel
+  deploy it was kept for is not coming back. Build config now lives in
+  `netlify.toml`.
 - **`coverageCount` is shown, `alternateSourceIds[]` is not.** The data is
   captured and server-side only; surfacing "also covered by X, Y, Z" is the
-  coverage-comparison wedge `MONETIZATION.md` identifies as the differentiator.
+  coverage-comparison wedge `docs/product/monetization.md` identifies as the differentiator.
   Small UI change, meaningful product change.
 - **The feed-quality gate samples whatever `/api/news` returns**, which varies
   between 100 and 452 items depending on cache state. Thresholds are set wide
@@ -535,7 +535,7 @@ So the next person does not redo it:
   modules import `"server-only"`, so importing the aggregator or summarizer from
   a client component is a build error.
 - **Every internal link and backticked repo path** in `README.md`,
-  `MONETIZATION.md` and `dev.md` resolves — checked by script.
+  `docs/product/monetization.md` and `docs/planning/execution-plan.md` resolves — checked by script.
 - **All verification gates pass**: `pnpm verify` (lint, typecheck, 52 tests,
   contrast, build) and `pnpm verify:live` (feed quality, axe, SEO).
 - **axe reports zero violations at any severity** across all six pages.

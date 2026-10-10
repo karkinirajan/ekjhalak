@@ -12,7 +12,7 @@ verified against the live project — which unblocks Phase 7 and moves Phase 11'
 blocker from "impossible" to "one scheduled function". Phase 2's own section
 records what the gate returned.
 
-**What is left lives in [development.md](development.md)** — this file records
+**What is left lives in [development.md](remaining-work.md)** — this file records
 what each gate returned, that one records the remaining work and why.
 
 Status legend: **done** · **partial** · **blocked** · **not started**
@@ -39,12 +39,16 @@ Status legend: **done** · **partial** · **blocked** · **not started**
 
 These override convenience at every phase.
 
-- **Netlify, not Vercel.** `vercel.json` is dead code kept only so a Vercel deploy
-  would still schedule its cron. The real scheduled job is
-  `netlify/functions/revalidate-feed.mts`; the real build config lives in the
-  Netlify UI. **Do not create a `netlify.toml`** — it silently takes over the
-  build settings the UI currently controls. If Netlify config is genuinely needed,
-  extend via CLI/UI or a `[functions]`-only toml, and confirm before merging.
+- **Netlify, not Vercel.** `vercel.json` has been deleted — the Vercel deploy it
+  existed to keep scheduled is not coming back. The real scheduled job is
+  `netlify/functions/revalidate-feed.mts`.
+- **Build config lives in `netlify.toml`**, in the repo. This reverses an earlier
+  rule here that said not to create one, on the grounds that a toml silently
+  takes over the settings the Netlify UI controls. It does take them over — that
+  is now the point. The UI left a commit unreviewable alongside the build that
+  would run it, and a dashboard change left no trace in history. The file
+  documents each setting it claims and why, including the `--webpack` pin that
+  the Netlify Next Runtime requires.
 - **Preserve, do not rebuild:** `lib/aggregator.ts`, `lib/rss-adapter.ts`,
   `lib/feed-normalizer.ts`, `lib/deduplicator.ts`, `lib/source-registry.ts`,
   `lib/story-text.ts`, `lib/article-extractor.ts`, `lib/summarizer.ts`,
@@ -87,7 +91,7 @@ newsletter shipped was answered with "the list is not open yet" — the form
 worked, nothing was ever sent. `lib/newsletter.ts` now reads either spelling and
 warns once per process, so the newsletter works today. **The rename and the
 Resend sending-domain verification still need the operator**; the shim is meant
-to be deleted once the variable is renamed. See `development.md` §2.
+to be deleted once the variable is renamed. See `docs/planning/remaining-work.md` §2.
 
 ---
 
@@ -264,7 +268,7 @@ component is a build error rather than a bundle shipping secrets and prompts.
 **Remaining:** mobile LCP is 3.0 s median against a 2.5 s target, and what is
 left is main-thread, not network — on a slow run every request finishes by 1.14 s
 and images by 0.62 s, three seconds before LCP is recorded. See
-`development.md` §3, which also records the three theories already tested so the
+`docs/planning/remaining-work.md` §3, which also records the three theories already tested so the
 fourth is not a guess.
 
 ---
@@ -329,7 +333,7 @@ against a required 95.
 ## Phase 7 — Auth + personalization — **blocked**
 
 Blocked on Phase 2 being wired up — the project exists, two setup steps remain.
-See `development.md` §1.
+See `docs/planning/remaining-work.md` §1.
 
 Supabase Auth, followed sources/buckets, personalized homepage for logged-in
 users with the anonymous experience unchanged, reading history.
@@ -342,7 +346,7 @@ identity system.
 ## Phase 8 — Monetization infrastructure — **blocked**
 
 Blocked on Phase 7, which is blocked on Phase 2 being wired up. See
-`development.md` §1 and `MONETIZATION.md`.
+`docs/planning/remaining-work.md` §1 and `docs/product/monetization.md`.
 
 Stripe Checkout + Billing Portal + signature-verified webhook, a paywall boundary
 at the story-page and digest level that never touches the free ad-free homepage
@@ -386,7 +390,7 @@ treatment the three network theories got in Phase 4 rather than a guess.
 ## Phase 10 — Documentation — **done**
 
 **Gate met.** Every internal link and every backticked repo path in `README.md`,
-`MONETIZATION.md` and this file resolves — checked by script, not by eye.
+`docs/product/monetization.md` and this file resolves — checked by script, not by eye.
 
 `README.md` gains a **SaaS Layer** section covering story-page routing and the
 permalink-window caveat, the display cap *and why it exists* stated plainly
@@ -407,6 +411,6 @@ features that were never built:
   Replaced with the real thing: two env vars, one migration, PostgREST over
   `fetch`, sources in code.
 
-`MONETIZATION.md` is now standalone with a dated changelog separating what
+`docs/product/monetization.md` is now standalone with a dated changelog separating what
 shipped from what is still planned, and the README points at it. Roadmap items 3
 and 10 are marked partly shipped with what actually landed.

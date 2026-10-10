@@ -8,8 +8,13 @@ It is bilingual by design. Native Nepali content from Setopati, Ratopati, and Na
 
 Live: [ekjhalak.news](https://ekjhalak.news)
 
-**Project state:** [`dev.md`](dev.md) tracks the eleven-phase hardening plan and
-what each verification gate returned. [`development.md`](development.md) is the
+**Documentation:** [`docs/`](docs/) — setup, product and planning, indexed in
+[`docs/README.md`](docs/README.md). Running the site in production needs manual
+dashboard work that is not in this repo: see
+[`docs/operations/production-setup.md`](docs/operations/production-setup.md).
+
+**Project state:** [`docs/planning/execution-plan.md`](docs/planning/execution-plan.md) tracks the eleven-phase hardening plan and
+what each verification gate returned. [`docs/planning/remaining-work.md`](docs/planning/remaining-work.md) is the
 remaining work, ordered by what unblocks the most.
 
 ---
@@ -65,9 +70,10 @@ On-demand invalidation: `POST /api/revalidate` calls `revalidateTag("news-feed",
 
 **Production runs on Netlify**, not Vercel — the site builds from `github.com/karkinirajan/ekjhalak` on `main` via `@netlify/plugin-nextjs`, and `ekjhalak.news` resolves there. That matters for anything platform-shaped:
 
-- The daily cache-bust is `netlify/functions/revalidate-feed.mts`, a scheduled function that POSTs to `/api/revalidate` at 00:00 UTC — 05:45 in Kathmandu, just before the country wakes up to the stories filed overnight. Its schedule is declared in the function file rather than in `netlify.toml`, because the site's build settings live in the Netlify UI and introducing a `netlify.toml` would silently take those over too.
-- `vercel.json` still declares the same job as a Vercel Cron. Netlify does not read that file, so that entry has never run; it is kept only so a Vercel deploy would still be scheduled. **`vercel.json` is not what runs in production.**
-- Environment variables are set on the Netlify site, not in Vercel. A `.vercel/` directory in a working copy is a stale link and does not affect the deploy.
+- The daily cache-bust is `netlify/functions/revalidate-feed.mts`, a scheduled function that POSTs to `/api/revalidate` at 00:00 UTC — 05:45 in Kathmandu, just before the country wakes up to the stories filed overnight. Its schedule is declared in the function file itself, which is where Netlify reads scheduled-function timings from; `netlify.toml` carries the build settings.
+- `vercel.json` has been deleted. It declared the same job as a Vercel Cron, Netlify never read it, and that entry had never run; it was kept only so a Vercel deploy would still be scheduled, and that possibility is gone.
+- Build configuration lives in [`netlify.toml`](netlify.toml) rather than the Netlify UI, so a commit can be reviewed alongside the build that will run it. Values there win over the dashboard.
+- Environment variables are set on the Netlify site. A `.vercel/` directory in a working copy is a stale link and does not affect the deploy. See [`docs/operations/production-setup.md`](docs/operations/production-setup.md) for which variables are required.
 
 ---
 
@@ -436,7 +442,7 @@ code and model prompts to browsers.
 - **No `netlify.toml`.** The build config lives in the Netlify UI and a toml would
   silently take it over. See the Netlify note under *Caching & Revalidation*.
 - **Auth, personalization and billing** are specified but unbuilt — both depend on
-  the archive being provisioned. See `dev.md`.
+  the archive being provisioned. See `docs/planning/execution-plan.md`.
 
 ---
 
@@ -469,7 +475,7 @@ GitHub Actions runs lint → type-check → build on every push to `main`:
 ## Next-Level Roadmap (10 Upgrades)
 
 Status as of 2026-08-06. Items 3 and 10 shipped in part during the phased
-hardening pass; see `dev.md` for what each phase's gate actually returned. The
+hardening pass; see `docs/planning/execution-plan.md` for what each phase's gate actually returned. The
 rest stand as written — they are legitimate future work, not backlog filler.
 
 1. Personal Briefing Profiles
@@ -514,7 +520,7 @@ SLOs, a dashboard, and automatic quarantine of a dead source.
 
 ## Monetization
 
-See **[MONETIZATION.md](MONETIZATION.md)** — the plan, the pricing, the revenue
+See **[docs/product/monetization.md](docs/product/monetization.md)** — the plan, the pricing, the revenue
 mix, the KPIs and the 30-day checklist, plus a dated changelog of what has
 actually shipped against it.
 

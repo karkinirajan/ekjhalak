@@ -19,7 +19,7 @@
 // in-process), so a pass verifies a handful of stories and setting `verified`
 // would empty the site rather than improve it. The mechanism is here, tested,
 // and enforced; the level it runs at is one environment variable, and it becomes
-// safe to raise the moment the archive is wired up. See development.md §1.
+// safe to raise the moment the archive is wired up. See docs/planning/remaining-work.md §1.
 //
 // Nothing here decides *quality* — lib/text-audit.ts and the verification pass
 // already did. This decides what to do with their verdicts.
