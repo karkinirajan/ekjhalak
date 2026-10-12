@@ -90,7 +90,8 @@ export function CategoryNav({
               // filter bar; a row of words with a rule under the current one is
               // a section nav, which is what this is. The Kathmandu Post, the
               // Guardian and the NYT all mark the current section this way.
-              "shrink-0 border-b-2 px-1 py-2 text-[0.95rem] font-semibold transition-colors sm:px-1",
+              // py-3.5 (not py-2) clears the 44px tap-target minimum.
+              "shrink-0 border-b-2 px-1 py-3.5 text-[0.95rem] font-semibold transition-colors sm:px-1",
               topic === "all"
                 ? "border-b-ink text-ink"
                 : "border-b-transparent text-ink-muted hover:text-ink",
@@ -120,7 +121,7 @@ export function CategoryNav({
                 onClick={() => setTopic(id)}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "shrink-0 border-b-2 px-1 py-2 text-[0.95rem] font-semibold transition-colors",
+                  "shrink-0 border-b-2 px-1 py-3.5 text-[0.95rem] font-semibold transition-colors",
                   isActive
                     ? "border-b-[var(--topic)] text-[var(--topic-text)]"
                     : "border-b-transparent text-ink-muted hover:text-ink",
@@ -152,7 +153,10 @@ export function CategoryNav({
                 onClick={() => setBucket(option.key)}
                 aria-pressed={bucket === option.key}
                 className={cn(
-                  "border-b-2 px-1 py-1.5 text-xs font-semibold transition-colors",
+                  // py-4 (not py-1.5) to clear the 44px tap-target minimum —
+                  // taller hit area, same text size, so the row grows a
+                  // touch but the "section nav" look is untouched.
+                  "border-b-2 px-1 py-4 text-xs font-semibold transition-colors",
                   bucket === option.key
                     ? "border-b-accent text-accent"
                     : "border-b-transparent text-ink-muted hover:text-ink",
@@ -173,7 +177,7 @@ export function CategoryNav({
                   onClick={() => setRange(option.key)}
                   aria-pressed={range === option.key}
                   className={cn(
-                    "eyebrow px-2 py-1 transition-colors",
+                    "eyebrow px-2 py-4 transition-colors",
                     range === option.key
                       ? "text-ink underline decoration-accent decoration-2 underline-offset-4"
                       : "text-ink-muted hover:text-ink",

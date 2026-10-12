@@ -52,7 +52,7 @@ export function PaginationBar({
   if (safeTotal <= 1) return null;
 
   const arrowClass =
-    "flex h-9 w-9 items-center justify-center rounded-md border border-rule text-ink-muted transition-colors hover:border-rule-strong hover:text-ink disabled:pointer-events-none disabled:opacity-35";
+    "flex h-11 w-11 items-center justify-center rounded-md border border-rule text-ink-muted transition-colors hover:border-rule-strong hover:text-ink disabled:pointer-events-none disabled:opacity-35";
 
   return (
     <nav
@@ -69,7 +69,11 @@ export function PaginationBar({
         <span className="text-ink">{safeTotal}</span>
       </p>
 
-      <div className="flex items-center gap-1.5">
+      {/* 44px targets push the full 9-slot window (7 pages + 2 arrows) past
+          a 375px viewport, so this row scrolls horizontally rather than
+          wrapping or clipping — same pattern as the topic rail in
+          category-nav.tsx. */}
+      <div className="flex max-w-full items-center gap-1.5 overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => onPageChange(Math.max(1, page - 1))}
@@ -85,7 +89,7 @@ export function PaginationBar({
             <span
               key={`gap-${index}`}
               aria-hidden="true"
-              className="flex h-9 w-6 items-center justify-center text-sm text-ink-muted select-none"
+              className="flex h-11 w-6 items-center justify-center text-sm text-ink-muted select-none"
             >
               …
             </span>
@@ -97,7 +101,7 @@ export function PaginationBar({
               aria-label={`${t.pagePre} ${entry}`}
               aria-current={entry === page ? "page" : undefined}
               className={cn(
-                "flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm font-semibold tabular-nums transition-colors",
+                "flex h-11 min-w-11 items-center justify-center rounded-md px-2 text-sm font-semibold tabular-nums transition-colors",
                 entry === page
                   ? "bg-ink text-canvas"
                   : "text-ink-muted hover:bg-raised hover:text-ink",

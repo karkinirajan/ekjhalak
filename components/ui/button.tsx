@@ -22,13 +22,20 @@ const buttonVariants = cva(
         link: "text-primary border-transparent underline-offset-4 hover:underline shadow-none",
       },
       size: {
-        default: "h-9 gap-1.5 px-3.5",
+        // 44px is the Apple HIG / Material minimum tap target. `default`,
+        // `sm` and `icon`/`icon-sm` are the sizes actually rendered on a
+        // mobile-reachable surface (masthead utilities, sheet close), so
+        // they hold the line at 44px even though the visual footprint used
+        // to look smaller. `xs`/`icon-xs`/`lg`/`icon-lg` are unused today —
+        // kept below 44px deliberately for a future dense/desktop-only
+        // context, not for anything a thumb has to hit.
+        default: "h-11 gap-1.5 px-3.5",
         xs: "h-7 gap-1 rounded-md px-2 text-xs [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 rounded-md px-2.5 text-xs [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "h-11 gap-1.5 rounded-md px-2.5 text-xs [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-10 gap-2 px-4",
-        icon: "size-9",
+        icon: "size-11",
         "icon-xs": "size-7 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8 rounded-md [&_svg:not([class*='size-'])]:size-3.5",
+        "icon-sm": "size-11 rounded-md [&_svg:not([class*='size-'])]:size-3.5",
         "icon-lg": "size-10",
       },
     },

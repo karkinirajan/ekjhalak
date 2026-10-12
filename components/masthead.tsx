@@ -138,7 +138,7 @@ export function Masthead({
             onClick={toggleLanguage}
             aria-label={t.langToggleLabel}
             className={cn(
-              "h-8 gap-1.5 rounded-md px-3 text-xs text-ink-muted hover:text-ink hover:bg-surface/50",
+              "gap-1.5 rounded-md px-3 text-xs text-ink-muted hover:text-ink hover:bg-surface/50",
               !isNp && "font-np",
             )}
           >
@@ -150,7 +150,7 @@ export function Masthead({
             size="sm"
             onClick={onSubscribe}
             className={cn(
-              "h-8 rounded-md bg-accent-solid px-4 text-xs font-bold text-on-accent hover:opacity-90 transition-opacity",
+              "rounded-md bg-accent-solid px-4 text-xs font-bold text-on-accent hover:opacity-90 transition-opacity",
               isNp && "font-np",
             )}
           >
