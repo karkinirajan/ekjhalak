@@ -34,6 +34,7 @@ import {
   type StoredArticleRow,
 } from "./article-rows";
 import type { NewsItem, StoryQuality } from "./news-pipeline";
+import { envString } from "./env";
 
 /**
  * The REST origin, under either name.
@@ -52,7 +53,7 @@ import type { NewsItem, StoryQuality } from "./news-pipeline";
  * public. The same latitude is emphatically not extended to the key below.
  */
 const ORIGIN_ENV =
-  process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  envString("SUPABASE_URL") ?? envString("NEXT_PUBLIC_SUPABASE_URL");
 
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

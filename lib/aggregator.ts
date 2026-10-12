@@ -47,6 +47,7 @@ import {
 import { applyPublishGate } from "./publish-gate";
 import type { NewsItem, SourceStatusMeta } from "./news-pipeline";
 import type { Source } from "./source-registry";
+import { envInt } from "./env";
 
 export interface AggregatedFeed {
   items: NewsItem[];
@@ -236,10 +237,7 @@ function annotateDescriptionCoverage(
  * correctness: whatever this pass does not reach keeps the publisher's own text
  * and is picked up by the next one.
  */
-const AGGREGATE_BUDGET_MS = Number.parseInt(
-  process.env.AGGREGATE_BUDGET_MS ?? "15000",
-  10,
-);
+const AGGREGATE_BUDGET_MS = envInt("AGGREGATE_BUDGET_MS", 15000, 0);
 
 /**
  * How far past the budget the pass may land before it is worth logging.
@@ -284,10 +282,7 @@ const HYDRATE_BUDGET_MS = 3_000;
  * still reads correctly, whereas a pass that crosses Netlify's 30-second limit
  * returns 502 to a reader. Quality is worth budget; it is not worth the site.
  */
-const VERIFY_BUDGET_MS = Number.parseInt(
-  process.env.VERIFY_BUDGET_MS ?? "8000",
-  10,
-);
+const VERIFY_BUDGET_MS = envInt("VERIFY_BUDGET_MS", 8000, 0);
 
 /**
  * The share of the pass that RSS ingestion may take.
@@ -325,10 +320,7 @@ const EXTRACT_SHARE = 0.4;
  * deterministic fallback, and the next regeneration picks up where this one
  * stopped — so this is a latency control, not a quality one.
  */
-const ENRICH_BUDGET_MS = Number.parseInt(
-  process.env.GROQ_BUDGET_MS ?? "25000",
-  10,
-);
+const ENRICH_BUDGET_MS = envInt("GROQ_BUDGET_MS", 25000, 0);
 
 /**
  * Rewrite and translate every story, best stories first.
@@ -347,10 +339,7 @@ const ENRICH_BUDGET_MS = Number.parseInt(
  * is cached-by-absence nowhere — the next regeneration simply starts again from
  * the same ranked order, so the front page converges first.
  */
-const EXTRACT_BUDGET_MS = Number.parseInt(
-  process.env.EXTRACT_BUDGET_MS ?? "15000",
-  10,
-);
+const EXTRACT_BUDGET_MS = envInt("EXTRACT_BUDGET_MS", 15000, 0);
 
 /**
  * A stage's slice of the pass, in milliseconds, floored at zero.

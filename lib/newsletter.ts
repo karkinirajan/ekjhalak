@@ -18,6 +18,7 @@
 // Build-time guard: importing this from a client component is a build
 // error rather than a shipped bundle. Reads RESEND_API_KEY.
 import "server-only";
+import { envOr } from "./env";
 
 const RESEND_API = "https://api.resend.com";
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -77,7 +78,7 @@ export function isNewsletterConfigured(): boolean {
  * arrives from a stranger's address is a briefing that lands in spam.
  */
 function fromAddress(): string {
-  return process.env.NEWSLETTER_FROM ?? "EkJhalak <support@ekjhalak.news>";
+  return envOr("NEWSLETTER_FROM", "EkJhalak <support@ekjhalak.news>");
 }
 
 async function resendFetch(
@@ -233,7 +234,7 @@ function confirmationText(url: string, copy: ConfirmationCopy): string {
  * later is a config change rather than a code change.
  */
 function replyToAddress(): string {
-  return process.env.NEWSLETTER_REPLY_TO ?? "support@ekjhalak.news";
+  return envOr("NEWSLETTER_REPLY_TO", "support@ekjhalak.news");
 }
 
 export async function sendConfirmation(
