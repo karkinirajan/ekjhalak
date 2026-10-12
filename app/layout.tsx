@@ -146,23 +146,26 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  // Ordered widest-support-last. A browser takes the first format it
+  // understands, so the SVG leads and the PNGs are there for the ones that do
+  // not — and favicon.ico is deliberately absent from this list, because it is
+  // served from /favicon.ico by convention and naming it here makes Chrome
+  // request it twice.
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
     apple: [
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
     other: [
+      // The manifest carries the Android icons, including the maskable one.
+      // They were also declared here as `rel="android-chrome"`, which is not a
+      // link relation any browser implements — the manifest is how Android has
+      // found them all along, and the two tags were doing nothing.
       { rel: "manifest", url: "/site.webmanifest" },
-      {
-        rel: "android-chrome",
-        url: "/android-chrome-192x192.png",
-        sizes: "192x192",
-      },
-      {
-        rel: "android-chrome",
-        url: "/android-chrome-512x512.png",
-        sizes: "512x512",
-      },
     ],
   },
 };

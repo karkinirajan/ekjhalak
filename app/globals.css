@@ -119,6 +119,7 @@
   --color-support-solid: var(--support-solid);
   --color-support-soft: var(--support-soft);
 
+  --color-brand-glint: var(--brand-glint);
   --color-on-accent: var(--on-accent);
   --color-topic-ink: var(--topic-ink);
   --color-topic-text: var(--topic-text);
@@ -249,6 +250,16 @@
      A token rather than `text-white` in five class strings, because the right
      answer flips with the theme: cream on gruvbox's neutral_red, dark ink on
      its bright_red. White on bright_red is 3.44:1 and fails. */
+  /* First light on the lead summit.
+     The one warm note in the palette, and the signature of the mark: the icon
+     in public/ is this amber on the brand blue, and the masthead draws the same
+     summit in the same colour so the tab and the page agree about what this
+     site looks like. Facebook's own amber, unchanged — it is never set as type,
+     only as a shape, so the 4.5:1 that moved the other accents does not apply.
+     The same value in both themes, because a brand mark that changes colour
+     with the system theme is two brands. */
+  --brand-glint: #f7b928;
+
   --on-accent: #ffffff;
 
   --topic: #9d0006;
@@ -335,6 +346,8 @@
     --support-solid: #45bd62;
     --support-soft: color-mix(in srgb, #45bd62 16%, transparent);
 
+    --brand-glint: #f7b928;
+
     --on-accent: #18191a;
 
     --topic: #fb4934;
@@ -367,6 +380,8 @@
   --support: #45bd62;
   --support-solid: #45bd62;
   --support-soft: color-mix(in srgb, #45bd62 16%, transparent);
+
+  --brand-glint: #f7b928;
 
   --on-accent: #18191a;
 

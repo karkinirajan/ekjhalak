@@ -51,8 +51,11 @@ export function BrandBanner({ className }: { className?: string }) {
         d="M54 104 L78 74 L90 84 L112 50 L124 64 L146 34 L166 68 L180 56 L198 104 Z"
         fill="var(--rule-strong)"
       />
-      {/* Summit, lit — the lead story of the day. */}
-      <path d="M146 34 L160 52 L132 52 Z" fill="var(--accent)" />
+      {/* Summit, lit — the lead story of the day, and the same first light the
+          favicon carries. It was --accent, which after the palette moved to
+          Facebook's blue meant a blue summit on a grey range: the focal point
+          of the mark, invisible. */}
+      <path d="M146 34 L160 52 L132 52 Z" fill="var(--brand-glint)" />
 
       {/* Dispatches, stacked newest-first. */}
       <rect x="216" y="56" width="64" height="4" rx="2" fill="var(--accent)" />

@@ -13,6 +13,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "node --import tsx --test lib/*.test.ts",
+    "build:brand": "node scripts/build-brand.mjs && cat brand/mark-small.svg > public/favicon.svg && cat brand/mark.svg > public/logo.svg",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:a11y": "node scripts/axe-scan.mjs",
     "check:feed": "node scripts/check-feed-quality.mjs",

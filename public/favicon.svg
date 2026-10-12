@@ -1,10 +1,13 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="EJKN favicon">
-  <rect x="2" y="2" width="60" height="60" rx="16" fill="#1e1f1d" stroke="#33476e" stroke-width="2"/>
-  <rect x="8" y="8" width="48" height="48" rx="12" fill="#0f182b" fill-opacity="0.7"/>
-  <path d="M16 34c3-8 10-12 16-12s13 4 16 12c-3 8-10 12-16 12s-13-4-16-12Z" fill="none" stroke="#c53030" stroke-width="3" stroke-linejoin="round"/>
-  <circle cx="32" cy="34" r="7" fill="#dce6ff"/>
-  <circle cx="32" cy="34" r="4" fill="#c53030"/>
-  <circle cx="28.5" cy="30.5" r="1.4" fill="#ffffff" fill-opacity="0.75"/>
-  <path d="M12 51h22" stroke="#e26f6f" stroke-width="3" stroke-linecap="round"/>
-  <path d="M37 51h15" stroke="#9de5cd" stroke-width="3" stroke-linecap="round"/>
+<!--
+  brand/mark-small.svg — the same mark for 16 and 32 pixel rendering.
+
+  The shoulder peak and the horizon rule both disappear into mud below about
+  forty pixels, so at those sizes they are gone. What is left is one peak and
+  its lit tip, drawn heavier: the same idea, said in fewer strokes, which is
+  what a favicon is for.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="EkJhalak">
+  <rect width="64" height="64" rx="14" fill="#1877f2"/>
+  <path d="M8 48 L32 16 L56 48 Z" fill="#ffffff"/>
+  <path d="M32 16 L42 29.5 L22 29.5 Z" fill="#f7b928"/>
 </svg>
