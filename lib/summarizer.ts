@@ -119,6 +119,15 @@ function normalizeText(text: string): string {
 // import it, while article-parse.ts is deliberately pure for exactly that
 // reason.
 import { looksLikeBoilerplate } from "./article-parse";
+import {
+  DAILY_TOKEN_BUDGET,
+  MAX_BATCHES_PER_PASS,
+  batchTokenEstimate,
+  recordSpend,
+  syncLedgerFrom429,
+  tokensRemaining,
+  tokensSpentToday,
+} from "./token-ledger";
 
 export { looksLikeBoilerplate };
 
@@ -352,6 +361,17 @@ async function callModel<T>(
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     if (res.status === 429 || res.status === 503) {
+      // Daily-quota exhaustion used to be the quietest failure in the pipeline:
+      // the model was shelved, enrichment returned nothing, and the site served
+      // untranslated stories with no line anywhere saying why. It took an
+      // instrumented run through four call layers to find it. It says so now.
+      if (/per[ -]day|\bTPD\b|\bRPD\b/i.test(detail)) {
+        syncLedgerFrom429(detail);
+        console.warn(
+          `[enrich] ${model} daily quota exhausted — ${tokensSpentToday().toLocaleString()} tokens used. ` +
+            "Stories keep their publisher text until it resets.",
+        );
+      }
       coolDown(model, cooldownFor(res, detail));
     } else if (res.status === 400 || res.status === 404) {
       // Bad model name or a request shape this model rejects — never going to
@@ -365,6 +385,14 @@ async function callModel<T>(
   }
 
   const data = await res.json().catch(() => null);
+
+  // Charge the ledger with what this actually cost, before any of the reasons
+  // the reply might be unusable. The tokens were spent either way, and a reply
+  // that fails to parse is exactly the case where forgetting to count it would
+  // let a broken model drain the day.
+  const spent = data?.usage?.total_tokens;
+  if (typeof spent === "number" && Number.isFinite(spent)) recordSpend(spent);
+
   const choice = data?.choices?.[0];
   if (!choice) return null;
 
@@ -614,16 +642,49 @@ export async function enrichStories(
   const out = new Map<string, EnrichResult>();
   if (!API_KEY || inputs.length === 0) return out;
 
-  const batches: EnrichInput[][] = [];
+  const allBatches: EnrichInput[][] = [];
   for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
-    batches.push(inputs.slice(i, i + BATCH_SIZE));
+    allBatches.push(inputs.slice(i, i + BATCH_SIZE));
   }
 
+  // What the day's allowance still affords, and what one pass is allowed to
+  // take of it. `inputs` arrives ranked — lib/aggregator.ts sorts by score
+  // before it builds the pending list — so truncating here spends the budget on
+  // the stories most worth translating rather than on whichever requests won
+  // the race to the API.
+  const affordable =
+    DAILY_TOKEN_BUDGET === 0
+      ? allBatches.length
+      : Math.floor(tokensRemaining() / Math.max(1, batchTokenEstimate()));
+  const allowed = Math.max(
+    0,
+    Math.min(allBatches.length, MAX_BATCHES_PER_PASS, affordable),
+  );
+
+  if (allowed === 0) {
+    console.warn(
+      `[enrich] skipped ${allBatches.length} batch(es): ${tokensRemaining().toLocaleString()} tokens left ` +
+        `of a ${DAILY_TOKEN_BUDGET.toLocaleString()} daily budget. Stories keep their publisher text.`,
+    );
+    return out;
+  }
+  if (allowed < allBatches.length) {
+    console.info(
+      `[enrich] ${allowed} of ${allBatches.length} batch(es) this pass ` +
+        `(${tokensRemaining().toLocaleString()} tokens left today); the rest keep publisher text ` +
+        "and are picked up by a later pass.",
+    );
+  }
+
+  const batches = allBatches.slice(0, allowed);
   let cursor = 0;
 
   async function worker() {
     while (true) {
       if (Date.now() >= deadline) return;
+      // Re-checked per batch, not only up front: a batch that came back dearer
+      // than expected must not let the two still in flight overdraw the day.
+      if (tokensRemaining() < batchTokenEstimate()) return;
       const index = cursor++;
       if (index >= batches.length) return;
 

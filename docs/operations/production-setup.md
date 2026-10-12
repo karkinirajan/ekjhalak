@@ -111,6 +111,36 @@ The code reads these names exactly; a typo fails silently in most cases.
 | Variable | Scope | Value |
 |---|---|---|
 | `GROQ_API_KEY` | All | Enables AI summaries. **Without it the pipeline still runs** and falls back to extraction |
+| `GROQ_DAILY_TOKEN_BUDGET` | All | Tokens/day the model stage may spend. Default 200000 — the free tier |
+| `GROQ_MAX_BATCHES_PER_PASS` | All | Batches one pass may take. Default 3 (≈30 stories, ≈24k tokens) |
+| `AGGREGATE_BUDGET_MS` | All | **Set this to 45000.** The code default of 15000 starves the archive write |
+
+#### Why the model stage is capped
+
+Groq meters tokens per model per day — 200,000 on the free tier. A measured
+batch costs 7,500–9,500 tokens and a pass has about 47 of them, so one full
+regeneration wants roughly **376,000 tokens**: nearly twice the entire daily
+allowance, against a feed that regenerates every few minutes.
+
+Before the cap, a pass fired all 47 and collected `429`s for most of them,
+silently — a 429 only shelves the model, so the visible symptom was a site with
+no translations and nothing in the logs saying why. It now logs the exhaustion
+with the real figure, and spends what it has on the stories worth spending it
+on: stories are ranked before they are batched, so each pass takes its best
+thirty, and the archive keeps what it bought. Later passes hydrate those for
+free and spend their budget on stories that are new.
+
+Raise `GROQ_DAILY_TOKEN_BUDGET` to match a paid tier. Setting it to `0` disables
+the ledger and restores the old spend-until-refused behaviour.
+
+#### Why `AGGREGATE_BUDGET_MS` must be raised
+
+The per-stage budgets are *slices* of `AGGREGATE_BUDGET_MS`, not additions to
+it, so a per-stage value larger than the aggregate can never be honoured. The
+archive write is the last thing a pass does and its budget is clamped to
+whatever is left (`lib/article-store.ts`), so at 15000 it is starved and aborts:
+measured as `write failed after 0 of 455 rows`. At 45000 the same pass writes
+every row with no failures.
 
 `NEWSLETTER_FROM` and `NEWSLETTER_REPLY_TO` both default to
 `support@ekjhalak.news` in code. Only set them to override.
