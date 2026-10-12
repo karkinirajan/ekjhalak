@@ -14,6 +14,11 @@
 // faithfully than sharp's resvg for this kind of flat geometry — and ImageMagick
 // is the only one of the three that writes a multi-image .ico.
 //
+// Every ImageMagick call passes -strip. Without it ImageMagick writes the
+// current time into a tEXt chunk, so a rebuild that changed nothing still
+// produced different bytes and showed up as a modified file in git — which
+// makes "are the committed icons what the script produces?" unanswerable.
+//
 // The text in the OG image is rasterised here, so it carries no font
 // dependency to the viewer. Nothing in public/ contains live <text>: an SVG
 // served to a browser renders with whatever font that machine happens to have,
@@ -103,6 +108,7 @@ run("magick", [
   "remove",
   "-alpha",
   "off",
+  "-strip",
   join(PUBLIC, "apple-touch-icon.png"),
 ]);
 emit("apple-touch-icon.png");
@@ -128,6 +134,7 @@ run("magick", [
   "remove",
   "-alpha",
   "off",
+  "-strip",
   join(PUBLIC, "maskable-512x512.png"),
 ]);
 emit("maskable-512x512.png");
