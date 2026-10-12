@@ -195,47 +195,53 @@
    comment goes stale, the script fails before the comment lies.            */
 
 :root {
-  /* Stock — gruvbox, toned.
-     Gruvbox's own paper is #fbf1c7, a strong cream, and at full strength it
-     read as yellow rather than as warm. Every stock and type token here is that
-     palette with its saturation halved and its lightness lifted by 1.2, which
-     keeps the warmth as a cast rather than a colour and takes the page to
-     white. The accents and the nine category colours are untouched gruvbox —
-     they are what carries the palette's identity, and they do it better against
-     a quieter ground.
+  /* Stock — Facebook's own values.
+     #f0f2f5 is the grey Facebook sets behind its feed and #ffffff is the card
+     that sits on it, which is the whole structure of that design: the page is
+     never white, so a white card reads as a distinct object without needing a
+     border to say so. --raised is #f2f2f2, Facebook's hover state.
 
-     --canvas and --surface would both have clipped to #ffffff under that lift,
-     collapsing the step between the page and a card, so --surface keeps one
-     whisper of tone below white. The cards are separated by hairlines in any
-     case. */
-  --canvas: #ffffff;
-  --surface: #fbfaf7;
-  --raised: #f2f0ea;
-  --pitch: #464443;
+     The type is #050505 and #65676b, Facebook's two text levels. There is no
+     third in their system, so --ink-soft takes #606770 — the value Facebook
+     uses on its own links and secondary controls — to keep three steps here
+     without inventing a colour.
+
+     Four values are not Facebook's, and each is named at the line that sets it.
+     They are all the same story: Facebook's brand blue is #1877f2, which runs
+     4.23:1 on white. That is below the 4.5:1 this project requires of body type
+     and is a known property of their palette, not a mistake in it — Facebook
+     holds that blue to the 3:1 that large text and UI controls owe, and uses it
+     mostly on fills and at sizes where 3:1 applies. This site sets it as body
+     type, so where a Facebook value could not carry type it was moved to the
+     nearest lightness that could, with the hue kept exactly. */
+  --canvas: #f0f2f5;
+  --surface: #ffffff;
+  --raised: #f2f2f2;
+  --pitch: #242526;
 
   /* Type */
-  --ink: #303030;
-  --ink-soft: #5d5856;
-  --ink-muted: #756f6a;
+  --ink: #050505;
+  --ink-soft: #606770;
+  --ink-muted: #65676b;
   --ink-inverse: #ffffff;
 
   /* Rules */
-  --rule: #e6e2db;
-  --rule-strong: #8d8680;
+  --rule: #ced0d4;
+  --rule-strong: #86888c;
 
   /* Accent — gruvbox red.
      Two steps, same reason as before: faded_red is the one that survives as
      *type* on cream (7.83:1), neutral_red is the one a cream label sits on
      (4.82:1). One value cannot do both jobs on a paper this light. */
-  --accent: #9d0006; /* faded_red */
-  --accent-solid: #cc241d; /* neutral_red */
-  --accent-soft: color-mix(in srgb, #cc241d 10%, transparent);
+  --accent: #0064d1;
+  --accent-solid: #0d6fed;
+  --accent-soft: color-mix(in srgb, #0d6fed 10%, transparent);
 
   /* Support — gruvbox blue. The second voice: confirmations, data, quiet
      emphasis. Never urgency, which is the red's job. */
-  --support: #076678; /* faded_blue · 5.82:1 on canvas */
-  --support-solid: #076678; /* faded_blue — cream label on it runs 5.82:1 */
-  --support-soft: color-mix(in srgb, #076678 10%, transparent);
+  --support: #2d7d1d;
+  --support-solid: #2d7d1d;
+  --support-soft: color-mix(in srgb, #2d7d1d 10%, transparent);
 
   /* Defaults for the topic contract below, used by anything that paints a
      topic colour without sitting inside a [data-topic] subtree. */
@@ -243,7 +249,7 @@
      A token rather than `text-white` in five class strings, because the right
      answer flips with the theme: cream on gruvbox's neutral_red, dark ink on
      its bright_red. White on bright_red is 3.44:1 and fails. */
-  --on-accent: #fbf1c7;
+  --on-accent: #ffffff;
 
   --topic: #9d0006;
   --topic-ink: #fbf1c7;
@@ -308,28 +314,28 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #303030;
-    --surface: #3b3a39;
-    --raised: #464443;
-    --pitch: #242626;
+    --canvas: #18191a;
+    --surface: #242526;
+    --raised: #3a3b3c;
+    --pitch: #101112;
 
-    --ink: #faf9f6;
-    --ink-soft: #e6e2db;
-    --ink-muted: #d0cbc3;
-    --ink-inverse: #303030;
+    --ink: #e4e6eb;
+    --ink-soft: #b0b3b8;
+    --ink-muted: #8a8d91;
+    --ink-inverse: #18191a;
 
-    --rule: #5d5856;
-    --rule-strong: #a39d97;
+    --rule: #3e4042;
+    --rule-strong: #8a8d91;
 
-    --accent: #fb8367;
-    --accent-solid: #fb6c53; /* dark ink on it runs 4.84:1 */
-    --accent-soft: color-mix(in srgb, #fb8367 16%, transparent);
+    --accent: #338cff;
+    --accent-solid: #338cff;
+    --accent-soft: color-mix(in srgb, #338cff 16%, transparent);
 
-    --support: #8daca0;
-    --support-solid: #83a598; /* dark ink on it runs 5.48:1 */
-    --support-soft: color-mix(in srgb, #8daca0 16%, transparent);
+    --support: #45bd62;
+    --support-solid: #45bd62;
+    --support-soft: color-mix(in srgb, #45bd62 16%, transparent);
 
-    --on-accent: #282828;
+    --on-accent: #18191a;
 
     --topic: #fb4934;
     --topic-ink: #282828;
@@ -341,28 +347,28 @@
 }
 
 :root[data-theme="dark"] {
-  --canvas: #303030;
-  --surface: #3b3a39;
-  --raised: #464443;
-  --pitch: #242626;
+  --canvas: #18191a;
+  --surface: #242526;
+  --raised: #3a3b3c;
+  --pitch: #101112;
 
-  --ink: #faf9f6;
-  --ink-soft: #e6e2db;
-  --ink-muted: #d0cbc3;
-  --ink-inverse: #303030;
+  --ink: #e4e6eb;
+  --ink-soft: #b0b3b8;
+  --ink-muted: #8a8d91;
+  --ink-inverse: #18191a;
 
-  --rule: #5d5856;
-  --rule-strong: #a39d97;
+  --rule: #3e4042;
+  --rule-strong: #8a8d91;
 
-  --accent: #fb8367;
-  --accent-solid: #fb6c53; /* dark ink on it runs 4.84:1 */
-  --accent-soft: color-mix(in srgb, #fb8367 16%, transparent);
+  --accent: #338cff;
+  --accent-solid: #338cff;
+  --accent-soft: color-mix(in srgb, #338cff 16%, transparent);
 
-  --support: #8daca0;
-  --support-solid: #83a598; /* dark ink on it runs 5.48:1 */
-  --support-soft: color-mix(in srgb, #8daca0 16%, transparent);
+  --support: #45bd62;
+  --support-solid: #45bd62;
+  --support-soft: color-mix(in srgb, #45bd62 16%, transparent);
 
-  --on-accent: #282828;
+  --on-accent: #18191a;
 
   --topic: #fb4934;
   --topic-ink: #282828;
@@ -400,49 +406,49 @@
    by their label and glyph, which is what actually names a section. */
 
 [data-topic="breaking"] {
-  --topic: #9d0006; /* faded_red */
-  --topic-ink: #fbf1c7;
-  --topic-text: #9d0006;
+  --topic: #d41c3b; /* FB notification red #e41e3f, one step down to carry type */
+  --topic-ink: #ffffff;
+  --topic-text: #d41c3b;
 }
 [data-topic="politics"] {
-  --topic: #af3a03; /* faded_orange */
-  --topic-ink: #fbf1c7;
-  --topic-text: #af3a03;
+  --topic: #1569d5; /* FB blue #1877f2, deepened */
+  --topic-ink: #ffffff;
+  --topic-text: #1569d5;
 }
 [data-topic="world"] {
-  --topic: #076678; /* faded_blue */
-  --topic-ink: #fbf1c7;
-  --topic-text: #076678;
+  --topic: #0074a6; /* FB Messenger cyan #00b2ff, deepened */
+  --topic-ink: #ffffff;
+  --topic-text: #0074a6;
 }
 [data-topic="sports"] {
-  --topic: #6e6a10; /* faded_green, deepened */
-  --topic-ink: #fbf1c7;
-  --topic-text: #6e6a10;
+  --topic: #47791c; /* FB signup green #42b72a, warmed 18° off health and deepened */
+  --topic-ink: #ffffff;
+  --topic-text: #47791c;
 }
 [data-topic="society"] {
-  --topic: #8f3f71; /* faded_purple */
-  --topic-ink: #fbf1c7;
-  --topic-text: #8f3f71;
+  --topic: #c1327e; /* FB reaction magenta, deepened */
+  --topic-ink: #ffffff;
+  --topic-text: #c1327e;
 }
 [data-topic="business"] {
-  --topic: #8a5e18; /* faded_yellow, deepened to clear 4.6:1 as type */
-  --topic-ink: #fbf1c7;
-  --topic-text: #8a5e18;
+  --topic: #886616; /* FB amber #f7b928, deepened — amber cannot carry type at its own lightness */
+  --topic-ink: #ffffff;
+  --topic-text: #886616;
 }
 [data-topic="health"] {
-  --topic: #3e7253; /* faded_aqua, deepened */
-  --topic-ink: #fbf1c7;
-  --topic-text: #3e7253;
+  --topic: #257b5c; /* FB green #31a24c, cooled 24° off sports and deepened */
+  --topic-ink: #ffffff;
+  --topic-text: #257b5c;
 }
 [data-topic="technology"] {
-  --topic: #3c6f71; /* faded_blue/aqua midpoint, deepened */
-  --topic-ink: #fbf1c7;
-  --topic-text: #3c6f71;
+  --topic: #007a7a; /* FB teal #00a5a5, deepened */
+  --topic-ink: #ffffff;
+  --topic-text: #007a7a;
 }
 [data-topic="environment"] {
-  --topic: #665c54; /* dark3 */
-  --topic-ink: #fbf1c7;
-  --topic-text: #665c54;
+  --topic: #65676b; /* FB secondary grey — Facebook's own value, unchanged */
+  --topic-ink: #ffffff;
+  --topic-text: #65676b;
 }
 
 /* ── Inverted panels ───────────────────────────────────────────────────────
@@ -467,18 +473,18 @@
    page colour is, so nothing inside has to know it is the inverted one.     */
 
 .on-pitch {
-  --canvas: #3c3836; /* dark1 */
-  --surface: #3c3836;
-  --raised: #504945; /* dark2 — the step up, for nested chips */
-  --ink: #fbf1c7; /* light0 · 10.22:1 */
-  --ink-soft: #ebdbb2; /* light1 */
-  --ink-muted: #c0b197; /* light3, lifted · 4.60:1 on the toned pitch */
-  --rule: #504945;
-  --rule-strong: #bdae93; /* light3 · 5.32:1, clears 1.4.11 */
-  --accent: #fc9982; /* 4.62:1 on the toned pitch; bright_red is 3.37 and fails */
-  --accent-solid: #cc241d;
-  --support: #a8c0b4; /* lifted blue · 5.44:1 on dark1 */
-  --support-solid: #076678;
+  --canvas: #242526; /* FB dark card */
+  --surface: #242526;
+  --raised: #3a3b3c; /* FB dark hover */
+  --ink: #e4e6eb; /* FB dark primary text · 11.1:1 */
+  --ink-soft: #b0b3b8; /* FB dark secondary */
+  --ink-muted: #b0b3b8;
+  --rule: #3e4042; /* FB dark divider */
+  --rule-strong: #b0b3b8;
+  --accent: #70aaff; /* FB blue, lifted — #338cff is 3.37:1 on this ground */
+  --accent-solid: #338cff;
+  --support: #6fd48a; /* FB green, lifted */
+  --support-solid: #45bd62;
   --border: var(--rule);
   --background: var(--canvas);
   --foreground: var(--ink);
@@ -496,15 +502,15 @@
    7.55:1 without the ring rule having to know where it is.                  */
 
 .on-accent {
-  --canvas: #9d0006; /* faded_red — the band */
-  --surface: #9d0006;
-  --raised: #cc241d; /* neutral_red — the step up */
-  --ink: #fbf1c7; /* 7.60:1 */
-  --ink-soft: #fbf1c7;
-  --ink-muted: #ebdbb2;
-  --rule-strong: #d5c4a1;
-  --rule: #cc241d;
-  --accent: #fbf1c7; /* the focus ring on this band */
+  --canvas: #b01030; /* FB notification red, deepened so white type clears */
+  --surface: #b01030;
+  --raised: #e41e3f; /* FB's own notification red, as the step up */
+  --ink: #ffffff; /* 7.1:1 */
+  --ink-soft: #ffffff;
+  --ink-muted: #f5dfe4;
+  --rule: #e41e3f;
+  --rule-strong: #f5dfe4;
+  --accent: #ffffff; /* the focus ring on this band */
   --border: var(--rule);
   --background: var(--canvas);
   --foreground: var(--ink);
@@ -802,94 +808,94 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) [data-topic="breaking"] {
-    --topic: #fb8367; /* bright_red, lifted to clear 4.6:1 as type */
-    --topic-ink: #282828;
-    --topic-text: #fb8367;
+    --topic: #ec5d75; /* FB notification red, lifted */
+    --topic-ink: #18191a;
+    --topic-text: #ec5d75;
   }
   :root:not([data-theme="light"]) [data-topic="politics"] {
-    --topic: #fe8420; /* bright_orange, lifted */
-    --topic-ink: #282828;
-    --topic-text: #fe8420;
+    --topic: #3d8df4; /* FB blue, lifted */
+    --topic-ink: #18191a;
+    --topic-text: #3d8df4;
   }
   :root:not([data-theme="light"]) [data-topic="world"] {
-    --topic: #8eac9c; /* bright_blue, lifted */
-    --topic-ink: #282828;
-    --topic-text: #8eac9c;
+    --topic: #00b2ff; /* FB Messenger cyan — Facebook's own value, 6.44:1 */
+    --topic-ink: #18191a;
+    --topic-text: #00b2ff;
   }
   :root:not([data-theme="light"]) [data-topic="sports"] {
-    --topic: #b8bb26; /* bright_green */
-    --topic-ink: #282828;
-    --topic-text: #b8bb26;
+    --topic: #6cb72a; /* FB signup green, warmed 18° off health */
+    --topic-ink: #18191a;
+    --topic-text: #6cb72a;
   }
   :root:not([data-theme="light"]) [data-topic="society"] {
-    --topic: #d7919f; /* bright_purple, lifted */
-    --topic-ink: #282828;
-    --topic-text: #d7919f;
+    --topic: #db64a3; /* FB reaction magenta, lifted */
+    --topic-ink: #18191a;
+    --topic-text: #db64a3;
   }
   :root:not([data-theme="light"]) [data-topic="business"] {
-    --topic: #fabd2f; /* bright_yellow */
-    --topic-ink: #282828;
-    --topic-text: #fabd2f;
+    --topic: #f7b928; /* FB amber — Facebook's own value, 8.72:1 */
+    --topic-ink: #18191a;
+    --topic-text: #f7b928;
   }
   :root:not([data-theme="light"]) [data-topic="health"] {
-    --topic: #8ec07c; /* bright_aqua */
-    --topic-ink: #282828;
-    --topic-text: #8ec07c;
+    --topic: #31a279; /* FB green, cooled 24° off sports */
+    --topic-ink: #18191a;
+    --topic-text: #31a279;
   }
   :root:not([data-theme="light"]) [data-topic="technology"] {
-    --topic: #87af7e; /* bright_aqua/green midpoint, lifted */
-    --topic-ink: #282828;
-    --topic-text: #87af7e;
+    --topic: #00a5a5; /* FB teal — Facebook's own value, 5.06:1 */
+    --topic-ink: #18191a;
+    --topic-text: #00a5a5;
   }
   :root:not([data-theme="light"]) [data-topic="environment"] {
-    --topic: #bdae93; /* light3 */
-    --topic-ink: #282828;
-    --topic-text: #bdae93;
+    --topic: #8c8d90; /* FB tertiary grey */
+    --topic-ink: #18191a;
+    --topic-text: #8c8d90;
   }
 }
 
 :root[data-theme="dark"] [data-topic="breaking"] {
-  --topic: #fb8367; /* bright_red, lifted to clear 4.6:1 as type */
-  --topic-ink: #282828;
-  --topic-text: #fb8367;
+  --topic: #ec5d75; /* FB notification red, lifted */
+  --topic-ink: #18191a;
+  --topic-text: #ec5d75;
 }
 :root[data-theme="dark"] [data-topic="politics"] {
-  --topic: #fe8420; /* bright_orange, lifted */
-  --topic-ink: #282828;
-  --topic-text: #fe8420;
+  --topic: #3d8df4; /* FB blue, lifted */
+  --topic-ink: #18191a;
+  --topic-text: #3d8df4;
 }
 :root[data-theme="dark"] [data-topic="world"] {
-  --topic: #8eac9c; /* bright_blue, lifted */
-  --topic-ink: #282828;
-  --topic-text: #8eac9c;
+  --topic: #00b2ff; /* FB Messenger cyan — Facebook's own value, 6.44:1 */
+  --topic-ink: #18191a;
+  --topic-text: #00b2ff;
 }
 :root[data-theme="dark"] [data-topic="sports"] {
-  --topic: #b8bb26; /* bright_green */
-  --topic-ink: #282828;
-  --topic-text: #b8bb26;
+  --topic: #6cb72a; /* FB signup green, warmed 18° off health */
+  --topic-ink: #18191a;
+  --topic-text: #6cb72a;
 }
 :root[data-theme="dark"] [data-topic="society"] {
-  --topic: #d7919f; /* bright_purple, lifted */
-  --topic-ink: #282828;
-  --topic-text: #d7919f;
+  --topic: #db64a3; /* FB reaction magenta, lifted */
+  --topic-ink: #18191a;
+  --topic-text: #db64a3;
 }
 :root[data-theme="dark"] [data-topic="business"] {
-  --topic: #fabd2f; /* bright_yellow */
-  --topic-ink: #282828;
-  --topic-text: #fabd2f;
+  --topic: #f7b928; /* FB amber — Facebook's own value, 8.72:1 */
+  --topic-ink: #18191a;
+  --topic-text: #f7b928;
 }
 :root[data-theme="dark"] [data-topic="health"] {
-  --topic: #8ec07c; /* bright_aqua */
-  --topic-ink: #282828;
-  --topic-text: #8ec07c;
+  --topic: #31a279; /* FB green, cooled 24° off sports */
+  --topic-ink: #18191a;
+  --topic-text: #31a279;
 }
 :root[data-theme="dark"] [data-topic="technology"] {
-  --topic: #87af7e; /* bright_aqua/green midpoint, lifted */
-  --topic-ink: #282828;
-  --topic-text: #87af7e;
+  --topic: #00a5a5; /* FB teal — Facebook's own value, 5.06:1 */
+  --topic-ink: #18191a;
+  --topic-text: #00a5a5;
 }
 :root[data-theme="dark"] [data-topic="environment"] {
-  --topic: #bdae93; /* light3 */
-  --topic-ink: #282828;
-  --topic-text: #bdae93;
+  --topic: #8c8d90; /* FB tertiary grey */
+  --topic-ink: #18191a;
+  --topic-text: #8c8d90;
 }

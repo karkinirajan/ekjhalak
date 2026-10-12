@@ -205,12 +205,12 @@ export default function RootLayout({
             browser. Both values are --canvas, per theme. */}
         <meta
           name="theme-color"
-          content="#ffffff"
+          content="#f0f2f5"
           media="(prefers-color-scheme: light)"
         />
         <meta
           name="theme-color"
-          content="#303030"
+          content="#18191a"
           media="(prefers-color-scheme: dark)"
         />
         {/* Runs before first paint, and both halves have to.
