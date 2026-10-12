@@ -20,7 +20,9 @@
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run check:contrast && pnpm audit --audit-level=high && pnpm run build",
     "verify:live": "pnpm run check:feed && pnpm run check:a11y https://ekjhalak.news/ && pnpm run check:seo",
     "check:seo": "node scripts/check-seo.mjs",
-    "build:turbo": "next build"
+    "build:turbo": "next build",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -35,6 +37,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^20.19.43",
     "@types/react": "^19.2.17",

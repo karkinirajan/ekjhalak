@@ -31,7 +31,7 @@ import {
   selectTicker,
   selectTrending,
 } from "@/lib/ranking";
-import type { TopicId } from "@/lib/taxonomy";
+import { TOPICS, type TopicId } from "@/lib/taxonomy";
 import type { NewsItem, NewsFeedResponse, RangeKey } from "@/lib/news-pipeline";
 
 const PAGE_SIZE = 12;
@@ -228,6 +228,93 @@ export function NewsFeed({ initialData, limit = 1500 }: NewsFeedProps) {
     if (items.length >= limit) return;
     void fetchFeed(true);
   }, [fetchFeed, items.length, limit]);
+
+  // Filter state lives in the URL too, so a filtered view is shareable and
+  // survives a reload — without putting it through `useSearchParams`, which
+  // would force this subtree to bail out of the static shell this route is
+  // built around (see `app/(feed)/page.tsx`'s ISR comment). Reading
+  // `window.location.search` directly and writing with the plain History API
+  // never touches Next's router, so no filter click re-fetches the server
+  // component above this one and repaints the hero it took measured effort
+  // to keep still.
+  //
+  // One-time read of whatever URL a reader arrived with — not a live
+  // subscription to it, which is why this re-reads only when `ensureFullPool`
+  // itself changes identity rather than on every keystroke.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    const rangeParam = params.get("range");
+    const validRange =
+      rangeParam === "day" || rangeParam === "week" || rangeParam === "month"
+        ? rangeParam
+        : null;
+
+    const bucketParam = params.get("bucket");
+    const validBucket =
+      bucketParam === "all" ||
+      bucketParam === "national" ||
+      bucketParam === "international"
+        ? bucketParam
+        : null;
+
+    const topicParam = params.get("topic");
+    const validTopic =
+      topicParam && (topicParam === "all" || topicParam in TOPICS)
+        ? (topicParam as TopicFilter)
+        : null;
+
+    const qParam = params.get("q");
+
+    const pageParam = Number(params.get("page"));
+    const validPage = Number.isInteger(pageParam) && pageParam > 1 ? pageParam : null;
+
+    if (!validRange && !validBucket && !validTopic && !qParam && !validPage) {
+      return;
+    }
+
+    // A deliberate, deferred sync from the URL a reader arrived with — not a
+    // render-time derivation, so it goes through `startTransition` rather
+    // than setting state unconditionally in the effect body.
+    startTransition(() => {
+      if (validRange) setRange(validRange);
+      if (validBucket) setBucket(validBucket);
+      if (validTopic) setTopic(validTopic);
+      if (qParam) {
+        setSearch(qParam);
+        setSearchDraft(qParam);
+      }
+      if (validPage) setPage(validPage);
+
+      const narrowsBeyondSsrDefault =
+        (validRange && validRange !== "day") ||
+        (validBucket && validBucket !== "all") ||
+        (validTopic && validTopic !== "all") ||
+        Boolean(qParam) ||
+        validPage !== null;
+      if (narrowsBeyondSsrDefault) ensureFullPool();
+    });
+  }, [ensureFullPool]);
+
+  // The other half of the above: keep the address bar in sync as filters
+  // change. `replaceState`, deliberately never `pushState` — a filter click
+  // updates the current entry rather than stacking one per click, so Back
+  // from a filtered view leaves this page entirely instead of stepping
+  // through every range/topic/search change first.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (range !== "day") params.set("range", range);
+    if (bucket !== "all") params.set("bucket", bucket);
+    if (topic !== "all") params.set("topic", topic);
+    if (search) params.set("q", search);
+    if (page > 1) params.set("page", String(page));
+
+    const query = params.toString();
+    const url = query
+      ? `${window.location.pathname}?${query}`
+      : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }, [range, bucket, topic, search, page]);
 
   // Every filter change returns to page 1. Done in the setters rather than an
   // effect on [range, bucket, topic, search]: the reset is a direct consequence

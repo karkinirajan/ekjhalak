@@ -14,6 +14,12 @@
 ./claude
 # testing
 /coverage
+# Playwright's run output (traces, HTML report) — regenerated every run.
+# tests/visual/__snapshots__ is NOT ignored: those PNGs are the committed
+# baseline the visual-regression suite diffs against.
+/test-results/
+/playwright-report/
+/blob-report/
 # Playwright MCP writes screenshots, console logs and page snapshots here during
 # a browser-driven QA pass. They are throwaway evidence for one session, not
 # fixtures — and the directory is created in the repo root, so without this it

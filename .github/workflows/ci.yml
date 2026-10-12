@@ -141,3 +141,48 @@ jobs:
           done
 
           pnpm run check:seo http://localhost:3000
+
+  visual-regression:
+    name: Visual regression (design system)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # --with-deps is safe here: this is a throwaway CI runner, not a
+      # workstation, and ubuntu-latest's own package manager is what it
+      # installs through — no different from any other apt step in a GitHub
+      # Actions job.
+      - name: Install Playwright's Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Baselines in tests/visual/__snapshots__ were generated on Linux, the
+      # same OS this runs on, specifically so a PR can't pass locally on a
+      # contributor's Mac and then fail here on font-rendering noise. If this
+      # step drifts for a real design change, regenerate with
+      # `pnpm run test:visual:update` and commit the new PNGs — never bump
+      # `maxDiffPixelRatio` in playwright.config.ts to make a real diff pass.
+      - name: Visual regression
+        run: pnpm run test:visual
+
+      - name: Upload failure report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
