@@ -37,6 +37,29 @@
   # declared in exactly one place.
   NETLIFY_USE_PNPM = "true"
 
+  # Secrets scanning: which variables are not secrets.
+  #
+  # Netlify scans the repo and the build output for the *value* of every
+  # environment variable and fails the build on a match. That is the right
+  # default, and it is why the genuinely sensitive names are deliberately absent
+  # from this list: GROQ_API_KEY, RESEND_API_KEY, SUPABASE_SERVICE_ROLE_KEY,
+  # DATABASE_URL, CRON_SECRET, REVALIDATE_SECRET and NEWSLETTER_SECRET are all
+  # still scanned, and must stay that way.
+  #
+  # The names below are configuration, not credentials — timing budgets, batch
+  # sizes, a model name, a publish policy and the public site URL. Several are
+  # small integers, and a small integer matches *as a substring* almost
+  # everywhere. The deploy that made this necessary failed on GROQ_BUDGET_MS,
+  # whose value is 25000, matched inside the Lighthouse timings
+  # `73.42500000000001` and `773.0250000022352` in audit/baseline — numbers with
+  # no relationship to it at all. It was also "found" in a webpack cache pack
+  # and in the Deno standard library vendored by Netlify's own Next.js plugin.
+  #
+  # Omitting the keys rather than the paths, because the paths are incidental:
+  # the next build would find 25000 somewhere else. Omitting the key says the
+  # true thing, which is that this value was never a secret.
+  SECRETS_SCAN_OMIT_KEYS = "AGGREGATE_BUDGET_MS,GROQ_BUDGET_MS,EXTRACT_BUDGET_MS,VERIFY_BUDGET_MS,GROQ_BATCH_SIZE,GROQ_CONCURRENCY,GROQ_MODEL,GROQ_DAILY_TOKEN_BUDGET,GROQ_MAX_BATCHES_PER_PASS,PUBLISH_POLICY,NEXT_PUBLIC_SITE_URL,NEWSLETTER_FROM,NEWSLETTER_REPLY_TO"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
