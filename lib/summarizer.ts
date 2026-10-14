@@ -30,8 +30,30 @@
 // error rather than a shipped bundle. Holds the model prompts and reads GROQ_API_KEY.
 import "server-only";
 
-export const SUMMARY_MAX_CHARS = 1_760;
-export const SUMMARY_MIN_CHARS = 300;
+import { envString } from "./env";
+import {
+  SUMMARY_BOUNDS,
+  SUMMARY_TARGET_WORDS,
+  summaryBounds,
+} from "./summary-length";
+
+// Re-exported so lib/aggregator.ts and the rest keep one import site for
+// everything about a summary, while the numbers stay testable.
+export {
+  SUMMARY_BOUNDS,
+  SUMMARY_TARGET_WORDS,
+  countWords,
+  summaryBounds,
+  type SummaryLang,
+} from "./summary-length";
+
+/**
+ * Kept for the callers that still reason in one number — the widest and
+ * narrowest of the two languages, so a shared check never rejects text that its
+ * own language would have allowed.
+ */
+export const SUMMARY_MAX_CHARS = SUMMARY_BOUNDS.np.max;
+export const SUMMARY_MIN_CHARS = SUMMARY_BOUNDS.en.min;
 
 /**
  * How much publisher-written text is kept unrewritten.
@@ -39,10 +61,16 @@ export const SUMMARY_MIN_CHARS = 300;
  * When a newsroom's own og:description is fuller than the blurb its feed
  * shipped, that text *is* the summary — it was written by the desk that
  * reported the story, and putting a model between the reader and it can only
- * lose something. So it is shown as it stands, up to three times the old
- * ceiling, and only text longer than this is handed to the model to compress.
+ * lose something.
+ *
+ * It was 2,640, two and a half times the target, and that single number is why
+ * the median summary on this site measured 1,910 characters against a brief
+ * asking for about 964: almost every story took the verbatim path and was shown
+ * at whatever length its publisher wrote, up to the cap. Anything longer than
+ * the language's own ceiling now goes to the model to be compressed, which is
+ * what the verbatim path was always supposed to mean.
  */
-export const VERBATIM_MAX_CHARS = 2_640;
+export const VERBATIM_MAX_CHARS = SUMMARY_BOUNDS.np.max;
 
 /** Stories per request. */
 const BATCH_SIZE = clampInt(process.env.GROQ_BATCH_SIZE, 10, 1, 40);
@@ -63,7 +91,33 @@ const REQUEST_TIMEOUT_MS = 45_000;
  * comma-separated list to replace the chain outright. Whatever it names is
  * tried first and the default follows as a fallback.
  */
-const DEFAULT_MODELS = ["openai/gpt-oss-120b"];
+/**
+ * The model each job runs on, and what it falls back to.
+ *
+ * Summarizing is comprehension-heavy — read a story, decide what matters — and
+ * gpt-oss-120b is the strongest reasoner on Groq's free list, so it does that.
+ * Its weakness is that Nepali is not on its model card, which matters far more
+ * for writing Nepali than for understanding it.
+ *
+ * Translating is the half where that weakness would show, so it runs on
+ * qwen3.8-27b, which lists Nepali among its 119 supported languages. That model
+ * is preview tier and Groq retired its predecessor qwen3.6-27b on 14 September,
+ * which is exactly why it is the head of a chain rather than a fixed name: when
+ * a model 404s, callModel shelves it for 24 hours and askChain moves to the
+ * next entry, so a retirement costs one failed batch rather than a dead stage.
+ * gpt-oss-120b is that next entry — worse Nepali than Qwen, far better than no
+ * translation at all.
+ */
+const DEFAULT_MODELS: Record<ModelPurpose, readonly string[]> = {
+  summary: ["openai/gpt-oss-120b"],
+  translation: ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"],
+};
+
+/** Per-job override, falling back to the shared GROQ_MODEL, then the defaults. */
+const MODEL_ENV: Record<ModelPurpose, string> = {
+  summary: "EKJHALAK_SUMMARY_MODEL",
+  translation: "EKJHALAK_TRANSLATION_MODEL",
+};
 
 /**
  * Deliberately far above what the answer needs (~300 tokens per story per
@@ -79,6 +133,26 @@ const DEFAULT_MODELS = ["openai/gpt-oss-120b"];
  */
 const MAX_OUTPUT_TOKENS = 32_000;
 
+/**
+ * One key per job.
+ *
+ * Groq meters tokens per key per day, so two keys is two allowances rather than
+ * one shared pot. Summarizing every new story costs about 142,000 tokens a day
+ * at this feed's volume and translating them costs the same again — 284,000
+ * against a single key's 200,000, which is why for weeks almost nothing was
+ * translated. Split across two keys, each job has room.
+ *
+ * GROQ_API_KEY remains the fallback for both, so a deployment that sets only
+ * the one key keeps working exactly as before — on a single shared allowance.
+ */
+function keyFor(purpose: ModelPurpose): string | undefined {
+  const specific =
+    purpose === "summary"
+      ? envString("EKJHALAK_SUMMARY")
+      : envString("EKJHALAK_TRANSLATION");
+  return specific ?? envString("GROQ_API_KEY");
+}
+
 const API_KEY = process.env.GROQ_API_KEY;
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -93,12 +167,20 @@ function clampInt(
   return Math.min(max, Math.max(min, parsed));
 }
 
-function modelChain(): string[] {
-  const configured = (process.env.GROQ_MODEL ?? "")
-    .split(",")
-    .map((name) => name.trim())
-    .filter(Boolean);
-  return [...new Set([...configured, ...DEFAULT_MODELS])];
+function modelChain(purpose: ModelPurpose): string[] {
+  const names = (value: string | undefined) =>
+    (value ?? "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean);
+
+  // A job-specific override wins outright. GROQ_MODEL is honoured only for
+  // summarizing: it predates the split, and a deployment that set it meant the
+  // summarizer — forcing it on the translator too would silently undo the
+  // reason translation runs on a different model.
+  const configured = names(envString(MODEL_ENV[purpose]));
+  const shared = purpose === "summary" ? names(envString("GROQ_MODEL")) : [];
+  return [...new Set([...configured, ...shared, ...DEFAULT_MODELS[purpose]])];
 }
 
 // ── Text hygiene ────────────────────────────────────────────────────────────
@@ -127,6 +209,7 @@ import {
   syncLedgerFrom429,
   tokensRemaining,
   tokensSpentToday,
+  type ModelPurpose,
 } from "./token-ledger";
 
 export { looksLikeBoilerplate };
@@ -225,23 +308,54 @@ function cooldownFor(res: Response, body: string): number {
 
 // ── Prompt ──────────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT =
-  `You are the bilingual desk of a Nepali newsroom. You receive a JSON array of source items. ` +
-  `For every item, produce the story twice: once in English and once in Nepali (Devanagari script). ` +
-  `Each version needs a headline and one summary paragraph.\n\n` +
+/**
+ * Two prompts, not one.
+ *
+ * Until 2026-10-14 a single call was asked to summarize *and* translate in one
+ * reply, and rule 6 of that prompt had to plead with the model to keep the two
+ * language versions saying the same thing. That is a request, not a guarantee:
+ * the model wrote both versions from the source independently, so each could
+ * pick up a different detail, and the only thing holding them together was the
+ * instruction not to drift.
+ *
+ * Splitting the work removes the possibility. The summarizer sees the source
+ * and writes one paragraph in the source's own language; the translator sees
+ * that finished paragraph and never sees the source at all, so it has nothing
+ * to drift towards. The two versions state the same facts because the second is
+ * made from the first, not because a rule asked for it.
+ *
+ * It also means each call does one job, with a prompt about that job — and
+ * since the two authenticate with different keys, two daily allowances.
+ */
+const SUMMARY_SYSTEM_PROMPT =
+  `You are the desk editor of a Nepali newsroom. You receive a JSON array of source items. ` +
+  `For every item, write ONE summary paragraph in the item's own source language, and a headline for it in that same language. ` +
+  `Do not translate. Do not write any other language. The translation is another desk's job.\n\n` +
   `Rules, all of them binding:\n` +
-  `1. Length: aim for ${SUMMARY_MIN_CHARS}–${SUMMARY_MAX_CHARS} characters. Use the length the story earns — a wire brief with one fact stays short, a story with several threads uses the room. Never pad to reach a number and never stop before the story is told.\n` +
+  `1. Length: about ${SUMMARY_TARGET_WORDS} words. Count words, not characters. A few words either side is fine. Use the length the story earns: a wire brief with one fact stays short, a story with several threads uses the room. Never pad to reach the number and never stop before the story is told.\n` +
   `2. Completeness is the priority. Carry every load-bearing fact across: who acted, what they did, when and where, the numbers, the stated reason, who is affected, what happens next, and any reaction or denial the source records. A summary that reports the event but drops the consequence has failed.\n` +
   `3. Precision over compression. Keep every name, title, place, date, figure, currency amount and unit exactly as the source gives it — never round, convert, approximate or re-date. Preserve the source's own hedging: "alleged" stays alleged, "reportedly" stays reportedly, an accusation never becomes a finding, a proposal never becomes a decision.\n` +
   `4. Attribute claims to whoever made them. "The minister said X" must not become "X". If the source names who is speaking, so must you.\n` +
   `5. Use only what the source says. Never add background, context, explanation or consequence that is not in the text in front of you, however obvious it seems.\n` +
-  `6. The two language versions must state the same facts in the same order. The Nepali is a translation of the story, not a different story, and the same holds in reverse. Neither may contain a fact the other lacks.\n` +
-  `7. Write natural, idiomatic Nepali — the register of a printed Nepali daily. Do not transliterate English sentences into Devanagari. Transliterate proper nouns and organisation names the way Nepali papers do. Use Devanagari digits only where the source does.\n` +
-  `8. Every sentence must be complete and self-contained. Never end mid-thought or trail off into an ellipsis.\n` +
-  `9. Neutral newsroom tone. One paragraph. No headings, labels, lists, markdown, emoji or first person.\n` +
-  `10. Strip publisher chrome: subscription pitches, "read more", bylines, datelines, copyright lines, section tags, navigation words.\n` +
-  `11. An item marked "verbatim": true must have its summary in the source language reproduced EXACTLY as supplied, character for character, with no rewriting, trimming or reordering. Only the other language is yours to write. This is the publisher's own text and it is not to be improved.\n` +
-  `12. Respond with exactly one JSON object of the shape {"items": [{"id", "titleEn", "summaryEn", "titleNp", "summaryNp"}, ...]} — one entry per input item, in the same order, echoing the item's id exactly. No markdown fences, no prose outside the object, no key besides "items".`;
+  `6. Every sentence must be complete and self-contained. Never end mid-thought or trail off into an ellipsis.\n` +
+  `7. Neutral newsroom tone. One paragraph. No headings, labels, lists, markdown, emoji or first person.\n` +
+  `8. Strip publisher chrome: subscription pitches, "read more", bylines, datelines, copyright lines, section tags, navigation words.\n` +
+  `9. An item marked "verbatim": true already carries the publisher's own summary. Reproduce it EXACTLY as supplied, character for character, with no rewriting, trimming or reordering. It is not to be improved.\n` +
+  `10. Respond with exactly one JSON object of the shape {"items": [{"id", "title", "summary"}, ...]} — one entry per input item, in the same order, echoing the item's id exactly. No markdown fences, no prose outside the object, no key besides "items".`;
+
+const TRANSLATION_SYSTEM_PROMPT =
+  `You are the translation desk of a Nepali newsroom. You receive a JSON array of finished news summaries, each with its headline, and the language to render it in. ` +
+  `Translate each one. You are not summarizing, not editing, and not reporting — the text in front of you is already the finished story.\n\n` +
+  `Rules, all of them binding:\n` +
+  `1. Translate the whole text. Every clause, every sentence. A translation that drops a sentence has failed, however minor the sentence looked.\n` +
+  `2. Add nothing. No background, no context, no explanation the source paragraph does not contain. If the paragraph is unclear, it stays unclear.\n` +
+  `3. Keep every name, title, place, date, figure, currency amount and unit exactly as given — never round, convert, approximate or re-date. 23 stays 23; Rs 4.2 billion stays Rs 4.2 billion.\n` +
+  `4. Preserve hedging and attribution exactly. "alleged" stays alleged, "reportedly" stays reportedly, "the minister said" keeps the minister. An accusation never becomes a finding.\n` +
+  `5. Write natural, idiomatic prose in the target language — the register of a printed daily, not a word-for-word gloss. For Nepali: Devanagari script, the register of a Nepali daily, never English sentences transliterated into Devanagari. Transliterate proper nouns and organisation names the way Nepali papers do. Use Devanagari digits only where the source does.\n` +
+  `6. Match the source paragraph's length and sentence order. The translation is the same story, said in another language, in the same sequence.\n` +
+  `7. Every sentence must be complete. Never end mid-thought or trail off into an ellipsis.\n` +
+  `8. One paragraph. No headings, labels, lists, markdown, emoji or first person.\n` +
+  `9. Respond with exactly one JSON object of the shape {"items": [{"id", "title", "summary"}, ...]} — one entry per input item, in the same order, echoing the item's id exactly. No markdown fences, no prose outside the object, no key besides "items".`;
 
 // ── Public shape ────────────────────────────────────────────────────────────
 
@@ -271,12 +385,11 @@ export interface EnrichResult {
   summaryTranslated: string;
 }
 
+/** One language per reply, for both stages — they share this shape. */
 interface ModelReply {
   id?: string;
-  titleEn?: string;
-  summaryEn?: string;
-  titleNp?: string;
-  summaryNp?: string;
+  title?: string;
+  summary?: string;
 }
 
 export function isEnrichmentConfigured(): boolean {
@@ -293,10 +406,12 @@ export function isEnrichmentConfigured(): boolean {
  */
 const MAX_SOURCE_CHARS = 6_000;
 
-function buildRequestBody(batch: EnrichInput[]) {
+const langName = (lang: string) => (lang === "np" ? "Nepali" : "English");
+
+function buildSummaryBody(batch: EnrichInput[]) {
   const payload = batch.map((item) => ({
     id: item.id,
-    sourceLanguage: item.lang === "np" ? "Nepali" : "English",
+    sourceLanguage: langName(item.lang),
     headline: normalizeText(item.title).slice(0, 400),
     body: normalizeText(item.body).slice(0, MAX_SOURCE_CHARS),
     ...(item.verbatim ? { verbatim: true } : {}),
@@ -304,7 +419,36 @@ function buildRequestBody(batch: EnrichInput[]) {
 
   return {
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: SUMMARY_SYSTEM_PROMPT },
+      { role: "user", content: JSON.stringify(payload) },
+    ],
+    temperature: 0.2,
+    max_completion_tokens: MAX_OUTPUT_TOKENS,
+    response_format: { type: "json_object" },
+  };
+}
+
+interface TranslateInput {
+  id: string;
+  title: string;
+  summary: string;
+  /** The language the finished summary is in. */
+  from: "en" | "np";
+}
+
+function buildTranslationBody(batch: TranslateInput[]) {
+  const payload = batch.map((item) => ({
+    id: item.id,
+    translateInto: langName(item.from === "np" ? "en" : "np"),
+    headline: item.title,
+    // No source body. The translator works from the finished summary only, so
+    // there is nothing for it to drift towards.
+    summary: item.summary,
+  }));
+
+  return {
+    messages: [
+      { role: "system", content: TRANSLATION_SYSTEM_PROMPT },
       { role: "user", content: JSON.stringify(payload) },
     ],
     temperature: 0.2,
@@ -339,14 +483,17 @@ async function callModel<T>(
   model: string,
   requestBody: Record<string, unknown>,
   deadline: number,
+  purpose: ModelPurpose,
 ): Promise<T[] | null> {
+  const apiKey = keyFor(purpose);
+  if (!apiKey) return null;
   let res: Response;
   try {
     res = await fetch(GROQ_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ ...requestBody, model }),
       signal: AbortSignal.timeout(requestTimeout(deadline)),
@@ -366,9 +513,9 @@ async function callModel<T>(
       // untranslated stories with no line anywhere saying why. It took an
       // instrumented run through four call layers to find it. It says so now.
       if (/per[ -]day|\bTPD\b|\bRPD\b/i.test(detail)) {
-        syncLedgerFrom429(detail);
+        syncLedgerFrom429(purpose, detail);
         console.warn(
-          `[enrich] ${model} daily quota exhausted — ${tokensSpentToday().toLocaleString()} tokens used. ` +
+          `[${purpose}] ${model} daily quota exhausted — ${tokensSpentToday(purpose).toLocaleString()} tokens used. ` +
             "Stories keep their publisher text until it resets.",
         );
       }
@@ -391,7 +538,8 @@ async function callModel<T>(
   // that fails to parse is exactly the case where forgetting to count it would
   // let a broken model drain the day.
   const spent = data?.usage?.total_tokens;
-  if (typeof spent === "number" && Number.isFinite(spent)) recordSpend(spent);
+  if (typeof spent === "number" && Number.isFinite(spent))
+    recordSpend(purpose, spent);
 
   const choice = data?.choices?.[0];
   if (!choice) return null;
@@ -427,11 +575,12 @@ async function callModel<T>(
 async function askChain<T>(
   requestBody: Record<string, unknown>,
   deadline: number,
+  purpose: ModelPurpose,
 ): Promise<T[]> {
-  for (const model of modelChain()) {
+  for (const model of modelChain(purpose)) {
     if (isCoolingDown(model)) continue;
     if (Date.now() >= deadline) break;
-    const replies = await callModel<T>(model, requestBody, deadline);
+    const replies = await callModel<T>(model, requestBody, deadline, purpose);
     if (replies) return replies;
   }
   return [];
@@ -573,12 +722,15 @@ export async function verifyEnrichments(
       // Checked per batch, like enrichment: verification must never be the
       // stage that empties the day's allowance out from under the next pass's
       // translations.
-      if (tokensRemaining() < batchTokenEstimate()) return;
+      if (tokensRemaining("summary") < batchTokenEstimate("summary")) return;
       const batch = batches[cursor++];
       if (batch === undefined) return;
       const replies = await askChain<VerifyReply>(
         buildVerifyBody(batch),
         deadline,
+        // Verification is a comprehension job, so it runs on the summarizer's
+        // model and allowance rather than the translator's.
+        "summary",
       );
       for (const reply of replies) {
         if (!reply?.id) continue;
@@ -598,11 +750,22 @@ export async function verifyEnrichments(
 }
 
 /** Walks the model chain until one answers. */
-async function enrichBatch(
+async function summarizeBatch(
   batch: EnrichInput[],
   deadline: number,
 ): Promise<ModelReply[]> {
-  return askChain<ModelReply>(buildRequestBody(batch), deadline);
+  return askChain<ModelReply>(buildSummaryBody(batch), deadline, "summary");
+}
+
+async function translateBatch(
+  batch: TranslateInput[],
+  deadline: number,
+): Promise<ModelReply[]> {
+  return askChain<ModelReply>(
+    buildTranslationBody(batch),
+    deadline,
+    "translation",
+  );
 }
 
 /**
@@ -613,36 +776,38 @@ async function enrichBatch(
  * a contract with the reader. A translation in the wrong script is not usable at
  * all, so it is dropped and the UI falls back to the original.
  */
-function toResult(reply: ModelReply, input: EnrichInput): EnrichResult | null {
+function toResult(
+  summaryReply: ModelReply,
+  translationReply: ModelReply | undefined,
+  input: EnrichInput,
+): EnrichResult | null {
   const otherLang = input.lang === "np" ? "en" : "np";
 
   // A verbatim item's own-language summary is the text we sent, not whatever
-  // came back. Rule 11 asks the model to echo it, but asking is not enforcing —
+  // came back. Rule 9 asks the model to echo it, but asking is not enforcing —
   // this is what guarantees the publisher's words reach the reader unedited.
   const summary = input.verbatim
     ? normalizeText(input.body)
-    : normalizeText((input.lang === "np" ? reply.summaryNp : reply.summaryEn) ?? "");
+    : normalizeText(summaryReply.summary ?? "");
   if (!isInLanguage(summary, input.lang) || looksLikeBoilerplate(summary)) {
     return null;
   }
 
-  const translatedTitle = normalizeText(
-    (input.lang === "np" ? reply.titleEn : reply.titleNp) ?? "",
-  );
-  const translatedSummary = normalizeText(
-    (input.lang === "np" ? reply.summaryEn : reply.summaryNp) ?? "",
-  );
+  const translatedTitle = normalizeText(translationReply?.title ?? "");
+  const translatedSummary = normalizeText(translationReply?.summary ?? "");
   const translationUsable =
     isInLanguage(translatedTitle, otherLang) &&
     isInLanguage(translatedSummary, otherLang) &&
     !looksLikeBoilerplate(translatedSummary);
 
-  const ceiling = input.verbatim ? VERBATIM_MAX_CHARS : SUMMARY_MAX_CHARS;
+  // Each language is held to its own ceiling. The same 140 words is ~964
+  // characters in English and ~1,060 in Nepali, so one shared number either
+  // truncates the Nepali mid-thought or lets the English run a fifth long.
   return {
-    summary: hardTruncateSummary(summary, ceiling),
+    summary: hardTruncateSummary(summary, summaryBounds(input.lang).max),
     titleTranslated: translationUsable ? translatedTitle : "",
     summaryTranslated: translationUsable
-      ? hardTruncateSummary(translatedSummary, ceiling)
+      ? hardTruncateSummary(translatedSummary, summaryBounds(otherLang).max)
       : "",
   };
 }
@@ -674,7 +839,9 @@ export async function enrichStories(
   const affordable =
     DAILY_TOKEN_BUDGET === 0
       ? allBatches.length
-      : Math.floor(tokensRemaining() / Math.max(1, batchTokenEstimate()));
+      : Math.floor(
+          tokensRemaining("summary") / Math.max(1, batchTokenEstimate("summary")),
+        );
   const allowed = Math.max(
     0,
     Math.min(allBatches.length, MAX_BATCHES_PER_PASS, affordable),
@@ -682,7 +849,7 @@ export async function enrichStories(
 
   if (allowed === 0) {
     console.warn(
-      `[enrich] skipped ${allBatches.length} batch(es): ${tokensRemaining().toLocaleString()} tokens left ` +
+      `[enrich] skipped ${allBatches.length} batch(es): ${tokensRemaining("summary").toLocaleString()} tokens left ` +
         `of a ${DAILY_TOKEN_BUDGET.toLocaleString()} daily budget. Stories keep their publisher text.`,
     );
     return out;
@@ -690,7 +857,7 @@ export async function enrichStories(
   if (allowed < allBatches.length) {
     console.info(
       `[enrich] ${allowed} of ${allBatches.length} batch(es) this pass ` +
-        `(${tokensRemaining().toLocaleString()} tokens left today); the rest keep publisher text ` +
+        `(${tokensRemaining("summary").toLocaleString()} tokens left today); the rest keep publisher text ` +
         "and are picked up by a later pass.",
     );
   }
@@ -703,7 +870,7 @@ export async function enrichStories(
       if (Date.now() >= deadline) return;
       // Re-checked per batch, not only up front: a batch that came back dearer
       // than expected must not let the two still in flight overdraw the day.
-      if (tokensRemaining() < batchTokenEstimate()) return;
+      if (tokensRemaining("summary") < batchTokenEstimate("summary")) return;
       const index = cursor++;
       if (index >= batches.length) return;
 
@@ -711,24 +878,71 @@ export async function enrichStories(
       if (batch === undefined) return;
       const byId = new Map(batch.map((item) => [item.id, item]));
 
-      let replies: ModelReply[];
+      // ── Stage one: the summary, in the story's own language ───────────────
+      let summaries: ModelReply[];
       try {
-        replies = await enrichBatch(batch, deadline);
+        summaries = await summarizeBatch(batch, deadline);
       } catch (err) {
-        console.warn("[enrich] batch failed:", err);
+        console.warn("[summary] batch failed:", err);
         continue;
       }
 
       // Match on the echoed id, falling back to position. Models are reliable
       // about the id but not universally, and a batch answered in order with a
       // mangled id is still four good summaries.
-      replies.forEach((reply, position) => {
-        const input =
-          (reply.id ? byId.get(reply.id) : undefined) ?? batch[position];
-        if (!input || out.has(input.id)) return;
-        const result = toResult(reply, input);
+      const paired = summaries
+        .map((reply, position) => ({
+          reply,
+          input: (reply.id ? byId.get(reply.id) : undefined) ?? batch[position],
+        }))
+        .filter(
+          (pair): pair is { reply: ModelReply; input: EnrichInput } =>
+            pair.input !== undefined && !out.has(pair.input.id),
+        );
+
+      // ── Stage two: the translation, made from that summary ────────────────
+      //
+      // The translator never sees the source. It is handed the finished
+      // paragraph and nothing else, so the two language versions cannot drift
+      // apart: the second is made from the first rather than written beside it.
+      //
+      // Its own key and its own allowance, so a day spent summarizing does not
+      // leave translation with nothing. A verbatim item still goes through
+      // here — its own-language text is the publisher's, but the translation
+      // is ours to write.
+      const translatable: TranslateInput[] = paired
+        .map(({ reply, input }) => ({
+          id: input.id,
+          title: normalizeText(reply.title ?? input.title),
+          summary: input.verbatim
+            ? normalizeText(input.body)
+            : normalizeText(reply.summary ?? ""),
+          from: input.lang,
+        }))
+        .filter((item) => item.summary.length > 0);
+
+      const translations = new Map<string, ModelReply>();
+      if (
+        translatable.length > 0 &&
+        tokensRemaining("translation") >= batchTokenEstimate("translation")
+      ) {
+        try {
+          const replies = await translateBatch(translatable, deadline);
+          replies.forEach((reply, position) => {
+            const id = reply.id ?? translatable[position]?.id;
+            if (id) translations.set(id, reply);
+          });
+        } catch (err) {
+          // A failed translation is not a failed story: the summary still
+          // stands and the UI falls back to the original language.
+          console.warn("[translation] batch failed:", err);
+        }
+      }
+
+      for (const { reply, input } of paired) {
+        const result = toResult(reply, translations.get(input.id), input);
         if (result) out.set(input.id, result);
-      });
+      }
     }
   }
 

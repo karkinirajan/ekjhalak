@@ -28,8 +28,7 @@ import {
   isEnrichmentConfigured,
   looksLikeBoilerplate,
   hardTruncateSummary,
-  SUMMARY_MIN_CHARS,
-  VERBATIM_MAX_CHARS,
+  summaryBounds,
   type EnrichInput,
   type EnrichResult,
 } from "./summarizer";
@@ -439,9 +438,9 @@ async function enrichFeed(
     // as written. A model rewrite of prose that is already the right size can
     // only lose a fact, and it would spend a request from a metered daily quota
     // to do it. The model is still asked for the translation.
+    const bounds = summaryBounds(item.originalLang);
     const verbatim =
-      item.summary.length >= SUMMARY_MIN_CHARS &&
-      item.summary.length <= VERBATIM_MAX_CHARS;
+      item.summary.length >= bounds.min && item.summary.length <= bounds.max;
 
     const key = enrichmentKey(item.id, item.summary);
     const cached = readEnrichment(key);
@@ -643,7 +642,10 @@ async function enrichFeed(
   for (const item of ranked) {
     if (enriched.has(item.id)) continue;
     if (!item.summary) continue;
-    item.summary = hardTruncateSummary(item.summary, VERBATIM_MAX_CHARS);
+    item.summary = hardTruncateSummary(
+      item.summary,
+      summaryBounds(item.originalLang).max,
+    );
   }
 
   // ── 5. Drop what has nothing to say ───────────────────────────────────────

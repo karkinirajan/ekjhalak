@@ -56,43 +56,71 @@ export const MAX_BATCHES_PER_PASS = envInt("GROQ_MAX_BATCHES_PER_PASS", 3, 1);
  */
 const ASSUMED_BATCH_TOKENS = 8_500;
 
-let ledgerDay = "";
-let tokensSpent = 0;
-let observedBatchTokens = ASSUMED_BATCH_TOKENS;
+/**
+ * The two jobs the pipeline asks a model to do, metered separately.
+ *
+ * Summarizing and translating are different pieces of work with different
+ * prompts, and since 2026-10-14 they authenticate with different keys — so they
+ * are different quotas. Groq meters tokens per key per day, which means two
+ * keys is two allowances rather than one shared pot, and a day spent
+ * summarizing can no longer leave nothing for translation.
+ *
+ * Keeping one ledger per purpose is what makes that real. A single counter
+ * across both keys would refuse work that the other key still had budget for.
+ */
+export type ModelPurpose = "summary" | "translation";
 
-/** What a batch is currently believed to cost. */
-export function batchTokenEstimate(): number {
-  return observedBatchTokens;
+export const MODEL_PURPOSES: readonly ModelPurpose[] = ["summary", "translation"];
+
+interface Ledger {
+  day: string;
+  spent: number;
+  observedBatchTokens: number;
 }
 
-/** Test seam: forget today's spend and the learned batch cost. */
-export function __resetLedgerForTests() {
-  ledgerDay = "";
-  tokensSpent = 0;
-  observedBatchTokens = ASSUMED_BATCH_TOKENS;
-}
-
-/** Test seam: what the ledger believes has been spent today. */
-export function tokensSpentToday(): number {
-  rollLedger();
-  return tokensSpent;
-}
+const ledgers: Record<ModelPurpose, Ledger> = {
+  summary: { day: "", spent: 0, observedBatchTokens: ASSUMED_BATCH_TOKENS },
+  translation: { day: "", spent: 0, observedBatchTokens: ASSUMED_BATCH_TOKENS },
+};
 
 /** UTC, to match how Groq reports the window it is metering. */
 function utcDay(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function rollLedger() {
+function ledgerFor(purpose: ModelPurpose): Ledger {
+  const ledger = ledgers[purpose];
   const day = utcDay();
-  if (day !== ledgerDay) {
-    ledgerDay = day;
-    tokensSpent = 0;
+  if (day !== ledger.day) {
+    ledger.day = day;
+    ledger.spent = 0;
+  }
+  return ledger;
+}
+
+/** What a batch of this kind is currently believed to cost. */
+export function batchTokenEstimate(purpose: ModelPurpose): number {
+  return ledgers[purpose].observedBatchTokens;
+}
+
+/** Test seam: forget today's spend and the learned batch cost. */
+export function __resetLedgerForTests() {
+  for (const purpose of MODEL_PURPOSES) {
+    ledgers[purpose] = {
+      day: "",
+      spent: 0,
+      observedBatchTokens: ASSUMED_BATCH_TOKENS,
+    };
   }
 }
 
+/** Test seam: what the ledger believes has been spent today. */
+export function tokensSpentToday(purpose: ModelPurpose): number {
+  return ledgerFor(purpose).spent;
+}
+
 /**
- * Tokens left in today's allowance.
+ * Tokens left in today's allowance for this job.
  *
  * Per process, like the rate limiter in lib/rate-limit.ts and honest about it:
  * several warm instances each keep their own ledger, so the real spend can be a
@@ -102,18 +130,19 @@ function rollLedger() {
  * whenever the real limit is reached, which is what keeps per-instance drift
  * from compounding across a day.
  */
-export function tokensRemaining(): number {
+export function tokensRemaining(purpose: ModelPurpose): number {
   if (DAILY_TOKEN_BUDGET === 0) return Number.POSITIVE_INFINITY;
-  rollLedger();
-  return Math.max(0, DAILY_TOKEN_BUDGET - tokensSpent);
+  return Math.max(0, DAILY_TOKEN_BUDGET - ledgerFor(purpose).spent);
 }
 
-export function recordSpend(tokens: number) {
-  rollLedger();
-  tokensSpent += tokens;
+export function recordSpend(purpose: ModelPurpose, tokens: number) {
+  const ledger = ledgerFor(purpose);
+  ledger.spent += tokens;
   if (tokens > 0) {
     // Converge on what batches actually cost rather than trusting the guess.
-    observedBatchTokens = Math.round(observedBatchTokens * 0.7 + tokens * 0.3);
+    ledger.observedBatchTokens = Math.round(
+      ledger.observedBatchTokens * 0.7 + tokens * 0.3,
+    );
   }
 }
 
@@ -123,12 +152,14 @@ export function recordSpend(tokens: number) {
  * A 429 for a daily limit carries the authoritative figure — "Limit 200000,
  * Used 197745" — which is better than anything this process can infer, and is
  * also the only way a cold instance learns that the day is already spent.
+ *
+ * Applied to one purpose, not both: the figure came from one key, and the other
+ * key's allowance is untouched by it.
  */
-export function syncLedgerFrom429(body: string) {
+export function syncLedgerFrom429(purpose: ModelPurpose, body: string) {
   const match = body.match(/Limit (\d+), Used (\d+)/);
   if (!match) return;
-  rollLedger();
+  const ledger = ledgerFor(purpose);
   const used = Number.parseInt(match[2] ?? "", 10);
-  if (Number.isFinite(used)) tokensSpent = Math.max(tokensSpent, used);
+  if (Number.isFinite(used)) ledger.spent = Math.max(ledger.spent, used);
 }
-
