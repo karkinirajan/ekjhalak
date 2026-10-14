@@ -13,6 +13,9 @@
   The manual dashboard work: Resend domain verification, the `support@` mailbox,
   Netlify environment variables, DNS, and the scheduled refresh. Nothing in it
   can be committed, and none of it is done by CI.
+- **Moving to a VPS** — [`operations/vps-migration.md`](operations/vps-migration.md).
+  SSH, deploy key, PostgreSQL, a real subscriber table, systemd, Nginx, TLS and
+  backups — and an honest account of which steps are code rather than config.
 - **What to build next** — [`product/premium-features.md`](product/premium-features.md).
   Five features graded by what the codebase already has, in build order.
 - **The commercial plan** — [`product/monetization.md`](product/monetization.md).
