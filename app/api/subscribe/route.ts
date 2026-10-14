@@ -7,6 +7,7 @@ import {
   sendConfirmation,
 } from "@/lib/newsletter";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { findSubscriber, recordRequest } from "@/lib/subscribers";
 import {
   createConfirmationToken,
   isTokenSigningConfigured,
@@ -98,6 +99,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
 
+  // Already on the list: say so and send nothing.
+  //
+  // Checked before the send budget, because answering a known subscriber costs
+  // one indexed lookup and should not consume an allowance meant for mail. The
+  // honest reason, though, is the mail itself: a confirmed reader who submits
+  // the form again — which people do, having forgotten — should not be asked to
+  // confirm a subscription they already have. That mail reads like a mistake,
+  // and acting on it changes nothing.
+  const existing = await findSubscriber(checked.email);
+  if (existing?.status === "confirmed") {
+    return NextResponse.json({ ok: true, status: "already_subscribed" });
+  }
+
   // Past here the request costs an email and a provider call, so it draws on
   // the tight budget. A mistyped address never reaches this line.
   const send = rateLimit(`subscribe:send:${client}`, SEND_LIMIT, RATE_WINDOW_MS);
@@ -108,6 +122,10 @@ export async function POST(request: NextRequest) {
   // Subscribing directly is weaker, and the response says which happened so the
   // UI can word the confirmation accurately.
   if (!canSendMail() || !isTokenSigningConfigured()) {
+    await recordRequest(checked.email, lang, {
+      ip: clientKey(request.headers),
+      userAgent: request.headers.get("user-agent"),
+    });
     const added = await addSubscriber(checked.email);
     if (!added.ok) {
       return NextResponse.json(
@@ -123,6 +141,14 @@ export async function POST(request: NextRequest) {
   if (!token) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
+
+  // Written before the mail goes, not after. If Resend fails we still want to
+  // know somebody asked: a pending row with no confirmation is a state someone
+  // can diagnose, and a silent nothing is not.
+  await recordRequest(checked.email, lang, {
+    ip: clientKey(request.headers),
+    userAgent: request.headers.get("user-agent"),
+  });
 
   const confirmUrl = `${siteUrl(request)}/api/subscribe/confirm?token=${encodeURIComponent(token)}&lang=${lang}`;
   const sent = await sendConfirmation(checked.email, confirmUrl, lang);

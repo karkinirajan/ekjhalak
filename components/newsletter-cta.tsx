@@ -14,6 +14,8 @@ type SubmitState =
   | "check-inbox"
   /** Subscribed outright, on deployments with no mail transport to confirm with. */
   | "done"
+  /** This address confirmed already — nothing was sent, nothing to do. */
+  | "already"
   | "invalid"
   | "throwaway"
   | "closed"
@@ -52,7 +54,11 @@ export function NewsletterCta() {
               ? t.newsletterFailed
               : null;
 
-  const settled = state === "check-inbox" || state === "done";
+  // Every outcome that ends the form. "already" belongs here: the reader asked,
+  // the answer is settled, and re-showing the field invites them to try again at
+  // something that is already done.
+  const settled =
+    state === "check-inbox" || state === "done" || state === "already";
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -81,7 +87,13 @@ export function NewsletterCta() {
         // link was sent, or — with no mail transport configured — the address
         // went straight onto the list. These are different promises and the
         // reader is told which one they got.
-        setState(body?.status === "subscribed" ? "done" : "check-inbox");
+        setState(
+          body?.status === "already_subscribed"
+            ? "already"
+            : body?.status === "subscribed"
+              ? "done"
+              : "check-inbox",
+        );
         setEmail("");
       } else if (response.status === 429) {
         setState("busy");
@@ -151,7 +163,9 @@ export function NewsletterCta() {
             )}
             {state === "check-inbox"
               ? t.newsletterCheckInbox
-              : t.newsletterSuccess}
+              : state === "already"
+                ? t.newsletterAlready
+                : t.newsletterSuccess}
           </p>
         ) : (
           // `noValidate` hands validation to this component rather than the

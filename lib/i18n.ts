@@ -49,6 +49,8 @@ const en = {
   newsletterCheckInbox:
     "Check your inbox — we've sent a link to confirm. You're not on the list until you click it, and the link lasts two days.",
   newsletterSuccess: "You're on the list. Watch your inbox tomorrow morning.",
+  newsletterAlready:
+    "You're already subscribed — nothing more to do. The next briefing arrives tomorrow morning.",
   newsletterInvalid: "Please enter a valid email address.",
   newsletterThrowaway:
     "That looks like a disposable address. Please use one you'll still read tomorrow.",
@@ -136,6 +138,8 @@ const np: I18nDict = {
   newsletterCheckInbox:
     "इनबक्स हेर्नुहोस् — पुष्टि गर्ने लिंक पठाइएको छ। त्यो नथिचेसम्म तपाईं सूचीमा पर्नुहुन्न, र लिंक दुई दिनसम्म चल्छ।",
   newsletterSuccess: "धन्यवाद! भोलि बिहान इनबक्स हेर्नुहोला।",
+  newsletterAlready:
+    "तपाईं पहिले नै सूचीमा हुनुहुन्छ — केही गर्नु पर्दैन। अर्को बुलेटिन भोलि बिहान आउँछ।",
   newsletterInvalid: "कृपया मान्य इमेल ठेगाना राख्नुहोस्।",
   newsletterThrowaway:
     "यो अस्थायी इमेल ठेगाना जस्तो देखिन्छ। कृपया भोलि पनि पढ्ने ठेगाना राख्नुहोस्।",

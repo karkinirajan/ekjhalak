@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addSubscriber } from "@/lib/newsletter";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { siteUrl } from "@/lib/site-url";
+import { confirmSubscriber } from "@/lib/subscribers";
 import { verifyConfirmationToken } from "@/lib/subscribe-token";
 
 /**
@@ -21,9 +23,20 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const lang = searchParams.get("lang") === "np" ? "np" : "en";
 
+  // Built from the configured site URL, not from request.url.
+  //
+  // Behind a reverse proxy request.url is what nginx forwarded —
+  // http://localhost:3000 — so resolving against it sent every reader who
+  // clicked a confirmation link to localhost. On Netlify request.url was the
+  // public address and this was invisible; it appeared the moment the app moved
+  // behind nginx. siteUrl() reads NEXT_PUBLIC_SITE_URL, which is the one place
+  // that already knows what this site is called.
   const redirect = (status: string) =>
     NextResponse.redirect(
-      new URL(`/subscribe/confirmed?status=${status}&lang=${lang}`, request.url),
+      new URL(
+        `/subscribe/confirmed?status=${status}&lang=${lang}`,
+        siteUrl() || request.url,
+      ),
       // 303: the browser must follow with a GET, and the result must not be
       // cached as a permanent move — this URL means something different every
       // time it is called.
@@ -48,8 +61,19 @@ export async function GET(request: NextRequest) {
     return redirect(verified.reason === "expired" ? "expired" : "invalid");
   }
 
-  const added = await addSubscriber(verified.email);
-  if (!added.ok) return redirect("failed");
+  // The database is the list; Resend is a copy of it. Recorded first so a
+  // provider outage cannot cost us a confirmation the reader actually made.
+  const stored = await confirmSubscriber(verified.email);
 
-  return redirect(added.alreadySubscribed ? "already" : "confirmed");
+  const added = await addSubscriber(verified.email);
+
+  // Only a failure on both sides is a failure to the reader. If the row is
+  // written, the person is subscribed whatever Resend thinks — the audience is
+  // a mirror of this list and can be rebuilt from it.
+  if (!added.ok && !stored.confirmed && !stored.alreadyConfirmed) {
+    return redirect("failed");
+  }
+
+  const already = stored.alreadyConfirmed || (added.ok && added.alreadySubscribed);
+  return redirect(already ? "already" : "confirmed");
 }
