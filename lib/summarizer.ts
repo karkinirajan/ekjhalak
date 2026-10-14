@@ -121,10 +121,59 @@ const REQUEST_TIMEOUT_MS = 45_000;
  * gpt-oss-120b is that next entry — worse Nepali than Qwen, far better than no
  * translation at all.
  */
+/**
+ * Gemini sits last in both chains, and last is the whole point.
+ *
+ * It is there for capacity, not quality. Measured on eight of this site's own
+ * Nepali articles against the production prompt, Gemini carried 81-86% of the
+ * figures where Groq's qwen carried 95%, and it silently converted Bikram
+ * Sambat dates the prompt had told it to leave alone: "असोज २२ देखि कार्तिक ३०"
+ * came back as "October 8 to November 16". For a news desk that is a factual
+ * error, not a stylistic one.
+ *
+ * What it does have is quota. In the same run it was the only provider to
+ * finish all eight articles; qwen managed six and gpt-oss one, both stopped by
+ * Groq's daily pool. So it runs when Groq has nothing left, where a translation
+ * that rounds a date beats no translation at all — and never before then.
+ */
+const GEMINI_SUMMARY_MODEL = "gemini-2.5-flash";
+const GEMINI_TRANSLATE_MODEL = "gemini-3.1-flash-lite";
+
+/**
+ * Is there a provider left when Groq's day is spent?
+ *
+ * The daily ledger is a brake on Groq's pool, and every gate in this file asks
+ * it before starting work. Once a second provider sits at the end of the chain
+ * those gates have to ask a wider question, or the fallback is unreachable on
+ * the one day it matters.
+ */
+function hasFallback(): boolean {
+  return Boolean(envString("GEMINI_API_KEY"));
+}
+
 const DEFAULT_MODELS: Record<ModelPurpose, readonly string[]> = {
-  summary: ["openai/gpt-oss-120b"],
-  translation: ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"],
+  summary: ["openai/gpt-oss-120b", `gemini:${GEMINI_SUMMARY_MODEL}`],
+  translation: [
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
+    `gemini:${GEMINI_TRANSLATE_MODEL}`,
+  ],
 };
+
+/**
+ * Which API a chain entry belongs to.
+ *
+ * The `gemini:` prefix is the marker. Everything else is Groq, which keeps the
+ * existing GROQ_MODEL overrides meaning exactly what they always did.
+ */
+type Provider = "groq" | "gemini";
+
+function providerOf(entry: string): Provider {
+  return entry.startsWith("gemini:") ? "gemini" : "groq";
+}
+
+const bareModel = (entry: string) =>
+  entry.startsWith("gemini:") ? entry.slice("gemini:".length) : entry;
 
 /**
  * Per-job override, falling back to the shared GROQ_MODEL, then the defaults.
@@ -158,6 +207,8 @@ const MODEL_NAMESPACE: Record<string, string> = {
 };
 
 function normalizeModelId(name: string): string {
+  // A gemini: entry is already fully qualified by its prefix.
+  if (name.startsWith("gemini:")) return name;
   if (name.includes("/")) return name;
   const qualified = MODEL_NAMESPACE[name];
   if (qualified) {
@@ -585,16 +636,77 @@ function requestTimeout(deadline: number): number {
   return Math.max(1, Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now()));
 }
 
-async function callModel<T>(
+/**
+ * The same request, in whichever dialect the provider speaks.
+ *
+ * Groq is OpenAI-shaped; Gemini puts the system prompt in `systemInstruction`,
+ * the user turn in `contents`, and asks for JSON through `responseMimeType`.
+ * Translating between the two here keeps every prompt, every budget and every
+ * cooldown in one place — the alternative is a second copy of the chain that
+ * drifts from this one.
+ */
+function geminiRequest(
   model: string,
+  apiKey: string,
+  body: Record<string, unknown>,
+): { url: string; init: RequestInit } {
+  const messages = (body.messages ?? []) as { role: string; content: string }[];
+  const system = messages.find((m) => m.role === "system")?.content ?? "";
+  const user = messages.find((m) => m.role === "user")?.content ?? "";
+
+  return {
+    url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    init: {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ parts: [{ text: user }] }],
+        generationConfig: {
+          temperature: body.temperature ?? 0.2,
+          maxOutputTokens: body.max_completion_tokens ?? MAX_OUTPUT_TOKENS,
+          responseMimeType: "application/json",
+        },
+      }),
+    },
+  };
+}
+
+/** Gemini's reply, reduced to the two things the rest of this file reads. */
+function readGemini(data: unknown): { text: string; tokens: number } | null {
+  const body = data as {
+    candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
+    usageMetadata?: { totalTokenCount?: number };
+  };
+  const candidate = body?.candidates?.[0];
+  if (!candidate) return null;
+  // MAX_TOKENS means the JSON is cut off and will not parse; the next model in
+  // the chain serves this batch better than salvage would.
+  if (candidate.finishReason && candidate.finishReason !== "STOP") return null;
+  const text = candidate.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  return { text: text.trim(), tokens: body.usageMetadata?.totalTokenCount ?? 0 };
+}
+
+async function callModel<T>(
+  entry: string,
   requestBody: Record<string, unknown>,
   deadline: number,
   purpose: ModelPurpose,
 ): Promise<T[] | null> {
-  const apiKey = keyFor(purpose);
+  const provider = providerOf(entry);
+  const model = bareModel(entry);
+  const apiKey = provider === "gemini" ? envString("GEMINI_API_KEY") : keyFor(purpose);
   if (!apiKey) return null;
+
   let res: Response;
   try {
+    if (provider === "gemini") {
+      const { url, init } = geminiRequest(model, apiKey, requestBody);
+      res = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(requestTimeout(deadline)),
+      });
+    } else {
     res = await fetch(GROQ_ENDPOINT, {
       method: "POST",
       headers: {
@@ -604,10 +716,11 @@ async function callModel<T>(
       body: JSON.stringify({ ...requestBody, model }),
       signal: AbortSignal.timeout(requestTimeout(deadline)),
     });
+    }
   } catch {
     // Timeout or transport failure. Shelve briefly so a flapping model does not
     // eat the whole run's deadline batch after batch.
-    coolDown(model, MIN_COOLDOWN_MS);
+    coolDown(entry, MIN_COOLDOWN_MS);
     return null;
   }
 
@@ -619,27 +732,46 @@ async function callModel<T>(
       // untranslated stories with no line anywhere saying why. It took an
       // instrumented run through four call layers to find it. It says so now.
       if (/per[ -]day|\bTPD\b|\bRPD\b/i.test(detail)) {
-        syncLedgerFrom429(purpose, detail);
+        // Only Groq's figure belongs in Groq's ledger. Gemini meters requests a
+        // day rather than tokens, and writing its refusal into the token count
+        // would close Groq's budget on the strength of someone else's limit.
+        if (provider === "groq") syncLedgerFrom429(purpose, detail);
         console.warn(
           `[${purpose}] ${model} daily quota exhausted — ${tokensSpentToday(purpose).toLocaleString()} tokens used. ` +
             "Stories keep their publisher text until it resets.",
         );
       }
-      coolDown(model, cooldownFor(res, detail));
+      coolDown(entry, cooldownFor(res, detail));
     } else if (res.status === 400 || res.status === 404) {
       // Bad model name or a request shape this model rejects — never going to
       // work, so take it out of the chain for this process.
-      coolDown(model, 24 * 60 * 60 * 1_000);
-      console.warn(`[enrich] ${model} rejected the request: ${detail.slice(0, 200)}`);
+      coolDown(entry, 24 * 60 * 60 * 1_000);
+      console.warn(`[enrich] ${entry} rejected the request: ${detail.slice(0, 200)}`);
     } else {
-      coolDown(model, MIN_COOLDOWN_MS);
+      coolDown(entry, MIN_COOLDOWN_MS);
     }
     return null;
   }
 
-  noteRateLimit(model, res);
+  if (provider === "groq") noteRateLimit(entry, res);
 
   const data = await res.json().catch(() => null);
+
+  if (provider === "gemini") {
+    const reply = readGemini(data);
+    if (!reply?.text) return null;
+    // Gemini's spend is deliberately not charged to the token ledger: that
+    // ledger models Groq's 200,000-a-day pool, and Gemini is only ever reached
+    // because that pool is empty. Charging it would make the fallback close the
+    // budget it exists to work around.
+    try {
+      const parsed = JSON.parse(reply.text);
+      const items = Array.isArray(parsed) ? parsed : parsed?.items;
+      return Array.isArray(items) ? (items as T[]) : null;
+    } catch {
+      return null;
+    }
+  }
 
   // Charge the ledger with what this actually cost, before any of the reasons
   // the reply might be unusable. The tokens were spent either way, and a reply
@@ -655,7 +787,7 @@ async function callModel<T>(
   // A truncated answer is not a partial answer: the JSON will not parse, and the
   // stories in this batch are better served by the next model than by salvage.
   if (choice.finish_reason && choice.finish_reason !== "stop") {
-    console.warn(`[enrich] ${model} stopped early: ${choice.finish_reason}`);
+    console.warn(`[enrich] ${entry} stopped early: ${choice.finish_reason}`);
     return null;
   }
 
@@ -841,7 +973,12 @@ export async function verifyEnrichments(
       // Checked per batch, like enrichment: verification must never be the
       // stage that empties the day's allowance out from under the next pass's
       // translations.
-      if (tokensRemaining("summary") < batchTokenEstimate("summary")) return;
+      if (
+        tokensRemaining("summary") < batchTokenEstimate("summary") &&
+        !hasFallback()
+      ) {
+        return;
+      }
       const batch = batches[cursor++];
       if (batch === undefined) return;
       const replies = await askChain<VerifyReply>(
@@ -955,12 +1092,18 @@ export async function enrichStories(
   // before it builds the pending list — so truncating here spends the budget on
   // the stories most worth translating rather than on whichever requests won
   // the race to the API.
-  const affordable =
+  // What Groq's remaining tokens afford — and, when they afford nothing, what
+  // the fallback does. Without this second clause an empty Groq pool returned
+  // zero batches and the chain was never walked, so the Gemini entry at the end
+  // of it could not be reached on precisely the day it exists for.
+  const groqAffords =
     DAILY_TOKEN_BUDGET === 0
       ? allBatches.length
       : Math.floor(
           tokensRemaining("summary") / Math.max(1, batchTokenEstimate("summary")),
         );
+  const affordable =
+    groqAffords > 0 ? groqAffords : hasFallback() ? allBatches.length : 0;
   const allowed = Math.max(
     0,
     Math.min(allBatches.length, MAX_BATCHES_PER_PASS, affordable),
@@ -989,7 +1132,12 @@ export async function enrichStories(
       if (Date.now() >= deadline) return;
       // Re-checked per batch, not only up front: a batch that came back dearer
       // than expected must not let the two still in flight overdraw the day.
-      if (tokensRemaining("summary") < batchTokenEstimate("summary")) return;
+      if (
+        tokensRemaining("summary") < batchTokenEstimate("summary") &&
+        !hasFallback()
+      ) {
+        return;
+      }
       const index = cursor++;
       if (index >= batches.length) return;
 
@@ -1043,7 +1191,8 @@ export async function enrichStories(
       const translations = new Map<string, ModelReply>();
       if (
         translatable.length > 0 &&
-        tokensRemaining("translation") >= batchTokenEstimate("translation")
+        (tokensRemaining("translation") >= batchTokenEstimate("translation") ||
+          hasFallback())
       ) {
         try {
           const replies = await translateBatch(translatable, deadline);

@@ -93,7 +93,12 @@ if (process.env.EKJHALAK_TRANSLATION || process.env.GROQ_API_KEY) {
 if (process.env.GEMINI_API_KEY) {
   // Flash and Flash-Lite are the two free tiers worth comparing; Flash-Lite is
   // cheaper per call and the question is whether its Nepali holds up.
-  for (const model of ["gemini-3.8-flash", "gemini-3.5-flash-lite"]) {
+  //
+  // Pinned to IDs the API actually serves. The research that proposed Gemini
+  // named gemini-3.8-flash and gemini-3.5-flash-lite; neither exists. A model
+  // ID that 404s is indistinguishable from a provider that performs badly, so
+  // these were checked against GET /v1beta/models before being written down.
+  for (const model of ["gemini-2.5-flash", "gemini-3.1-flash-lite"]) {
     providers.push({
       name: `gemini:${model.replace("gemini-", "")}`,
       async translate(text, title) {
