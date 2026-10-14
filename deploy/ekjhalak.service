@@ -1,0 +1,19 @@
+[Unit]
+Description=EkJhalak News
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/srv/ekjhalak
+EnvironmentFile=/srv/ekjhalak/.env
+Environment=NODE_OPTIONS=--max-old-space-size=700
+Environment=PORT=3000
+ExecStart=/usr/bin/pnpm run start
+Restart=always
+RestartSec=10
+MemoryMax=800M
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+[Unit]
+Description=EkJhalak feed refresh
+After=ekjhalak.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/srv/ekjhalak/.env
+ExecStart=/bin/bash -c "curl -fsS -X POST \"http://127.0.0.1:3000/api/revalidate?secret=$REVALIDATE_SECRET\" >/dev/null"
