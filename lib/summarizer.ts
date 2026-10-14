@@ -553,9 +553,27 @@ export async function verifyEnrichments(
     batches.push(inputs.slice(i, i + BATCH_SIZE));
   }
 
+  // Verification spends from the same daily allowance as enrichment — both go
+  // through askChain, so both are charged to the ledger — and it is the stage
+  // that must give way when the two compete. A story that is translated but
+  // unverified still reaches the reader and is simply marked unverified; a
+  // story that was never translated does not. So the cap here is the same
+  // per-pass ceiling enrichment uses, applied to what enrichment left.
+  const allowed = Math.min(batches.length, MAX_BATCHES_PER_PASS);
+  if (allowed < batches.length) {
+    console.info(
+      `[verify] ${allowed} of ${batches.length} batch(es) this pass; ` +
+        "the rest stay unverified until a later pass.",
+    );
+  }
+
   let cursor = 0;
   async function worker() {
-    while (cursor < batches.length && Date.now() < deadline) {
+    while (cursor < allowed && Date.now() < deadline) {
+      // Checked per batch, like enrichment: verification must never be the
+      // stage that empties the day's allowance out from under the next pass's
+      // translations.
+      if (tokensRemaining() < batchTokenEstimate()) return;
       const batch = batches[cursor++];
       if (batch === undefined) return;
       const replies = await askChain<VerifyReply>(
