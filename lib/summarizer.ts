@@ -73,7 +73,20 @@ export const SUMMARY_MIN_CHARS = SUMMARY_BOUNDS.en.min;
 export const VERBATIM_MAX_CHARS = SUMMARY_BOUNDS.np.max;
 
 /** Stories per request. */
-const BATCH_SIZE = clampInt(process.env.GROQ_BATCH_SIZE, 10, 1, 40);
+/**
+ * Stories per request.
+ *
+ * Three, not ten, and the reason is a limit separate from the daily one. Groq
+ * sends `x-ratelimit-limit-tokens: 8000` — a *per minute* ceiling — and a batch
+ * costs about 835 tokens a story. Ten stories is 8,350 tokens in one request,
+ * which exceeds the whole minute's allowance on its own; three requests of that
+ * size in flight is 25,050 against 8,000, so most of them could only ever 429.
+ *
+ * Three stories is 2,505 tokens a request and 7,515 with the default three in
+ * flight, which fits with room for the reply. Raising this without lowering
+ * GROQ_CONCURRENCY puts the stage back where it was.
+ */
+const BATCH_SIZE = clampInt(process.env.GROQ_BATCH_SIZE, 3, 1, 40);
 /** Requests in flight at once. */
 const CONCURRENCY = clampInt(process.env.GROQ_CONCURRENCY, 3, 1, 8);
 const REQUEST_TIMEOUT_MS = 45_000;
@@ -313,6 +326,51 @@ function isCoolingDown(model: string): boolean {
 
 function coolDown(model: string, ms: number) {
   cooldownUntil.set(model, Date.now() + ms);
+}
+
+/**
+ * What the last reply said about the per-minute window.
+ *
+ * Groq reports both limits on every response — `x-ratelimit-remaining-tokens`
+ * and `x-ratelimit-reset-tokens` — and the per-minute one is the tighter of the
+ * two by far: 8,000 tokens against 200,000 a day. Reading it is strictly better
+ * than inferring it, and it is free, since it rides on a reply we already have.
+ *
+ * When a model has less left in the minute than a batch costs, the next batch
+ * waits for the window instead of spending a request to be told no. A 429 is
+ * not harmless: it shelves the model for thirty seconds, so one avoidable
+ * refusal costs far more than the pause that would have prevented it.
+ */
+const minuteWindow = new Map<string, { remaining: number; resetAt: number }>();
+
+function noteRateLimit(model: string, res: Response) {
+  const remaining = Number.parseInt(
+    res.headers.get("x-ratelimit-remaining-tokens") ?? "",
+    10,
+  );
+  if (!Number.isFinite(remaining)) return;
+
+  // "20.777s", "4m19.2s" — minutes are optional and seconds may be fractional.
+  const raw = res.headers.get("x-ratelimit-reset-tokens") ?? "";
+  const parts = raw.match(/(?:(\d+)m)?([\d.]+)s/);
+  const seconds = parts
+    ? (parts[1] ? Number.parseInt(parts[1], 10) * 60 : 0) +
+      Number.parseFloat(parts[2] ?? "0")
+    : 60;
+
+  minuteWindow.set(model, {
+    remaining,
+    resetAt: Date.now() + Math.max(0, seconds) * 1_000,
+  });
+}
+
+/** Milliseconds to wait before this model can afford `tokens` again. */
+function waitForMinuteWindow(model: string, tokens: number): number {
+  const window = minuteWindow.get(model);
+  if (!window) return 0;
+  if (Date.now() >= window.resetAt) return 0;
+  if (window.remaining >= tokens) return 0;
+  return window.resetAt - Date.now();
 }
 
 const DAILY_QUOTA_COOLDOWN_MS = 30 * 60 * 1_000;
@@ -579,6 +637,8 @@ async function callModel<T>(
     return null;
   }
 
+  noteRateLimit(model, res);
+
   const data = await res.json().catch(() => null);
 
   // Charge the ledger with what this actually cost, before any of the reasons
@@ -628,6 +688,17 @@ async function askChain<T>(
   for (const model of modelChain(purpose)) {
     if (isCoolingDown(model)) continue;
     if (Date.now() >= deadline) break;
+
+    // Wait out the per-minute window rather than spend a request to be refused.
+    // A 429 shelves the model for thirty seconds, so an avoidable refusal costs
+    // far more than the pause that would have prevented it — but only wait if
+    // the pass can still afford to, otherwise move to the next model.
+    const wait = waitForMinuteWindow(model, batchTokenEstimate(purpose));
+    if (wait > 0) {
+      if (Date.now() + wait >= deadline) continue;
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+
     const replies = await callModel<T>(model, requestBody, deadline, purpose);
     if (replies) return replies;
   }
