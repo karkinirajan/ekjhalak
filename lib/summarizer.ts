@@ -113,11 +113,49 @@ const DEFAULT_MODELS: Record<ModelPurpose, readonly string[]> = {
   translation: ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"],
 };
 
-/** Per-job override, falling back to the shared GROQ_MODEL, then the defaults. */
-const MODEL_ENV: Record<ModelPurpose, string> = {
-  summary: "EKJHALAK_SUMMARY_MODEL",
-  translation: "EKJHALAK_TRANSLATION_MODEL",
+/**
+ * Per-job override, falling back to the shared GROQ_MODEL, then the defaults.
+ *
+ * Two names each, because the deployment settled on GROQ_MODEL_SUMMARY and
+ * GROQ_MODEL_TRANSLATE while this file was written against EKJHALAK_*_MODEL.
+ * Reading both costs nothing and means a correct-looking .env is never silently
+ * ignored — a model name that does not take effect shows up as a quota bill
+ * against the wrong model, which is close to invisible.
+ */
+const MODEL_ENV: Record<ModelPurpose, readonly string[]> = {
+  summary: ["GROQ_MODEL_SUMMARY", "EKJHALAK_SUMMARY_MODEL"],
+  translation: ["GROQ_MODEL_TRANSLATE", "EKJHALAK_TRANSLATION_MODEL"],
 };
+
+/**
+ * Groq model IDs are namespaced — `qwen/qwen3.8-27b`, not `qwen3.8-27b` — and
+ * the bare name 404s rather than resolving. A 404 shelves the model for 24
+ * hours, so a missing prefix in configuration reads as "the translator is
+ * permanently down" with nothing pointing at the cause.
+ *
+ * Only the vendors actually in play are mapped. An unknown bare name is passed
+ * through untouched and allowed to fail honestly, because guessing a namespace
+ * for it would be inventing configuration the operator did not write.
+ */
+const MODEL_NAMESPACE: Record<string, string> = {
+  "qwen3.8-27b": "qwen/qwen3.8-27b",
+  "qwen3.6-27b": "qwen/qwen3.6-27b",
+  "gpt-oss-120b": "openai/gpt-oss-120b",
+  "gpt-oss-20b": "openai/gpt-oss-20b",
+};
+
+function normalizeModelId(name: string): string {
+  if (name.includes("/")) return name;
+  const qualified = MODEL_NAMESPACE[name];
+  if (qualified) {
+    console.warn(
+      `[model] "${name}" is missing its vendor prefix — using "${qualified}". ` +
+        "Groq 404s the bare name, which would shelve the model for 24 hours.",
+    );
+    return qualified;
+  }
+  return name;
+}
 
 /**
  * Deliberately far above what the answer needs (~300 tokens per story per
@@ -153,7 +191,6 @@ function keyFor(purpose: ModelPurpose): string | undefined {
   return specific ?? envString("GROQ_API_KEY");
 }
 
-const API_KEY = process.env.GROQ_API_KEY;
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 function clampInt(
@@ -172,13 +209,16 @@ function modelChain(purpose: ModelPurpose): string[] {
     (value ?? "")
       .split(",")
       .map((name) => name.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map(normalizeModelId);
 
   // A job-specific override wins outright. GROQ_MODEL is honoured only for
   // summarizing: it predates the split, and a deployment that set it meant the
   // summarizer — forcing it on the translator too would silently undo the
   // reason translation runs on a different model.
-  const configured = names(envString(MODEL_ENV[purpose]));
+  const configured = MODEL_ENV[purpose].flatMap((key) =>
+    names(envString(key)),
+  );
   const shared = purpose === "summary" ? names(envString("GROQ_MODEL")) : [];
   return [...new Set([...configured, ...shared, ...DEFAULT_MODELS[purpose]])];
 }
@@ -392,8 +432,16 @@ interface ModelReply {
   summary?: string;
 }
 
+/**
+ * Can the pipeline summarize at all?
+ *
+ * Asks keyFor rather than GROQ_API_KEY directly: since the split, a deployment
+ * may set EKJHALAK_SUMMARY and EKJHALAK_TRANSLATION and no shared key at all,
+ * and reading the old name here would have reported the whole stage
+ * unconfigured while two perfectly good keys sat in the environment.
+ */
 export function isEnrichmentConfigured(): boolean {
-  return Boolean(API_KEY);
+  return Boolean(keyFor("summary"));
 }
 
 /**
@@ -695,7 +743,7 @@ export async function verifyEnrichments(
   deadline: number,
 ): Promise<Map<string, VerifyVerdict>> {
   const verdicts = new Map<string, VerifyVerdict>();
-  if (!API_KEY || inputs.length === 0) return verdicts;
+  if (!keyFor("summary") || inputs.length === 0) return verdicts;
 
   const batches: VerifyInput[][] = [];
   for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
@@ -824,7 +872,7 @@ export async function enrichStories(
   deadline: number,
 ): Promise<Map<string, EnrichResult>> {
   const out = new Map<string, EnrichResult>();
-  if (!API_KEY || inputs.length === 0) return out;
+  if (!keyFor("summary") || inputs.length === 0) return out;
 
   const allBatches: EnrichInput[][] = [];
   for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
