@@ -216,7 +216,7 @@ function cooldownFor(res: Response, body: string): number {
   const match = body.match(/try again in\s+(?:(\d+)m)?([\d.]+)s/i);
   if (match) {
     const minutes = match[1] ? Number.parseInt(match[1], 10) : 0;
-    const seconds = Number.parseFloat(match[2]);
+    const seconds = Number.parseFloat(match[2] ?? "");
     return Math.max(MIN_COOLDOWN_MS, (minutes * 60 + seconds) * 1_000);
   }
 
@@ -557,6 +557,7 @@ export async function verifyEnrichments(
   async function worker() {
     while (cursor < batches.length && Date.now() < deadline) {
       const batch = batches[cursor++];
+      if (batch === undefined) return;
       const replies = await askChain<VerifyReply>(
         buildVerifyBody(batch),
         deadline,
@@ -689,6 +690,7 @@ export async function enrichStories(
       if (index >= batches.length) return;
 
       const batch = batches[index];
+      if (batch === undefined) return;
       const byId = new Map(batch.map((item) => [item.id, item]));
 
       let replies: ModelReply[];

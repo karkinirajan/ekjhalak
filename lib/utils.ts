@@ -122,7 +122,11 @@ export function sourceMonogram(name: string): string {
     .filter(Boolean)
     .filter((word, index) => !(index === 0 && /^(the|la|le|el)$/i.test(word)));
 
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[1][0]).toUpperCase();
+  // Destructured rather than indexed so the empty and single-word cases are
+  // the same check the compiler reads. `.filter(Boolean)` above already
+  // guarantees no entry is an empty string, hence `[0]` is always a character.
+  const [first, second] = words;
+  if (!first) return "?";
+  if (!second) return first.slice(0, 2).toUpperCase();
+  return `${first[0] ?? ""}${second[0] ?? ""}`.toUpperCase();
 }

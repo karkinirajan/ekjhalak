@@ -179,6 +179,7 @@ export async function extractMany(
   async function worker() {
     while (cursor < pending.length && Date.now() < deadline) {
       const url = pending[cursor++];
+      if (url === undefined) return;
       const result = await extractArticleText(url, deadline);
       if (result) out.set(url, result);
     }

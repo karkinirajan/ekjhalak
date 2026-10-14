@@ -100,15 +100,18 @@ export function parseMetaTags(html: string): Map<string, string> {
 
   for (const tag of html.matchAll(/<meta\b([^>]*)>/gi)) {
     const attrs = tag[1];
+    if (!attrs) continue;
     let key = "";
     let content = "";
 
     for (const attr of attrs.matchAll(/([A-Za-z][\w:.-]*)\s*=\s*["']([^"']*)["']/g)) {
-      const name = attr[1].toLowerCase();
+      const name = attr[1]?.toLowerCase();
+      const value = attr[2];
+      if (name === undefined || value === undefined) continue;
       if (name === "property" || name === "name") {
-        key = `${name}:${attr[2].toLowerCase()}`;
+        key = `${name}:${value.toLowerCase()}`;
       } else if (name === "content") {
-        content = attr[2];
+        content = value;
       }
     }
 
@@ -164,6 +167,7 @@ export function jsonLdBody(html: string): string {
   )) {
     if (++blocks > MAX_JSONLD_BLOCKS) break;
     const body = block[1];
+    if (body === undefined) continue;
     // A megabyte of JSON is a product catalogue or an event feed, not an
     // article's metadata, and JSON.parse on it is unbounded synchronous work.
     if (body.length > MAX_JSONLD_BLOCK_BYTES) continue;
@@ -279,7 +283,9 @@ export function paragraphText(html: string): string {
   let length = 0;
 
   for (const match of scannable.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
-    const text = stripWidgetPrefix(htmlToText(match[1]));
+    const inner = match[1];
+    if (inner === undefined) continue;
+    const text = stripWidgetPrefix(htmlToText(inner));
     if (text.length < MIN_PARAGRAPH_CHARS) continue;
     if (looksLikeNavigation(text)) continue;
     if (looksLikeBoilerplate(text)) continue;

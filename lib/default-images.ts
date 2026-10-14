@@ -91,7 +91,7 @@ function wash(colour: string, pct: number): string {
     "#" +
     parts
       .map((v, i) =>
-        Math.round(v * pct + stock[i] * (1 - pct))
+        Math.round(v * pct + (stock[i] ?? 0) * (1 - pct))
           .toString(16)
           .padStart(2, "0"),
       )

@@ -128,7 +128,7 @@ export function syncLedgerFrom429(body: string) {
   const match = body.match(/Limit (\d+), Used (\d+)/);
   if (!match) return;
   rollLedger();
-  const used = Number.parseInt(match[2], 10);
+  const used = Number.parseInt(match[2] ?? "", 10);
   if (Number.isFinite(used)) tokensSpent = Math.max(tokensSpent, used);
 }
 

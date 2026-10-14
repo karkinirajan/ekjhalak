@@ -59,8 +59,8 @@ test("diversifyBySource swaps repeated outlets locally", () => {
     ];
 
     const result = diversifyBySource(items, 3);
-    assert.equal(result[0].id, "a");
-    assert.equal(result[1].id, "c");
+    assert.equal(result[0]!.id, "a");
+    assert.equal(result[1]!.id, "c");
 });
 
 test("selectTicker prefers urgent fresh stories", () => {
@@ -69,7 +69,7 @@ test("selectTicker prefers urgent fresh stories", () => {
         makeItem({ id: "breaking", topic: "breaking", publishedTimestamp: 1_700_000_000_000 }),
     ];
     const result = selectTicker(items, 5, 1_700_000_000_000);
-    assert.equal(result[0].id, "breaking");
+    assert.equal(result[0]!.id, "breaking");
 });
 
 test("selectTrending respects the per-source cap and exclusions", () => {

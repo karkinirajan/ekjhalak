@@ -42,11 +42,11 @@ const srgb = (c: number) => {
 };
 const luminance = (hex: string) => {
   const [r, g, b] = [1, 3, 5].map((i) => srgb(parseInt(hex.slice(i, i + 2), 16)));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
 };
 const contrast = (a: string, b: string) => {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
+  return (hi! + 0.05) / (lo! + 0.05);
 };
 
 test("every generated cover prints its label at WCAG AA against its own ground", () => {

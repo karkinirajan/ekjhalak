@@ -37,8 +37,8 @@ test("deduplicate merges near-duplicates and records coverage counts", () => {
     const result = deduplicate(items);
 
     assert.equal(result.length, 2);
-    assert.equal(result[0].coverageCount, 2);
-    assert.equal(result[1].id, "c");
+    assert.equal(result[0]!.coverageCount, 2);
+    assert.equal(result[1]!.id, "c");
 });
 
 test("deduplicate records which outlets carried a story, not just how many", () => {
@@ -50,8 +50,8 @@ test("deduplicate records which outlets carried a story, not just how many", () 
 
     const [survivor] = deduplicate(items);
 
-    assert.equal(survivor.coverageCount, 3);
-    assert.deepEqual(survivor.alternateSourceIds, ["src-b", "src-c"]);
+    assert.equal(survivor!.coverageCount, 3);
+    assert.deepEqual(survivor!.alternateSourceIds, ["src-b", "src-c"]);
 });
 
 test("deduplicate counts an outlet once when it republishes its own story", () => {
@@ -62,13 +62,13 @@ test("deduplicate counts an outlet once when it republishes its own story", () =
 
     const [survivor] = deduplicate(items);
 
-    assert.equal(survivor.coverageCount, 1);
-    assert.equal(survivor.alternateSourceIds, undefined);
+    assert.equal(survivor!.coverageCount, 1);
+    assert.equal(survivor!.alternateSourceIds, undefined);
 });
 
 test("a story no other outlet carried lists no alternates", () => {
     const [survivor] = deduplicate([makeItem({ id: "a", title: "A story nobody else ran" })]);
 
-    assert.equal(survivor.coverageCount, 1);
-    assert.equal(survivor.alternateSourceIds, undefined);
+    assert.equal(survivor!.coverageCount, 1);
+    assert.equal(survivor!.alternateSourceIds, undefined);
 });

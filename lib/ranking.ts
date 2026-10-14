@@ -117,10 +117,12 @@ export function diversifyBySource(
   while (pool.length > 0) {
     let index = 0;
 
-    if (pool[0].sourceId === lastSource) {
+    const head = pool[0];
+    if (head?.sourceId === lastSource) {
       const limit = Math.min(pool.length, lookahead);
       for (let i = 1; i < limit; i++) {
-        if (pool[i].sourceId !== lastSource) {
+        const candidate = pool[i];
+        if (candidate && candidate.sourceId !== lastSource) {
           index = i;
           break;
         }
@@ -128,6 +130,10 @@ export function diversifyBySource(
     }
 
     const [chosen] = pool.splice(index, 1);
+    // `pool.length > 0` is the loop condition and `index` is always in range,
+    // so splice always yields one item. The guard is for the compiler, and it
+    // breaks rather than throws because an empty pool simply ends the shuffle.
+    if (!chosen) break;
     ordered.push(chosen);
     lastSource = chosen.sourceId;
   }

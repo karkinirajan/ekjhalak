@@ -152,7 +152,7 @@ function extractImageUrl(item: Record<string, unknown>): string | null {
   // First <img> in description (last resort)
   const desc = extractText(item.description);
   const imgMatch = desc.match(/<img[^>]+src=["']([^"']+)["']/i);
-  if (imgMatch) return imgMatch[1];
+  if (imgMatch?.[1]) return imgMatch[1];
 
   return null;
 }

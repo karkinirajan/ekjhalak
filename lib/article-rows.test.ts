@@ -60,7 +60,7 @@ test("a story this pass did not enrich omits the enrichment columns entirely", (
 
   for (const column of ENRICHMENT_COLUMNS) {
     assert.ok(
-      !(column in core[0]),
+      !(column in core[0]!),
       `${column} must be absent, not null — present keys are overwritten`,
     );
   }
@@ -98,10 +98,10 @@ test("an enriched story carries every enrichment column", () => {
 
   assert.equal(enriched.length, 1);
   for (const column of ENRICHMENT_COLUMNS) {
-    assert.ok(column in enriched[0], `${column} missing`);
+    assert.ok(column in enriched[0]!, `${column} missing`);
   }
-  assert.equal(enriched[0].enrichment_key, "abc123def456:1a2b3c");
-  assert.equal(enriched[0].quality?.verified, true);
+  assert.equal(enriched[0]!.enrichment_key, "abc123def456:1a2b3c");
+  assert.equal(enriched[0]!.quality?.verified, true);
 });
 
 test("the partition routes by enrichmentKey and nothing else", () => {

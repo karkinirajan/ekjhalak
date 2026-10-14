@@ -69,6 +69,9 @@ export function rateLimit(
  */
 export function clientKey(headers: Headers): string {
   const forwarded = headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
+  // `split` on a non-empty string always yields at least one element, but the
+  // compiler cannot see that; `?? forwarded` keeps the whole header rather
+  // than inventing a key that would pool unrelated clients together.
+  if (forwarded) return (forwarded.split(",")[0] ?? forwarded).trim();
   return headers.get("x-real-ip") ?? "unknown";
 }
