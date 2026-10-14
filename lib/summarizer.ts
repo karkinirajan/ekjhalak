@@ -30,7 +30,7 @@
 // error rather than a shipped bundle. Holds the model prompts and reads GROQ_API_KEY.
 import "server-only";
 
-import { envString } from "./env";
+import { envOr, envString } from "./env";
 import {
   SUMMARY_BOUNDS,
   SUMMARY_TARGET_WORDS,
@@ -148,8 +148,14 @@ const REQUEST_TIMEOUT_MS = 45_000;
 // so Lite is what both stages fall back to. Its figure retention measured 86%
 // against qwen's 95% on this site's own articles, which is the price of being
 // the provider that still answers.
-const GEMINI_SUMMARY_MODEL = "gemini-3.1-flash-lite";
-const GEMINI_TRANSLATE_MODEL = "gemini-3.1-flash-lite";
+const GEMINI_SUMMARY_MODEL = envOr(
+  "GEMINI_MODEL_SUMMARY",
+  "gemini-3.1-flash-lite",
+);
+const GEMINI_TRANSLATE_MODEL = envOr(
+  "GEMINI_MODEL_TRANSLATE",
+  "gemini-3.1-flash-lite",
+);
 
 /**
  * Is there a provider left when Groq's day is spent?

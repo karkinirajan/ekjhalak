@@ -60,13 +60,19 @@
   # that sets GROQ_MODEL_SUMMARY to that value would fail the scan on its own
   # default. The two EKJHALAK_*_MODEL aliases are listed alongside them.
   #
-  # EKJHALAK_SUMMARY and EKJHALAK_TRANSLATION are deliberately NOT here: those
-  # are API keys, and they stay scanned.
+  # The Gemini model names join them, and that deploy is worth recording: the
+  # scan reported GEMINI_MODEL_TRANSLATE "leaking" into the webpack cache six
+  # times. What it had found was the string "gemini-3.1-flash-lite" — a literal
+  # constant in lib/summarizer.ts, which is the model's public name and the same
+  # value the variable holds. Nothing leaked; a model name matched itself.
+  #
+  # EKJHALAK_SUMMARY, EKJHALAK_TRANSLATION and GEMINI_API_KEY are deliberately
+  # NOT here: those are API keys, and they stay scanned.
   #
   # Omitting the keys rather than the paths, because the paths are incidental:
   # the next build would find 25000 somewhere else. Omitting the key says the
   # true thing, which is that this value was never a secret.
-  SECRETS_SCAN_OMIT_KEYS = "AGGREGATE_BUDGET_MS,GROQ_BUDGET_MS,EXTRACT_BUDGET_MS,VERIFY_BUDGET_MS,GROQ_BATCH_SIZE,GROQ_CONCURRENCY,GROQ_MODEL,GROQ_MODEL_SUMMARY,GROQ_MODEL_TRANSLATE,EKJHALAK_SUMMARY_MODEL,EKJHALAK_TRANSLATION_MODEL,GROQ_DAILY_TOKEN_BUDGET,GROQ_MAX_BATCHES_PER_PASS,PUBLISH_POLICY,NEXT_PUBLIC_SITE_URL,NEWSLETTER_FROM,NEWSLETTER_REPLY_TO"
+  SECRETS_SCAN_OMIT_KEYS = "AGGREGATE_BUDGET_MS,GROQ_BUDGET_MS,EXTRACT_BUDGET_MS,VERIFY_BUDGET_MS,GROQ_BATCH_SIZE,GROQ_CONCURRENCY,GROQ_MODEL,GROQ_MODEL_SUMMARY,GROQ_MODEL_TRANSLATE,EKJHALAK_SUMMARY_MODEL,EKJHALAK_TRANSLATION_MODEL,GEMINI_MODEL_SUMMARY,GEMINI_MODEL_TRANSLATE,GROQ_DAILY_TOKEN_BUDGET,GROQ_MAX_BATCHES_PER_PASS,PUBLISH_POLICY,NEXT_PUBLIC_SITE_URL,NEWSLETTER_FROM,NEWSLETTER_REPLY_TO"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
