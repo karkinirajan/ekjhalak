@@ -60,13 +60,17 @@ const ASSUMED_BATCH_TOKENS = 8_500;
  * The two jobs the pipeline asks a model to do, metered separately.
  *
  * Summarizing and translating are different pieces of work with different
- * prompts, and since 2026-10-14 they authenticate with different keys — so they
- * are different quotas. Groq meters tokens per key per day, which means two
- * keys is two allowances rather than one shared pot, and a day spent
- * summarizing can no longer leave nothing for translation.
+ * prompts, and since 2026-10-14 they run on different models — so they draw
+ * from different quotas.
  *
- * Keeping one ledger per purpose is what makes that real. A single counter
- * across both keys would refuse work that the other key still had budget for.
+ * The distinction matters and was got wrong once: Groq meters per organization
+ * per MODEL, not per key. Three keys from one account share one 200,000-token
+ * pot, verified by exhausting it on one key and watching the other two report
+ * the same org and the same figure. Separate keys buy separation of concerns,
+ * not capacity. Separate models buy capacity.
+ *
+ * Keeping one ledger per purpose is what makes that real: a single counter
+ * across both would refuse work the other model still had budget for.
  */
 export type ModelPurpose = "summary" | "translation";
 

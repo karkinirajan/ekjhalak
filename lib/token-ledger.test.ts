@@ -126,9 +126,14 @@ describe("the cap arithmetic enrichStories performs", () => {
 });
 
 describe("the two purposes are metered separately", () => {
-  // Summarizing and translating authenticate with different Groq keys, and Groq
-  // meters per key per day. One shared counter would refuse work that the other
-  // key still had budget for — which is the whole reason the keys were split.
+  // Groq meters per organization per MODEL, not per key — three keys from one
+  // account share one 200,000-token pot, which was verified by exhausting it on
+  // one key and watching the other two report the same org and the same figure.
+  //
+  // What makes the two stages independent is therefore the model, not the key:
+  // summarizing runs on gpt-oss-120b and translating on qwen3.8-27b, so they
+  // draw from different pools. One shared counter here would refuse work that
+  // the other model still had budget for.
   it("spending on one does not reduce the other", () => {
     recordSpend("summary", DAILY_TOKEN_BUDGET);
     assert.equal(tokensRemaining("summary"), 0);
