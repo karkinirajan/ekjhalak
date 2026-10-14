@@ -34,163 +34,43 @@ import {
   type StoredArticleRow,
 } from "./article-rows";
 import type { NewsItem, StoryQuality } from "./news-pipeline";
-import { envString } from "./env";
+import { isDbConfigured, query } from "./db";
 
 /**
  * The REST origin, under either name.
  *
- * `SUPABASE_URL` is the name this module has always read and the name the docs
- * use. `NEXT_PUBLIC_SUPABASE_URL` is accepted because it is the name Supabase's
- * own dashboard and every quickstart put in front of the operator, and this
- * project has now lost three separate features to a variable being spelled the
- * way some other tool spells it: `RESENT_API_KEY` swallowed every newsletter
- * signup for weeks, `DATABASE_URL` was set where the REST origin belonged, and
- * then the origin arrived under the `NEXT_PUBLIC_` prefix. Guessing which
- * spelling wins is not a thing an operator should have to do three times.
+ * The store is a Postgres connection, configured by DATABASE_URL alone.
  *
- * Accepting both is safe *for this value specifically*: the REST origin is not a
- * secret. It is in the URL bar of every Supabase app and is designed to be
- * public. The same latitude is emphatically not extended to the key below.
+ * It used to be Supabase over PostgREST, reached by SUPABASE_URL with
+ * NEXT_PUBLIC_SUPABASE_URL accepted alongside it — a latitude that was safe for
+ * the origin and never extended to the key. All of that is gone: the origin was
+ * an HTTPS endpoint and this is a socket to a database on the same machine.
+ *
+ * DATABASE_URL was already in this file, read only to recover a project ref for
+ * an error message. It is the connection now, which is what the name always
+ * said it was.
  */
-const ORIGIN_ENV =
-  envString("SUPABASE_URL") ?? envString("NEXT_PUBLIC_SUPABASE_URL");
-
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-/**
- * The service-role key must never be readable from a browser.
- *
- * It bypasses row-level security completely — it is the only credential that can
- * write this table, which is the point, and also why a `NEXT_PUBLIC_` copy of it
- * would be a full database compromise inlined into every JavaScript bundle the
- * site serves. Next.js does that inlining silently and at build time, so the
- * mistake produces no error and no visible symptom.
- *
- * Given the run of near-misses above, this checks rather than assumes. It cannot
- * un-leak a key, so it does the two things it can: say so unmissably, and refuse
- * to treat the archive as configured, so the mistake stops a feature instead of
- * quietly shipping a credential.
- */
-const LEAKED_KEY_NAMES = Object.keys(process.env).filter(
-  (name) =>
-    name.startsWith("NEXT_PUBLIC_") &&
-    /SERVICE_ROLE|SERVICE_KEY|SECRET/i.test(name),
-);
-
-/**
- * The REST origin, or null with a reason logged.
- *
- * It has to be the project's HTTPS origin — `https://<ref>.supabase.co` —
- * because every request here is `${origin}/rest/v1/articles`. Supabase's
- * dashboard puts a Postgres connection string next to it under a similar name,
- * and that is what was actually set in production on the first attempt: `fetch`
- * then threw `TypeError: Request cannot be constructed from a URL that includes
- * credentials` on every batch, the catch swallowed it as designed, and the feed
- * carried on looking healthy while nothing was ever written.
- *
- * Validated once at module load rather than discovered per batch, for two
- * reasons. It makes the mistake loud — one clear line saying what to use instead
- * — and it makes `isStoreConfigured()` answer false, so the aggregator stops
- * reserving three seconds out of the model stage for a write that cannot
- * succeed. Silently costing every reader three seconds of enrichment is a worse
- * failure than not writing.
- */
-const REST_ORIGIN: string | null = (() => {
-  if (LEAKED_KEY_NAMES.length > 0) {
-    console.error(
-      `[article-store] REFUSING TO START: ${LEAKED_KEY_NAMES.join(", ")} is ` +
-        "exposed to the browser. NEXT_PUBLIC_ variables are inlined into the " +
-        "client bundle at build time, so a service-role key under that prefix " +
-        "is published to every visitor and must be rotated, not renamed. The " +
-        "archive is disabled until it is gone.",
-    );
-    return null;
-  }
-
-  if (!ORIGIN_ENV) {
-    // The last silent path, closed.
-    //
-    // Returning null quietly here is right when nobody intended an archive at
-    // all — a deployment without a database should not shout about one. But a
-    // service-role key with no origin is not that. It is somebody who meant to
-    // configure this and named the variable something else, which has now
-    // happened four times running, twice with the value sitting right there
-    // under `DATABASE_URL`.
-    //
-    // So the condition is the key, not the origin: say something exactly when
-    // there is evidence of intent, and say the actual value to paste.
-    if (SERVICE_KEY) {
-      const ref = process.env.DATABASE_URL?.match(
-        /(?:postgres\.|db\.)([a-z0-9]{20})/i,
-      )?.[1];
-      console.error(
-        "[article-store] SUPABASE_SERVICE_ROLE_KEY is set but no REST origin " +
-          "is. The archive is OFF and nothing is being written. Set " +
-          "SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) to " +
-          (ref
-            ? `https://${ref}.supabase.co — the project ref is already in your DATABASE_URL, ` +
-              "which is the Postgres wire protocol and not something this module can use."
-            : "your project's REST origin, https://<project-ref>.supabase.co " +
-              "(Dashboard → Project Settings → Data API → Project URL)."),
-      );
-    }
-    return null;
-  }
-
-  let parsed: URL;
-  try {
-    parsed = new URL(ORIGIN_ENV);
-  } catch {
-    console.error(
-      `[article-store] SUPABASE_URL is not a URL (${ORIGIN_ENV.slice(0, 12)}…). ` +
-        "Expected the project's REST origin, e.g. https://<ref>.supabase.co",
-    );
-    return null;
-  }
-
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-    console.error(
-      `[article-store] SUPABASE_URL is a ${parsed.protocol.replace(":", "")} ` +
-        "connection string, not the REST origin. This module speaks PostgREST " +
-        "over HTTPS, not the Postgres wire protocol — set it to " +
-        "https://<project-ref>.supabase.co (Dashboard → Project Settings → " +
-        "Data API → Project URL). The archive is disabled until then.",
-    );
-    return null;
-  }
-
-  if (parsed.username || parsed.password) {
-    console.error(
-      "[article-store] SUPABASE_URL carries credentials, which `fetch` rejects " +
-        "outright. Use the bare REST origin; the key travels in a header.",
-    );
-    return null;
-  }
-
-  // Trailing slash would produce `…//rest/v1/articles`, which PostgREST 404s.
-  return parsed.origin;
-})();
-
 export function isStoreConfigured(): boolean {
-  return Boolean(REST_ORIGIN && SERVICE_KEY);
+  return isDbConfigured();
 }
 
 /**
- * Rows per write request.
+ * Rows per INSERT.
  *
- * PostgREST takes the whole array in one statement, so this is about request
- * size rather than round-trips: 500 rows of a story each is comfortably inside
- * any body limit, and a failure loses one batch rather than the pass.
+ * One statement either way, so this is about statement size rather than round
+ * trips. Postgres binds one parameter per column per row — 500 rows of 17
+ * columns is 8,500 parameters, comfortably under the 65,535 ceiling — and a
+ * failure loses one batch rather than the pass.
  */
 const WRITE_BATCH = 500;
 
 /**
- * Ids per read request.
+ * Ids per read.
  *
- * Far smaller than the write batch, and for an unrelated reason: a read puts its
- * ids in the query string as `id=in.(…)`, and ids are 12 hex characters plus a
- * separator. 120 keeps the URL near 1.6 KB, well under the 8 KB at which proxies
- * and gateways start truncating without telling anyone.
+ * The URL-length reason this number had under PostgREST is gone — the ids now
+ * travel as one array parameter, not in a query string. It is kept because the
+ * other reason still holds: a chunk that times out costs only its own stories a
+ * model request, so smaller chunks fail smaller.
  */
 const READ_CHUNK = 120;
 
@@ -200,16 +80,14 @@ const WRITE_TIMEOUT_MS = 5_000;
 /** Ceiling on one read round-trip. Shorter: a read is an optimisation. */
 const READ_TIMEOUT_MS = 3_000;
 
-/** Ids are SHA-256 prefixes. Anything else never reaches a query string. */
+/**
+ * Ids are SHA-256 prefixes.
+ *
+ * Queries are parameterised now, so this is no longer what stands between a
+ * crafted id and the database. It stays as a cheap correctness filter: an id
+ * that cannot be one of ours is not worth a round trip.
+ */
 const ID_PATTERN = /^[0-9a-f]{6,64}$/i;
-
-function headers(extra: Record<string, string> = {}): Record<string, string> {
-  return {
-    apikey: SERVICE_KEY!,
-    Authorization: `Bearer ${SERVICE_KEY}`,
-    ...extra,
-  };
-}
 
 // ── Observability ───────────────────────────────────────────────────────────
 //
@@ -227,7 +105,8 @@ function headers(extra: Record<string, string> = {}): Record<string, string> {
 export interface ArchiveStatus {
   configured: boolean;
   /** Which env var supplied the origin — the mismatch that keeps happening. */
-  originFrom: "SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_URL" | null;
+  /** Which variable configured the store, or null when none did. */
+  originFrom: "DATABASE_URL" | null;
   lastWriteAt: string | null;
   lastWriteRows: number;
   lastError: string | null;
@@ -254,11 +133,7 @@ const stats = {
 export function archiveStatus(): ArchiveStatus {
   return {
     configured: isStoreConfigured(),
-    originFrom: !REST_ORIGIN
-      ? null
-      : process.env.SUPABASE_URL
-        ? "SUPABASE_URL"
-        : "NEXT_PUBLIC_SUPABASE_URL",
+    originFrom: isDbConfigured() ? "DATABASE_URL" : null,
     lastWriteAt: stats.lastWriteAt
       ? new Date(stats.lastWriteAt).toISOString()
       : null,
@@ -296,15 +171,13 @@ export function noteHydrate(hits: number, misses: number): void {
 export async function countArticles(): Promise<number | null> {
   if (!isStoreConfigured()) return null;
   try {
-    const response = await fetch(`${REST_ORIGIN}/rest/v1/articles?select=id`, {
-      method: "HEAD",
-      signal: AbortSignal.timeout(READ_TIMEOUT_MS),
-      headers: headers({ Prefer: "count=exact", Range: "0-0" }),
-      cache: "no-store",
-    });
-    // PostgREST reports the count in Content-Range as `0-0/1234`.
-    const total = response.headers.get("content-range")?.split("/")[1];
-    return total && total !== "*" ? Number(total) : null;
+    const rows = await query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM articles",
+      [],
+      READ_TIMEOUT_MS,
+    );
+    const total = rows[0]?.count;
+    return total === undefined ? null : Number(total);
   } catch (err) {
     noteError(err);
     return null;
@@ -317,23 +190,44 @@ async function writeBatch(
   rows: CoreRow[] | EnrichedRow[],
   timeoutMs: number,
 ): Promise<void> {
-  const response = await fetch(`${REST_ORIGIN}/rest/v1/articles?on_conflict=id`, {
-    method: "POST",
-    signal: AbortSignal.timeout(timeoutMs),
-    headers: headers({
-      "Content-Type": "application/json",
-      // merge-duplicates makes this an upsert; return=minimal stops PostgREST
-      // serialising every row back at us for a result nobody reads.
-      Prefer: "resolution=merge-duplicates,return=minimal",
-    }),
-    body: JSON.stringify(rows),
-    cache: "no-store",
+  if (rows.length === 0) return;
+
+  // The column list comes from the first row, which is why partitionForWrite
+  // exists: core rows and enriched rows are written in separate batches so this
+  // list is uniform. Mixing them would make one batch's column set decide what
+  // every row in it writes.
+  const columns = Object.keys(rows[0] as unknown as Record<string, unknown>);
+
+  // One statement for the whole batch. 500 rows as 500 statements is 500 round
+  // trips; as one it measured 329 ms.
+  const values: unknown[] = [];
+  const tuples = rows.map((row, rowIndex) => {
+    const record = row as unknown as Record<string, unknown>;
+    const placeholders = columns.map((column, columnIndex) => {
+      values.push(record[column] ?? null);
+      return `$${rowIndex * columns.length + columnIndex + 1}`;
+    });
+    return `(${placeholders.join(",")})`;
   });
 
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`HTTP ${response.status}: ${detail.slice(0, 300)}`);
-  }
+  // The most important line in this module. The update list is built from the
+  // columns this batch actually carries, so a pass that wrote core columns only
+  // cannot null out a translation an earlier pass paid a model for. `EXCLUDED`
+  // is the row that would have been inserted.
+  //
+  // first_seen_at is never in `columns` and so is never updated: it means the
+  // first time this story was seen, and an upsert must not move it.
+  const updates = columns
+    .filter((column) => column !== "id")
+    .map((column) => `${column} = EXCLUDED.${column}`)
+    .join(", ");
+
+  await query(
+    `INSERT INTO articles (${columns.join(",")}) VALUES ${tuples.join(",")}
+     ON CONFLICT (id) DO UPDATE SET ${updates}`,
+    values,
+    timeoutMs,
+  );
 }
 
 /**
@@ -425,19 +319,6 @@ export interface StoredEnrichment {
   quality: StoryQuality | null;
 }
 
-async function getJson<T>(path: string, timeoutMs: number): Promise<T | null> {
-  const response = await fetch(`${REST_ORIGIN}${path}`, {
-    signal: AbortSignal.timeout(timeoutMs),
-    headers: headers({ Accept: "application/json" }),
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`HTTP ${response.status}: ${detail.slice(0, 200)}`);
-  }
-  return (await response.json()) as T;
-}
-
 /**
  * What the archive already knows about these stories.
  *
@@ -462,29 +343,31 @@ export async function fetchEnrichments(
   const wanted = [...new Set(ids)].filter((id) => ID_PATTERN.test(id));
   if (wanted.length === 0) return found;
 
-  const select =
-    "id,summary,title_translated,summary_translated,enrichment_key,quality";
-
   for (let i = 0; i < wanted.length; i += READ_CHUNK) {
     const remaining = Math.min(READ_TIMEOUT_MS, deadline - Date.now());
     if (remaining <= 0) break;
 
     const chunk = wanted.slice(i, i + READ_CHUNK);
     try {
-      const rows = await getJson<
-        {
-          id: string;
-          summary: string | null;
-          title_translated: string | null;
-          summary_translated: string | null;
-          enrichment_key: string | null;
-          quality: StoryQuality | null;
-        }[]
-      >(
-        `/rest/v1/articles?select=${select}&id=in.(${chunk.join(",")})`,
+      // `= ANY($1)` takes the whole chunk as one array parameter. Interpolating
+      // the ids into the SQL would work — they are hex, and ID_PATTERN has
+      // already rejected anything else — but a parameter needs no such argument
+      // to be true, and the next person to widen that pattern will not read it.
+      const rows = await query<{
+        id: string;
+        summary: string | null;
+        title_translated: string | null;
+        summary_translated: string | null;
+        enrichment_key: string | null;
+        quality: StoryQuality | null;
+      }>(
+        `SELECT id, summary, title_translated, summary_translated,
+                enrichment_key, quality
+           FROM articles WHERE id = ANY($1)`,
+        [chunk],
         remaining,
       );
-      for (const row of rows ?? []) {
+      for (const row of rows) {
         found.set(row.id, {
           enrichmentKey: row.enrichment_key,
           summary: row.summary ?? "",
@@ -516,11 +399,13 @@ export async function fetchEnrichments(
 export async function fetchStoredStory(id: string): Promise<NewsItem | null> {
   if (!isStoreConfigured() || !ID_PATTERN.test(id)) return null;
   try {
-    const rows = await getJson<StoredArticleRow[]>(
-      `/rest/v1/articles?select=${STORY_SELECT}&id=eq.${id}&limit=1`,
+    const rows = await query<StoredArticleRow & Record<string, unknown>>(
+      `SELECT ${STORY_SELECT.split(",").join(", ")}
+         FROM articles WHERE id = $1 LIMIT 1`,
+      [id],
       READ_TIMEOUT_MS,
     );
-    const row = rows?.[0];
+    const row = rows[0];
     return row ? fromRow(row) : null;
   } catch (err) {
     console.warn(
