@@ -136,7 +136,19 @@ const REQUEST_TIMEOUT_MS = 45_000;
  * Groq's daily pool. So it runs when Groq has nothing left, where a translation
  * that rounds a date beats no translation at all — and never before then.
  */
-const GEMINI_SUMMARY_MODEL = "gemini-2.5-flash";
+// Flash-Lite for both, and the reason is a limit the research got wrong.
+//
+// It reported Gemini's free tier at 1,000-1,500 requests a day. Measured from
+// the API's own 429: gemini-2.5-flash allows TWENTY generate_content requests
+// per day per project, with a 43,877-second retry delay — twelve hours. Twenty
+// requests is two passes, not a day's capacity, and the fallback was silently
+// refused on the first day it was asked to work.
+//
+// gemini-3.1-flash-lite still answers after the same traffic exhausted Flash,
+// so Lite is what both stages fall back to. Its figure retention measured 86%
+// against qwen's 95% on this site's own articles, which is the price of being
+// the provider that still answers.
+const GEMINI_SUMMARY_MODEL = "gemini-3.1-flash-lite";
 const GEMINI_TRANSLATE_MODEL = "gemini-3.1-flash-lite";
 
 /**
@@ -233,7 +245,20 @@ function normalizeModelId(name: string): string {
  * this small, so it costs nothing on a normal request and only exists for the
  * one that would otherwise be truncated.
  */
-const MAX_OUTPUT_TOKENS = 32_000;
+/**
+ * Output ceiling, set to the smallest any model in the chains accepts.
+ *
+ * It was 32,000, which gpt-oss-120b allows and qwen3.8-27b does not: qwen caps
+ * max_completion_tokens at 16,384 and answers anything higher with a 400. A 400
+ * is treated as "this model will never work" and shelves it for twenty-four
+ * hours, so the translator was being disabled on its first request of every
+ * process — not by its Nepali, not by quota, but by a number in this file.
+ *
+ * 16,384 is qwen's limit and comfortably above what any batch needs: three
+ * stories of about 140 words each is well under a thousand tokens of output.
+ * The ceiling exists to stop a runaway reply, not to be reached.
+ */
+const MAX_OUTPUT_TOKENS = 16_384;
 
 /**
  * One key per job.
