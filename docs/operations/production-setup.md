@@ -133,6 +133,67 @@ free and spend their budget on stories that are new.
 Raise `GROQ_DAILY_TOKEN_BUDGET` to match a paid tier. Setting it to `0` disables
 the ledger and restores the old spend-until-refused behaviour.
 
+### Optional — OpenRouter (second provider)
+
+| Variable | Scope | Value |
+|---|---|---|
+| `OPENROUTER_API_KEY` | All | Enables the OpenRouter link in the model chain. Absent = chain behaves exactly as before |
+| `OPENROUTER_MODEL_SUMMARY` | All | Default `nvidia/nemotron-3-super-120b-a12b:free` |
+| `OPENROUTER_MODEL_TRANSLATE` | All | Default `google/gemma-4-31b-it:free` |
+| `OPENROUTER_DAILY_REQUEST_BUDGET` | All | Requests/day. Default 50; **set to 1000 after buying $10 of credits once** |
+| `OPENROUTER_MINUTE_REQUEST_LIMIT` | All | Default 20. Only matters once the daily budget is raised |
+| `OPENROUTER_SITE_URL` | All | Optional. Sent as `HTTP-Referer` for leaderboard attribution |
+| `OPENROUTER_APP_TITLE` | All | Optional. Sent as `X-Title` |
+
+Chain order is Groq → OpenRouter → Gemini. Groq leads because it is the only
+link measured against these prompts in production; OpenRouter sits ahead of
+Gemini on allowance alone (50 free requests a day against Gemini's 20).
+
+#### OpenRouter inverts the batching rule
+
+This is the part that is easy to get backwards, because it is the opposite of
+everything the Groq cap above says.
+
+| | Groq | OpenRouter free |
+|---|---|---|
+| Metered in | **tokens** | **requests** |
+| Daily | 200,000 per model | 50 per *account* (1,000 after one $10 purchase) |
+| Tighter cap | **8,000 tokens/minute** | 20 requests/minute |
+| Scoped | per organization **per model** | per account, across all `:free` models |
+| Bigger batches | cost more | cost **the same** |
+
+Three consequences:
+
+1. **`GROQ_BATCH_SIZE=3` exists for Groq's minute cap, and is actively wrong
+   for OpenRouter.** At 3, this feed's ~161 stories/day need ~108 requests
+   (summary + translation) and will not fit in 50. At 20 the same work is ~18
+   requests. The free models carry 256k–1M context, so a batch of 20 is one
+   request exactly like a batch of 3. Raise it **only** if you promote
+   OpenRouter ahead of Groq — otherwise it breaks Groq's minute window, which
+   is what the 3 is sized for.
+2. **Splitting the two jobs across two models buys nothing here.** On Groq that
+   is precisely what buys capacity (summary on `gpt-oss-120b`, translation on
+   `qwen3.8-27b`, separate 200k pots). OpenRouter's cap is per account, so
+   `lib/request-ledger.ts` keeps **one** counter, deliberately not keyed by
+   purpose. A per-purpose counter would believe it had twice the allowance.
+3. **Failed requests may count.** `recordRequestSpend` is therefore called
+   before the reply, not after, and a 429 is skipped rather than provoked.
+
+The `$10` threshold is lifetime *purchases*, not balance — spend every cent and
+the 1,000/day entitlement stays. It is the cheapest constraint removal
+available to this project.
+
+> **Not yet measured.** The two default model IDs are informed guesses, not
+> results. Gemma 4 is the better bet for Nepali on Google's Devanagari
+> coverage; neither has been scored against this pipeline's prompts. Run
+> `scripts/translate-bakeoff.mjs` with the *production* prompt before promoting
+> OpenRouter ahead of Groq — a weak harness prompt once scored `qwen3.8-27b` at
+> 48% and nearly got a perfectly good model dropped.
+
+> Free model IDs churn; OpenRouter's catalogue dropped one mid-October 2026. A
+> vanished ID answers 404, which shelves that entry for the process and falls
+> through to the next link — the pass degrades, it does not fail.
+
 #### Why `AGGREGATE_BUDGET_MS` must be raised
 
 The per-stage budgets are *slices* of `AGGREGATE_BUDGET_MS`, not additions to

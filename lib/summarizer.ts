@@ -158,22 +158,70 @@ const GEMINI_TRANSLATE_MODEL = envOr(
 );
 
 /**
+ * OpenRouter's free models, which meter requests a day rather than tokens.
+ *
+ * These two defaults are a starting point, not a measured choice. Gemma 4 is
+ * the better bet for Nepali on the strength of Google's Devanagari coverage,
+ * and Nemotron Super is the largest free model with output headroom to spare —
+ * but neither has been scored against this pipeline's prompts. Run
+ * scripts/translate-bakeoff.mjs with the production prompt before promoting
+ * either ahead of Groq in the chain. Guessing which model is better at Nepali
+ * from its parameter count is how qwen3.8-27b nearly got dropped for a fault
+ * that turned out to be in the test harness.
+ *
+ * Free model IDs churn — OpenRouter's catalogue dropped one mid-October — so a
+ * vanished model must degrade to the next link rather than stop the pass. It
+ * does: an unknown ID answers 404, and callModel shelves a 404 for the process.
+ */
+const OPENROUTER_SUMMARY_MODEL = envOr(
+  "OPENROUTER_MODEL_SUMMARY",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+);
+const OPENROUTER_TRANSLATE_MODEL = envOr(
+  "OPENROUTER_MODEL_TRANSLATE",
+  "google/gemma-4-31b-it:free",
+);
+
+/**
  * Is there a provider left when Groq's day is spent?
  *
  * The daily ledger is a brake on Groq's pool, and every gate in this file asks
  * it before starting work. Once a second provider sits at the end of the chain
  * those gates have to ask a wider question, or the fallback is unreachable on
  * the one day it matters.
+ *
+ * OpenRouter counts as a fallback only while it has requests left today. Its
+ * key being present is not enough: a spent OpenRouter allowance that still
+ * answered `true` here would reopen every Groq gate in this file against a
+ * provider that is going to refuse, and the pass would spend its deadline
+ * collecting 429s — which is the exact failure the token ledger was written to
+ * stop, rebuilt one provider over.
  */
 function hasFallback(): boolean {
-  return Boolean(envString("GEMINI_API_KEY"));
+  if (envString("GEMINI_API_KEY")) return true;
+  return Boolean(envString("OPENROUTER_API_KEY")) && requestsRemaining() > 0;
 }
 
+/**
+ * Groq leads, OpenRouter follows, Gemini last.
+ *
+ * Groq first because it is the only link measured against these prompts in
+ * production. OpenRouter ahead of Gemini on allowance alone: 50 free requests
+ * a day against Gemini's 20, and 1,000 once the account has bought $10 once.
+ * Gemini stays at the end as the provider of last resort rather than being
+ * removed, because its 20 requests are 20 more than nothing on the day both
+ * others are spent.
+ */
 const DEFAULT_MODELS: Record<ModelPurpose, readonly string[]> = {
-  summary: ["openai/gpt-oss-120b", `gemini:${GEMINI_SUMMARY_MODEL}`],
+  summary: [
+    "openai/gpt-oss-120b",
+    `openrouter:${OPENROUTER_SUMMARY_MODEL}`,
+    `gemini:${GEMINI_SUMMARY_MODEL}`,
+  ],
   translation: [
     "qwen/qwen3.8-27b",
     "openai/gpt-oss-120b",
+    `openrouter:${OPENROUTER_TRANSLATE_MODEL}`,
     `gemini:${GEMINI_TRANSLATE_MODEL}`,
   ],
 };
@@ -181,17 +229,39 @@ const DEFAULT_MODELS: Record<ModelPurpose, readonly string[]> = {
 /**
  * Which API a chain entry belongs to.
  *
- * The `gemini:` prefix is the marker. Everything else is Groq, which keeps the
+ * A prefix is the marker. Everything unprefixed is Groq, which keeps the
  * existing GROQ_MODEL overrides meaning exactly what they always did.
+ *
+ * Only the FIRST colon separates prefix from model, which matters here in a way
+ * it did not when Gemini was the only prefix: OpenRouter's free model IDs end
+ * in `:free`, so `openrouter:google/gemma-4-31b-it:free` has two colons and
+ * splitting on the wrong one asks OpenRouter for a model called
+ * `google/gemma-4-31b-it` — a paid ID, which either bills the account or 404s.
  */
-type Provider = "groq" | "gemini";
+type Provider = "groq" | "gemini" | "openrouter";
+
+const PROVIDER_PREFIXES: ReadonlyArray<readonly [string, Provider]> = [
+  ["gemini:", "gemini"],
+  ["openrouter:", "openrouter"],
+];
 
 function providerOf(entry: string): Provider {
-  return entry.startsWith("gemini:") ? "gemini" : "groq";
+  for (const [prefix, provider] of PROVIDER_PREFIXES) {
+    if (entry.startsWith(prefix)) return provider;
+  }
+  return "groq";
 }
 
-const bareModel = (entry: string) =>
-  entry.startsWith("gemini:") ? entry.slice("gemini:".length) : entry;
+function bareModel(entry: string): string {
+  for (const [prefix] of PROVIDER_PREFIXES) {
+    if (entry.startsWith(prefix)) return entry.slice(prefix.length);
+  }
+  return entry;
+}
+
+/** Does this entry name a provider explicitly? */
+const hasProviderPrefix = (entry: string) =>
+  PROVIDER_PREFIXES.some(([prefix]) => entry.startsWith(prefix));
 
 /**
  * Per-job override, falling back to the shared GROQ_MODEL, then the defaults.
@@ -225,8 +295,9 @@ const MODEL_NAMESPACE: Record<string, string> = {
 };
 
 function normalizeModelId(name: string): string {
-  // A gemini: entry is already fully qualified by its prefix.
-  if (name.startsWith("gemini:")) return name;
+  // A prefixed entry is already fully qualified, and must not be touched: a
+  // Groq namespace guessed onto an OpenRouter ID would be nonsense.
+  if (hasProviderPrefix(name)) return name;
   if (name.includes("/")) return name;
   const qualified = MODEL_NAMESPACE[name];
   if (qualified) {
@@ -287,6 +358,7 @@ function keyFor(purpose: ModelPurpose): string | undefined {
 }
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
+const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
 function clampInt(
   raw: string | undefined,
@@ -346,6 +418,14 @@ import {
   tokensSpentToday,
   type ModelPurpose,
 } from "./token-ledger";
+import {
+  DAILY_REQUEST_BUDGET,
+  msUntilRequestSlot,
+  recordRequestSpend,
+  requestsRemaining,
+  requestsUsedToday,
+  syncRequestLedgerFrom429,
+} from "./request-ledger";
 
 export { looksLikeBoilerplate };
 
@@ -726,8 +806,19 @@ async function callModel<T>(
 ): Promise<T[] | null> {
   const provider = providerOf(entry);
   const model = bareModel(entry);
-  const apiKey = provider === "gemini" ? envString("GEMINI_API_KEY") : keyFor(purpose);
+  const apiKey =
+    provider === "gemini"
+      ? envString("GEMINI_API_KEY")
+      : provider === "openrouter"
+        ? envString("OPENROUTER_API_KEY")
+        : keyFor(purpose);
   if (!apiKey) return null;
+
+  // Last gate before the request leaves. askChain checks this too, but the
+  // allowance can be spent by a concurrent worker between that check and this
+  // one — there are three requests in flight by default — and the whole point
+  // of the ledger is that an avoidable refusal still costs a slot.
+  if (provider === "openrouter" && requestsRemaining() <= 0) return null;
 
   let res: Response;
   try {
@@ -738,15 +829,31 @@ async function callModel<T>(
         signal: AbortSignal.timeout(requestTimeout(deadline)),
       });
     } else {
-    res = await fetch(GROQ_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ ...requestBody, model }),
-      signal: AbortSignal.timeout(requestTimeout(deadline)),
-    });
+      // OpenRouter speaks the same OpenAI dialect as Groq, so the request body,
+      // the reply shape and the parsing below are shared verbatim. Only the URL,
+      // the key and two optional attribution headers differ — which is the whole
+      // reason adding this provider was cheap.
+      const openrouter = provider === "openrouter";
+
+      // Counted before the reply, not after. A request that times out or 500s
+      // has still been made, and OpenRouter states failed requests may count
+      // against the daily cap, so crediting only successes would let a failing
+      // model drain the real allowance invisibly.
+      if (openrouter) recordRequestSpend();
+
+      res = await fetch(openrouter ? OPENROUTER_ENDPOINT : GROQ_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          // Optional, and only sent when configured: OpenRouter attributes
+          // traffic to these on its public leaderboards. Omitted entirely
+          // rather than sent blank, because an empty Referer is worse than none.
+          ...(openrouter ? openrouterAttribution() : {}),
+        },
+        body: JSON.stringify({ ...requestBody, model }),
+        signal: AbortSignal.timeout(requestTimeout(deadline)),
+      });
     }
   } catch {
     // Timeout or transport failure. Shelve briefly so a flapping model does not
@@ -763,12 +870,18 @@ async function callModel<T>(
       // untranslated stories with no line anywhere saying why. It took an
       // instrumented run through four call layers to find it. It says so now.
       if (/per[ -]day|\bTPD\b|\bRPD\b/i.test(detail)) {
-        // Only Groq's figure belongs in Groq's ledger. Gemini meters requests a
-        // day rather than tokens, and writing its refusal into the token count
-        // would close Groq's budget on the strength of someone else's limit.
+        // Each refusal belongs in its own provider's ledger and nowhere else.
+        // Gemini and OpenRouter meter requests a day rather than tokens, and
+        // writing either refusal into the token count would close Groq's budget
+        // on the strength of someone else's limit.
         if (provider === "groq") syncLedgerFrom429(purpose, detail);
+        if (provider === "openrouter") syncRequestLedgerFrom429(detail);
+        const used =
+          provider === "openrouter"
+            ? `${requestsUsedToday()} of ${DAILY_REQUEST_BUDGET} requests used`
+            : `${tokensSpentToday(purpose).toLocaleString()} tokens used`;
         console.warn(
-          `[${purpose}] ${model} daily quota exhausted — ${tokensSpentToday(purpose).toLocaleString()} tokens used. ` +
+          `[${purpose}] ${model} daily quota exhausted — ${used}. ` +
             "Stories keep their publisher text until it resets.",
         );
       }
@@ -808,9 +921,15 @@ async function callModel<T>(
   // the reply might be unusable. The tokens were spent either way, and a reply
   // that fails to parse is exactly the case where forgetting to count it would
   // let a broken model drain the day.
-  const spent = data?.usage?.total_tokens;
-  if (typeof spent === "number" && Number.isFinite(spent))
-    recordSpend(purpose, spent);
+  // Only Groq's spend belongs in Groq's token ledger. OpenRouter reports usage
+  // in the same field, but charging it here would make the fallback close the
+  // very budget it exists to work around — the same mistake the Gemini branch
+  // above avoids, and easier to make here because the reply shape is identical.
+  if (provider === "groq") {
+    const spent = data?.usage?.total_tokens;
+    if (typeof spent === "number" && Number.isFinite(spent))
+      recordSpend(purpose, spent);
+  }
 
   const choice = data?.choices?.[0];
   if (!choice) return null;
@@ -843,6 +962,22 @@ async function callModel<T>(
  * the parts that took production down when they were wrong — duplicating them
  * for a second caller would have been the obvious way to get them wrong again.
  */
+/**
+ * Optional attribution headers, present only when configured.
+ *
+ * OpenRouter reads these to credit traffic on its public model leaderboards.
+ * Both are omitted when unset rather than sent empty, because `Referer: ""` is
+ * a malformed header where a missing one is simply a missing one.
+ */
+function openrouterAttribution(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const referer = envString("OPENROUTER_SITE_URL") ?? envString("SITE_URL");
+  const title = envString("OPENROUTER_APP_TITLE");
+  if (referer) headers["HTTP-Referer"] = referer;
+  if (title) headers["X-Title"] = title;
+  return headers;
+}
+
 async function askChain<T>(
   requestBody: Record<string, unknown>,
   deadline: number,
@@ -851,6 +986,22 @@ async function askChain<T>(
   for (const model of modelChain(purpose)) {
     if (isCoolingDown(model)) continue;
     if (Date.now() >= deadline) break;
+
+    // Skip a spent OpenRouter allowance rather than spend a slot proving it is
+    // spent. Unlike a Groq 429, which only shelves one model for thirty
+    // seconds, an OpenRouter refusal may itself count against the daily cap.
+    if (providerOf(model) === "openrouter") {
+      if (requestsRemaining() <= 0) continue;
+
+      // Same trade as Groq's token window below, for the same reason: a
+      // per-minute refusal may be charged against the daily cap, so pausing is
+      // cheaper than being told no — but only pause if the pass can afford it.
+      const slot = msUntilRequestSlot();
+      if (slot > 0) {
+        if (Date.now() + slot >= deadline) continue;
+        await new Promise((resolve) => setTimeout(resolve, slot));
+      }
+    }
 
     // Wait out the per-minute window rather than spend a request to be refused.
     // A 429 shelves the model for thirty seconds, so an avoidable refusal costs
