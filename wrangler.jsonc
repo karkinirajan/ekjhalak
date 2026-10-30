@@ -1,0 +1,8 @@
+{
+  "name": "ekjhalak",
+  "main": "cloudflare/worker.mjs",
+  "compatibility_date": "2026-10-23",
+  "observability": {
+    "enabled": true
+  }
+}

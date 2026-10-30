@@ -16,10 +16,13 @@
 #                  back or fails at runtime, in production only.
 #   unrs-resolver  napi bindings for the TypeScript import resolver that
 #                  eslint-config-next uses.
+#   workerd        Cloudflare Workers runtime binary used by wrangler during
+#                  Workers Builds deploys.
 allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: true
+  workerd: true
 # Transitive-dependency pins.
 #
 # All three are advisories against packages this project does not depend on
