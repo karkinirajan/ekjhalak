@@ -39,7 +39,7 @@ export type PageSlug =
  * deriving it from a build date would make every deploy look like a policy
  * change.
  */
-export const POLICY_UPDATED = "2026-08-03";
+export const POLICY_UPDATED = "2026-10-30";
 
 /** The byline: the person's own name, linked to their site. */
 export const OWNER_DISPLAY_NAME = "Nirajan Karki";
@@ -218,7 +218,8 @@ const privacy: Record<Lang, PageContent> = {
       {
         heading: "Collected by the site",
         body: [
-          "No account, no name, no email — unless you type one into the newsletter form. Nothing you read, click, search for or filter by is recorded or associated with you. There is no analytics product measuring your session and no advertising identifier.",
+          "No account, no name, no email — unless you type one into the newsletter form. Nothing you read, click, search for or filter by is associated with you, and no advertising identifier exists.",
+          "Page views are counted with Vercel Web Analytics: which page was opened, the referring site, and the country, browser and device type derived from the request. It sets no cookies and stores no IP address; a visitor is told apart only by a hash that resets every day, so no reader can be followed from one day to the next or across other sites.",
           "The news feed is the same for every reader. Nothing on this site is personalised, which also means there is nothing to personalise it from.",
         ],
       },
@@ -234,7 +235,7 @@ const privacy: Record<Lang, PageContent> = {
         heading: "Third parties",
         body: [
           "The site is hosted on Vercel, which necessarily processes the request in order to serve the page and keeps standard server logs. Vercel Speed Insights measures page-load performance; it reports timings, not people, and is not used to identify or follow anyone.",
-          "Fonts are served from Google Fonts. Story photographs are loaded directly from each publisher's own image servers, which means those servers see the request — the site sends no referrer with it.",
+          "Fonts are served from this site itself; no request goes to Google Fonts. Story photographs are loaded directly from each publisher's own image servers, which means those servers see the request — the site sends no referrer with it.",
           "Story text is sent to Groq's API to be summarised and translated. What is sent is the publisher's own headline and syndicated body text, which is already public. Nothing about you is included, because nothing about you is held.",
         ],
       },
@@ -263,7 +264,8 @@ const privacy: Record<Lang, PageContent> = {
       {
         heading: "साइटले सङ्कलन गर्ने",
         body: [
-          "खाता छैन, नाम छैन, इमेल छैन — न्यूजलेटर फारममा आफैँ नलेखेसम्म। तपाईंले के पढ्नुभयो, कता क्लिक गर्नुभयो, के खोज्नुभयो वा कुन फिल्टर लगाउनुभयो, केही पनि रेकर्ड हुँदैन र तपाईंसँग जोडिँदैन। तपाईंको सत्र नाप्ने कुनै एनालिटिक्स उत्पादन छैन र विज्ञापन पहिचानक पनि छैन।",
+          "खाता छैन, नाम छैन, इमेल छैन — न्यूजलेटर फारममा आफैँ नलेखेसम्म। तपाईंले के पढ्नुभयो, कता क्लिक गर्नुभयो, के खोज्नुभयो वा कुन फिल्टर लगाउनुभयो, त्यो तपाईंसँग जोडिँदैन, र कुनै विज्ञापन पहिचानक छैन।",
+          "पृष्ठ हेराइ भर्सल वेब एनालिटिक्सले गन्छ: कुन पृष्ठ खोलियो, कुन साइटबाट आइयो, र अनुरोधबाट थाहा हुने देश, ब्राउजर र यन्त्रको प्रकार। यसले कुकी राख्दैन र आइपी ठेगाना भण्डारण गर्दैन; पाठकलाई हरेक दिन नयाँ हुने ह्यासबाट मात्र छुट्याइन्छ, त्यसैले कसैलाई एक दिनदेखि अर्को दिनसम्म वा अन्य साइटहरूमा पछ्याउन सकिँदैन।",
           "समाचार फिड सबै पाठकका लागि उस्तै हुन्छ। यहाँ केही पनि व्यक्तिअनुसार बदलिँदैन, जसको अर्थ बदल्नका लागि केही सङ्कलन पनि गरिँदैन।",
         ],
       },
@@ -279,7 +281,7 @@ const privacy: Record<Lang, PageContent> = {
         heading: "तेस्रो पक्ष",
         body: [
           "साइट भर्सलमा होस्ट गरिएको छ, जसले पृष्ठ पठाउनका लागि अनिवार्य रूपमा अनुरोध प्रशोधन गर्छ र सामान्य सर्भर लग राख्छ। भर्सल स्पिड इनसाइट्सले पृष्ठ लोड हुने गति नाप्छ; यसले समय नाप्छ, मानिस होइन, र कसैलाई चिन्न वा पछ्याउन प्रयोग हुँदैन।",
-          "फन्ट गुगल फन्ट्सबाट आउँछन्। समाचारका तस्बिर सम्बन्धित प्रकाशककै इमेज सर्भरबाट सिधै लोड हुन्छन्, जसको अर्थ ती सर्भरले अनुरोध देख्छन् — साइटले त्यससँग कुनै रेफरर पठाउँदैन।",
+          "फन्ट यही साइटबाटै आउँछन्; गुगल फन्ट्समा कुनै अनुरोध जाँदैन। समाचारका तस्बिर सम्बन्धित प्रकाशककै इमेज सर्भरबाट सिधै लोड हुन्छन्, जसको अर्थ ती सर्भरले अनुरोध देख्छन् — साइटले त्यससँग कुनै रेफरर पठाउँदैन।",
           "समाचारको पाठ सारांश र अनुवादका लागि गुगलको जेमिनाई एपिआईमा पठाइन्छ। पठाइने भनेको प्रकाशककै शीर्षक र सार्वजनिक रूपमै उपलब्ध मूल पाठ हो। तपाईंसम्बन्धी केही समावेश हुँदैन, किनभने तपाईंसम्बन्धी केही राखिएकै छैन।",
         ],
       },

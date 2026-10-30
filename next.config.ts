@@ -24,9 +24,9 @@ const securityHeaders = [
         process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"
       }`,
       // Tailwind and shadcn inject inline styles
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      // Google Fonts static assets
-      "font-src 'self' https://fonts.gstatic.com",
+      "style-src 'self' 'unsafe-inline'",
+      // Fonts are self-hosted from app/fonts via next/font/local
+      "font-src 'self'",
       // Images: self + data URIs + all HTTPS sources (RSS feeds supply arbitrary CDNs)
       "img-src 'self' data: https:",
       // External API calls made from the browser (translation APIs are server-only,

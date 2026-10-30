@@ -1,8 +1,37 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
-import { Inter, Mukta, Source_Serif_4 } from "next/font/google";
+import localFont from "next/font/local";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SiteProvider } from "@/components/site-provider";
 import { SITE_NAME, SITE_URL } from "@/lib/site-url";
+
+// The font files live in app/fonts and are loaded with next/font/local, not
+// next/font/google.
+//
+// next/font/google fetches the stylesheet and every font file from Google at
+// build time, so a build depends on Google answering cleanly at that moment. A
+// Vercel build in iad1 failed when one Source Serif URL came back without a
+// file extension and the loader crashed reading it. With the files in the repo,
+// the build no longer touches the network for fonts. Readers saw self-hosted
+// files either way, because next/font/google self-hosts too.
+//
+// The files are Google's own subsets, unchanged from fonts.gstatic.com, and
+// each subset is a separate localFont call with Google's unicode-range. Within
+// one family, a localFont call cannot give each src its own unicode-range, and
+// without one the browser would download the latin-ext file for every page.
+// The subsets are chained into one CSS variable on <html>, in `fontVariables`
+// below. Only the last call in each chain generates the metric-matched
+// fallback face: a fallback placed earlier would be a complete local font, so
+// it would catch every character before the later subsets were tried.
+//
+// next/font requires its arguments to be written as literals, so the
+// unicode-range strings are repeated in each call instead of shared.
+// Cyrillic, Greek and Vietnamese, which the Google loader also declared, are
+// not carried over: the site publishes in English and Nepali, and a stray
+// character from those ranges falls through to the system fallback.
+// To update a face, request the css2 URL with a modern Chrome user agent and
+// replace the matching file.
 
 // Headlines are set in Source Serif 4.
 //
@@ -26,11 +55,33 @@ import { SITE_NAME, SITE_URL } from "@/lib/site-url";
 // reader's drop cap); walking every route in both languages found no element
 // rendering this family at 400, so the file was one more preloaded weight
 // competing with the LCP image for a throttled connection's first second.
-const sourceSerif = Source_Serif_4({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["600", "700"],
+const sourceSerif = localFont({
+  src: "./fonts/source-serif-4-latin.woff2",
+  weight: "600 700",
   display: "swap",
+  adjustFontFallback: false,
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD",
+    },
+  ],
+});
+
+const sourceSerifExt = localFont({
+  src: "./fonts/source-serif-4-latin-ext.woff2",
+  weight: "600 700",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: "Times New Roman",
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF",
+    },
+  ],
 });
 
 // English body copy, UI chrome and all metadata use Inter.
@@ -40,12 +91,34 @@ const sourceSerif = Source_Serif_4({
 // masthead. The NYT sets the same material in its own sans at 11px/500, the
 // Guardian in Guardian Text Sans. One sans doing body, UI and metadata is also
 // one fewer family on the wire.
-const inter = Inter({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const inter = localFont({
+  src: "./fonts/inter-latin.woff2",
+  weight: "400 700",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD",
+    },
+  ],
+});
+
+const interExt = localFont({
+  src: "./fonts/inter-latin-ext.woff2",
+  weight: "400 700",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: "Arial",
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF",
+    },
+  ],
 });
 
 // Nepali content is set in Mukta — the face Kantipur uses.
@@ -86,12 +159,66 @@ const inter = Inter({
 // contentful paint went 1.2s to 2.5s, layout shift appeared where there had
 // been none, and the Lighthouse score fell from 82 to 78. Devanagari has no
 // system fallback worth swapping from, so deferring it defers the headline.
-const mukta = Mukta({
-  variable: "--font-devanagari",
-  subsets: ["devanagari", "latin"],
-  weight: ["400", "600", "700"],
+const mukta = localFont({
+  src: [
+    { path: "./fonts/mukta-400-devanagari.woff2", weight: "400" },
+    { path: "./fonts/mukta-600-devanagari.woff2", weight: "600" },
+    { path: "./fonts/mukta-700-devanagari.woff2", weight: "700" },
+  ],
   display: "swap",
+  adjustFontFallback: false,
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0900-097F, U+1CD0-1CF4, U+1CF7-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF, U+11B00-11B0A",
+    },
+  ],
 });
+
+const muktaLatin = localFont({
+  src: [
+    { path: "./fonts/mukta-400-latin.woff2", weight: "400" },
+    { path: "./fonts/mukta-600-latin.woff2", weight: "600" },
+    { path: "./fonts/mukta-700-latin.woff2", weight: "700" },
+  ],
+  display: "swap",
+  adjustFontFallback: false,
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD",
+    },
+  ],
+});
+
+const muktaExt = localFont({
+  src: [
+    { path: "./fonts/mukta-400-latin-ext.woff2", weight: "400" },
+    { path: "./fonts/mukta-600-latin-ext.woff2", weight: "600" },
+    { path: "./fonts/mukta-700-latin-ext.woff2", weight: "700" },
+  ],
+  display: "swap",
+  preload: false,
+  adjustFontFallback: "Arial",
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF",
+    },
+  ],
+});
+
+// Each CSS variable carries its family's subsets in order, with the fallback
+// face from the last call at the end. The names match the ones next/font/google
+// produced, so globals.css is unchanged.
+const fontVariables = {
+  "--font-display": `${sourceSerif.style.fontFamily}, ${sourceSerifExt.style.fontFamily}`,
+  "--font-body": `${inter.style.fontFamily}, ${interExt.style.fontFamily}`,
+  "--font-devanagari": `${mukta.style.fontFamily}, ${muktaLatin.style.fontFamily}, ${muktaExt.style.fontFamily}`,
+} as CSSProperties;
 
 const SITE_DESCRIPTION =
   "Calm bilingual news briefings for Nepal and the world. Clean, original-language summaries — no clutter, no noise.";
@@ -196,7 +323,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sourceSerif.variable} ${inter.variable} ${mukta.variable}`}
+      style={fontVariables}
     >
       <head>
         {/* Both, so the browser paints form controls and scrollbars to match
@@ -247,6 +374,7 @@ export default function RootLayout({
         <SiteProvider>
           <main id="main-content">{children}</main>
         </SiteProvider>
+        <Analytics />
       </body>
     </html>
   );
