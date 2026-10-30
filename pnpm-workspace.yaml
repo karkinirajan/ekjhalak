@@ -35,6 +35,10 @@ allowBuilds:
 #   js-yaml  < 4.3.1   — quadratic CPU on `!!omap`, reached through eslint.
 #                        Lint-time only.
 #   source-map-js < 1.2.2 — ReDoS, reached through postcss. Build-time only.
+#   zod      < 4.6.6   — memory exhaustion on oversized constrained collections
+#                        (GHSA-mrhx-c7xc-m3w5), reached through
+#                        eslint-config-next > eslint-plugin-react-hooks.
+#                        Lint-time only.
 #   brace-expansion is NOT pinned, and the attempt is worth recording: the
 #   advisory spans two disjoint ranges (<1.1.20 and >=4.0.0 <5.0.11) and the
 #   tree holds both majors, because minimatch@3 wants ^1 and minimatch@10 wants
@@ -69,6 +73,7 @@ overrides:
   js-yaml: ">=4.3.1"
   postcss: ">=8.5.23"
   source-map-js: ">=1.2.2"
+  zod: ">=4.6.6"
 # One advisory is ignored, by id, with its reason.
 #
 # GHSA-vfj7-8cjw-p6xm (braces, stack exhaustion on deeply nested patterns) has
