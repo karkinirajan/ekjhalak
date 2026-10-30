@@ -8,7 +8,10 @@
 //         GET.
 //
 //   POST  anything else trusted — a systemd timer, a person with curl —
-//         authenticated with `?secret=` against REVALIDATE_SECRET.
+//         authenticated against REVALIDATE_SECRET. Only /api/revalidate has a
+//         POST, and it reads `?secret=` for the callers it already has. New
+//         routes are GET-only on CRON_SECRET in a header: REVALIDATE_SECRET
+//         purges a cache, and should not also be able to send email.
 //
 // Both fail closed. The first version of the revalidate route skipped the check
 // entirely when its secret was unset — "allow freely (dev/staging)" — which

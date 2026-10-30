@@ -309,8 +309,11 @@ const ledgerBefore = (await db.query("SELECT count(*)::int n FROM digest_deliver
 res = await cron.GET(req(`${base}/api/cron/digest?dry=1`, { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } }));
 body = await res.json();
 check("cron GET with CRON_SECRET and ?dry=1 reports without sending", res.status === 200 && body.status === "dry-run" && body.stories === 1, `${res.status} ${JSON.stringify(body)}`);
-res = await cron.POST(req(`${base}/api/cron/digest?dry=1&secret=${process.env.CRON_SECRET}`, { method: "POST" }));
-check("the GET secret does not open the POST door", res.status === 401, String(res.status));
+check("the digest route has no POST, so the cache-purge secret cannot send mail", cron.POST === undefined, typeof cron.POST);
+res = await cron.GET(req(`${base}/api/cron/digest?dry=1`, { headers: { authorization: `Bearer ${process.env.REVALIDATE_SECRET}` } }));
+check("the cache-purge secret is refused on the digest's GET too", res.status === 401, String(res.status));
+res = await cron.GET(req(`${base}/api/cron/digest?dry=1&secret=${process.env.CRON_SECRET}`));
+check("a secret in the query string is not accepted at all", res.status === 401, String(res.status));
 check("dry runs wrote nothing to the ledger", ledgerBefore === (await db.query("SELECT count(*)::int n FROM digest_deliveries")).rows[0].n);
 const keep = process.env.CRON_SECRET;
 delete process.env.CRON_SECRET;
