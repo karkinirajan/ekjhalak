@@ -24,7 +24,8 @@
     "check:seo": "node scripts/check-seo.mjs",
     "build:turbo": "next build",
     "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots"
+    "test:visual:update": "playwright test --update-snapshots",
+    "test:visual:update:ci": "node scripts/update-visual-baselines.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

@@ -170,12 +170,18 @@ jobs:
       - name: Install Playwright's Chromium
         run: npx playwright install --with-deps chromium
 
-      # Baselines in tests/visual/__snapshots__ were generated on Linux, the
-      # same OS this runs on, specifically so a PR can't pass locally on a
-      # contributor's Mac and then fail here on font-rendering noise. If this
-      # step drifts for a real design change, regenerate with
-      # `pnpm run test:visual:update` and commit the new PNGs — never bump
-      # `maxDiffPixelRatio` in playwright.config.ts to make a real diff pass.
+      # Baselines in tests/visual/__snapshots__ must be generated where this
+      # runs — Ubuntu — or a PR can pass on a contributor's machine and fail
+      # here on font-rendering noise. "Linux" is not enough: the same Chromium
+      # on another distribution lays a page out a fraction of a pixel
+      # differently, and a screenshot whose *dimensions* differ cannot be saved
+      # by any tolerance ("Expected 1216px by 439px, received 1216px by 438px").
+      #
+      # Regenerate with `pnpm run test:visual:update:ci`: it renders in the
+      # Playwright Ubuntu image for the installed version, re-runs the suite
+      # there to prove it passes, and copies the PNGs back. Commit them.
+      # `test:visual:update` on a workstation is for experiments only. And never
+      # bump `maxDiffPixelRatio` in playwright.config.ts to make a real diff pass.
       - name: Visual regression
         run: pnpm run test:visual
 
