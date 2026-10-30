@@ -67,12 +67,26 @@ const PORT = 9333;
  *
  * CHROME_PATH still wins outright, so an unusual install needs no change here.
  */
+function findPlaywrightChrome() {
+  const cacheDir = join(homedir(), ".cache", "ms-playwright");
+  if (!existsSync(cacheDir)) return null;
+  for (const entry of readdirSync(cacheDir).sort().reverse()) {
+    if (!entry.startsWith("chromium-")) continue;
+    const bin = join(cacheDir, entry, "chrome-linux64", "chrome");
+    if (existsSync(bin)) return bin;
+  }
+  return null;
+}
+
 const CHROME_CANDIDATES = [
   process.env.CHROME_PATH,
   "google-chrome-stable",
   "google-chrome",
   "chromium",
   "chromium-browser",
+  findPlaywrightChrome(),
+  "brave",
+  "brave-browser",
 ].filter(Boolean);
 
 function resolveChrome() {
