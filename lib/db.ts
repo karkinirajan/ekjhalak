@@ -8,6 +8,7 @@ import "server-only";
 
 import { Pool } from "pg";
 
+import { SUPABASE_ROOT_CA } from "./db-ca";
 import { envString } from "./env";
 
 /**
@@ -47,6 +48,28 @@ function isLocal(connectionString: string): boolean {
   }
 }
 
+/** Is this a Supabase-hosted database — pooler (*.supabase.com) or direct (*.supabase.co)? */
+function isSupabase(connectionString: string): boolean {
+  try {
+    const host = new URL(connectionString).hostname;
+    return host.endsWith(".supabase.com") || host.endsWith(".supabase.co");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * TLS settings for a connection string.
+ *
+ * Local gets none. Supabase gets verification against its own root CA, which is
+ * in no default trust store. Every other host gets verification against the
+ * system store — the CA is deliberately not applied to hosts it did not sign.
+ */
+function sslFor(connectionString: string): true | { ca: string } | undefined {
+  if (isLocal(connectionString)) return undefined;
+  return isSupabase(connectionString) ? { ca: SUPABASE_ROOT_CA } : true;
+}
+
 export function pool(): Pool | null {
   const connectionString = envString("DATABASE_URL");
   if (!connectionString) return null;
@@ -66,8 +89,8 @@ export function pool(): Pool | null {
       // including an attacker's, so it buys encryption against a passive
       // listener and nothing at all against an active one. A managed provider
       // with a private CA should have its CA added here rather than have
-      // verification turned off for every host.
-      ssl: isLocal(connectionString) ? undefined : true,
+      // verification turned off for every host — see sslFor and lib/db-ca.ts.
+      ssl: sslFor(connectionString),
     });
 
     // An idle client that errors — the server restarted, the network dropped —
