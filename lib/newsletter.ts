@@ -335,3 +335,105 @@ export async function addSubscriber(email: string): Promise<DeliveryOutcome> {
 export function canSendMail(): boolean {
   return Boolean(resendKey());
 }
+
+// ── Digest mail ─────────────────────────────────────────────────────────────
+//
+// One message per reader rather than one broadcast, because each carries its own
+// unsubscribe link and the database — not Resend's audience — is the list.
+// Resend's batch endpoint takes up to 100 messages in a single request, which is
+// what keeps a send inside its rate limit.
+
+/** Resend's ceiling on one batch request. */
+export const MAX_BATCH = 100;
+
+export interface DigestMessage {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  headers: Record<string, string>;
+}
+
+/**
+ * How a send ended.
+ *
+ * `retryable` is the distinction the caller acts on: a throttle or an outage is
+ * worth trying again later, a rejected message is not, and a rejected *batch*
+ * means one message in it is bad — which says nothing about the other ninety-nine.
+ */
+export type SendResult =
+  | { ok: true }
+  | { ok: false; retryable: boolean; status: number | null };
+
+function digestPayload(message: DigestMessage) {
+  return {
+    from: fromAddress(),
+    to: [message.to],
+    reply_to: replyToAddress(),
+    subject: message.subject,
+    html: message.html,
+    text: message.text,
+    headers: message.headers,
+  };
+}
+
+async function submit(
+  path: string,
+  body: unknown,
+  idempotencyKey: string,
+): Promise<SendResult> {
+  const res = await resendFetch(path, {
+    method: "POST",
+    body: JSON.stringify(body),
+    // A request that timed out may still have been accepted. The same key makes
+    // the retry a replay of the first answer rather than a second send.
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+
+  if (!res) return { ok: false, retryable: true, status: null };
+  if (res.ok) return { ok: true };
+
+  console.error(
+    `[newsletter] Resend rejected a digest send: ${res.status} ${await res
+      .text()
+      .catch(() => "")}`.slice(0, 300),
+  );
+  return {
+    ok: false,
+    retryable: res.status === 429 || res.status >= 500,
+    status: res.status,
+  };
+}
+
+/** Up to MAX_BATCH digest messages in one request. */
+export function sendDigestBatch(
+  messages: DigestMessage[],
+  idempotencyKey: string,
+): Promise<SendResult> {
+  return submit("/emails/batch", messages.map(digestPayload), idempotencyKey);
+}
+
+/** One digest message — the fallback when a batch is rejected and one is to blame. */
+export function sendDigestMessage(
+  message: DigestMessage,
+  idempotencyKey: string,
+): Promise<SendResult> {
+  return submit("/emails", digestPayload(message), idempotencyKey);
+}
+
+/**
+ * Mirror an unsubscribe to the Resend audience.
+ *
+ * Best effort and silent: the database is the list and has already been written,
+ * and the digest is sent from it, so a failure here cannot cause another email.
+ * It matters only to anyone who sends from the Resend dashboard directly.
+ */
+export async function unsubscribeContact(email: string): Promise<void> {
+  if (!resendKey()) return;
+  const audienceId = await ensureAudienceId();
+  if (!audienceId) return;
+  await resendFetch(
+    `/audiences/${audienceId}/contacts/${encodeURIComponent(email)}`,
+    { method: "PATCH", body: JSON.stringify({ unsubscribed: true }) },
+  );
+}

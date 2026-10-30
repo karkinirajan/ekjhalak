@@ -252,6 +252,36 @@ ALTER TABLE ONLY public.subscription_events
 
 
 --
+-- Name: digest_deliveries; Type: TABLE; Schema: public; Owner: -
+--
+-- Added by hand, not part of the dump above it: the daily digest's delivery
+-- ledger, one row per subscriber per digest date (lib/digest-store.ts). It is
+-- what lets the cron run more than once a morning without mailing anyone twice.
+-- Placed last because it references subscribers, whose primary key is created
+-- above. Re-dump this file from a database that has it applied to replace this
+-- block.
+--
+
+CREATE TABLE public.digest_deliveries (
+    digest_date date NOT NULL,
+    subscriber_id bigint NOT NULL,
+    status text NOT NULL,
+    attempted_at timestamp with time zone DEFAULT now() NOT NULL,
+    error text,
+    CONSTRAINT digest_deliveries_status_check CHECK ((status = ANY (ARRAY['sending'::text, 'sent'::text, 'failed'::text]))),
+    CONSTRAINT digest_deliveries_pkey PRIMARY KEY (digest_date, subscriber_id),
+    CONSTRAINT digest_deliveries_subscriber_id_fkey FOREIGN KEY (subscriber_id) REFERENCES public.subscribers(id) ON DELETE CASCADE
+);
+
+
+--
+-- Name: digest_deliveries_date_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX digest_deliveries_date_status_idx ON public.digest_deliveries USING btree (digest_date, status);
+
+
+--
 -- PostgreSQL database dump complete
 --
 

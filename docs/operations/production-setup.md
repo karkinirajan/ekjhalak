@@ -258,7 +258,88 @@ Groq quota re-summarizing stories that have not changed.
 
 ---
 
-## 6. Post-deploy verification
+## 6. The daily digest
+
+Every morning the site emails each confirmed subscriber the last 24 hours of
+stories: the top 25 by how many outlets ran them, split into Nepal and World,
+in the reader's own language, with a personal unsubscribe link (and the
+one-click `List-Unsubscribe` header mail clients show as a button).
+
+### 6.1 Database
+
+Apply both migrations, in order, to the production database. They are
+re-runnable and add the two subscriber tables and the delivery ledger:
+
+```bash
+psql "$DATABASE_URL" -f db/migrations/0001_newsletter_tables.sql
+psql "$DATABASE_URL" -f db/migrations/0002_digest_deliveries.sql
+```
+
+On Supabase, paste each file into the SQL editor instead
+(<https://supabase.com/dashboard/project/_/sql/new>). Both turn on row level
+security so the address list is not readable through Supabase's REST API; the
+app connects as `postgres` and is unaffected.
+
+### 6.2 Variables
+
+Nothing new is required — the digest needs `DATABASE_URL`, `RESEND_API_KEY`,
+`NEWSLETTER_SECRET` and `CRON_SECRET`, all set above. Set them wherever the site
+is actually hosted: production answers with `server: Vercel`, so that is Vercel →
+Project → Settings → Environment Variables (the Netlify wording elsewhere in this
+file is out of date). Two optional ones:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DIGEST_MAX_STORIES` | 25 | Stories per email |
+| `DIGEST_BUDGET_MS` | 25000 | Time one run may spend sending before it stops and leaves the rest to the next trigger |
+
+### 6.3 Schedule (Cloudflare Cron Triggers)
+
+`cloudflare/worker.mjs` runs the digest when a trigger fires with one of the
+expressions in its `DIGEST_CRONS`. Add **all three** under Workers → `ekjhalak`
+→ Settings → Triggers → Cron Triggers (the strings must match exactly):
+
+| Expression (UTC) | Nepal time |
+|---|---|
+| `15 1 * * *` | 07:00 |
+| `30 1 * * *` | 07:15 |
+| `45 1 * * *` | 07:30 |
+
+Three, not one, on purpose: each run claims only readers who have not had
+today's digest, so the second and third find nothing to do — unless the first
+was cut short by `DIGEST_BUDGET_MS` or a provider throttle, in which case they
+finish it. Nobody is mailed twice. The Worker needs the `CRON_SECRET` secret
+(and `ORIGIN_URL` if the site is not at the default origin). Any other
+scheduler works too: `GET /api/cron/digest` with `Authorization: Bearer
+$CRON_SECRET`.
+
+### 6.4 Check it before the first morning
+
+```bash
+# What a run would do — stories picked and readers addressed. Sends nothing.
+curl -s "https://ekjhalak.news/api/cron/digest?dry=1" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Expect `"status":"dry-run"` with a story count and the number of confirmed
+subscribers. `503` means a prerequisite is missing and the body's `reason` says
+which (`no-database`, `no-mail-transport`, `no-signing-key`). The first real
+send is the 07:00 trigger; its result is in the Worker's logs as
+`[worker] GET /api/cron/digest -> 200 {...}`.
+
+### 6.5 Limits worth knowing
+
+- **Resend's plan caps daily sending.** A list larger than the cap cannot be
+  mailed in one morning; check the plan before the list grows.
+- **A bounced address is retried** at each of the day's three triggers (and
+  tomorrow) until its status is changed to `bounced` in `subscribers`. There is
+  no bounce webhook yet.
+- **The unsubscribe endpoint's rate limit is per instance**, like the subscribe
+  endpoint's (see *Known gap*). The token is what protects it.
+
+---
+
+## 7. Post-deploy verification
 
 Run these against production once the above is done:
 

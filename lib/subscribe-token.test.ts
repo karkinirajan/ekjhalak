@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   createConfirmationToken,
+  createUnsubscribeToken,
   isTokenSigningConfigured,
   verifyConfirmationToken,
+  verifyUnsubscribeToken,
 } from "./subscribe-token";
 
 // A static import is safe here because the module reads NEWSLETTER_SECRET
@@ -83,4 +85,56 @@ test("tokens round-trip addresses containing plus tags and dots", () => {
   const email = "first.last+news@example.co.uk";
   const token = createConfirmationToken(email)!;
   assert.deepEqual(verifyConfirmationToken(token), { ok: true, email });
+});
+
+test("an unsubscribe token verifies to the address it was issued for", () => {
+  const token = createUnsubscribeToken("reader@example.com")!;
+  assert.deepEqual(verifyUnsubscribeToken(token), {
+    ok: true,
+    email: "reader@example.com",
+  });
+});
+
+test("an unsubscribe token carries no expiry in its payload", () => {
+  // A link in an email from years ago must still let the reader leave, so the
+  // verifier has no clock to consult — there is nothing in the payload to compare.
+  const token = createUnsubscribeToken("reader@example.com")!;
+  const payload = JSON.parse(
+    Buffer.from(token.split(".")[0]!.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString(),
+  );
+  assert.equal("x" in payload, false);
+  assert.equal(verifyUnsubscribeToken(token).ok, true);
+});
+
+test("the two kinds of token are not interchangeable", () => {
+  const unsubscribe = createUnsubscribeToken("reader@example.com")!;
+  const confirmation = createConfirmationToken("reader@example.com")!;
+  assert.deepEqual(verifyConfirmationToken(unsubscribe), {
+    ok: false,
+    reason: "malformed",
+  });
+  assert.deepEqual(verifyUnsubscribeToken(confirmation), {
+    ok: false,
+    reason: "malformed",
+  });
+});
+
+test("a tampered unsubscribe token is rejected", () => {
+  const token = createUnsubscribeToken("reader@example.com")!;
+  const [, signature] = token.split(".");
+  const forged = Buffer.from(JSON.stringify({ v: "u1", e: "victim@example.com" }))
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  assert.deepEqual(verifyUnsubscribeToken(`${forged}.${signature}`), {
+    ok: false,
+    reason: "bad-signature",
+  });
+});
+
+test("malformed unsubscribe tokens are rejected rather than throwing", () => {
+  for (const bad of ["", ".", "nodot", "a.", ".b", "!!!.???"]) {
+    assert.equal(verifyUnsubscribeToken(bad).ok, false);
+  }
 });

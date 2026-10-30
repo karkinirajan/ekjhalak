@@ -71,3 +71,18 @@ export function checkEmail(raw: unknown): EmailCheck {
 
   return { ok: true, email };
 }
+
+/**
+ * An address with its local part hidden, for showing back to the person it
+ * belongs to — `reader@example.com` becomes `r•••••@example.com`.
+ *
+ * The unsubscribe page prints the address so a reader with several inboxes can
+ * see which one they are leaving, but the page is reachable by anyone holding the
+ * link, and a forwarded email should not hand the whole address to whoever
+ * opens it.
+ */
+export function maskEmail(email: string): string {
+  const at = email.lastIndexOf("@");
+  if (at < 1) return "•••";
+  return `${email[0]}${"•".repeat(Math.min(at - 1, 5))}${email.slice(at)}`;
+}

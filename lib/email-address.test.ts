@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { checkEmail } from "./email-address";
+import { checkEmail, maskEmail } from "./email-address";
 import { rateLimit } from "./rate-limit";
 
 test("checkEmail accepts ordinary addresses", () => {
@@ -89,4 +89,21 @@ test("rateLimit keys are independent", () => {
   assert.equal(rateLimit(a, 1, 60_000, now).allowed, true);
   assert.equal(rateLimit(a, 1, 60_000, now).allowed, false);
   assert.equal(rateLimit(b, 1, 60_000, now).allowed, true);
+});
+
+test("maskEmail hides the local part but keeps the domain and first letter", () => {
+  assert.equal(maskEmail("reader@example.com"), "r•••••@example.com");
+  assert.equal(maskEmail("ab@example.com"), "a•@example.com");
+  assert.equal(maskEmail("a@example.com"), "a@example.com");
+});
+
+test("maskEmail never reveals more than one character of a long local part", () => {
+  const masked = maskEmail("verylongaddress+tag@example.com");
+  assert.equal(masked, "v•••••@example.com");
+  assert.ok(!masked.includes("verylong"));
+});
+
+test("maskEmail copes with input that is not an address", () => {
+  assert.equal(maskEmail("no-at-sign"), "•••");
+  assert.equal(maskEmail(""), "•••");
 });

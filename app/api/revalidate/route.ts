@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
-import { secretsMatch } from "@/lib/secret-compare";
+import { bearerToken, isCronAuthorized } from "@/lib/cron-auth";
 
 /**
  * On-demand cache invalidation for the news feed.
@@ -22,16 +22,8 @@ import { secretsMatch } from "@/lib/secret-compare";
  * 401; only an explicitly non-production NODE_ENV opens the door.
  */
 
-function isAuthorized(method: "GET" | "POST", presented: string | null) {
-  const expected =
-    method === "GET" ? process.env.CRON_SECRET : process.env.REVALIDATE_SECRET;
-
-  if (expected) return secretsMatch(presented, expected);
-
-  // No secret configured: allowed only outside production, where there is
-  // nothing to protect and requiring one would make local work tedious.
-  return process.env.NODE_ENV !== "production";
-}
+// The check itself lives in lib/cron-auth.ts, shared with every other scheduled
+// route so the fail-closed rule above cannot drift between them.
 
 function purge() {
   revalidateTag("news-feed", "max");
@@ -43,9 +35,7 @@ function purge() {
 }
 
 export async function GET(request: NextRequest) {
-  const bearer =
-    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
-  if (!isAuthorized("GET", bearer)) {
+  if (!isCronAuthorized("GET", bearerToken(request.headers))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return purge();
@@ -53,7 +43,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const secret = request.nextUrl.searchParams.get("secret");
-  if (!isAuthorized("POST", secret)) {
+  if (!isCronAuthorized("POST", secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return purge();

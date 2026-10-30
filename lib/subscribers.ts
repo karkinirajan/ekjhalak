@@ -193,6 +193,41 @@ export async function confirmSubscriber(
   }
 }
 
+/**
+ * Take an address off the list.
+ *
+ * `ok` means the address is not subscribed when this returns — whether this call
+ * removed it, it had already gone, or it was never there. All three are the same
+ * answer to the reader, and treating "already unsubscribed" as a failure would
+ * show an error to somebody who did exactly the right thing twice. `ok: false`
+ * is reserved for the one case where the list could not be written, which the
+ * reader must be told about because the next digest will still arrive.
+ */
+export async function unsubscribeSubscriber(
+  email: string,
+): Promise<{ ok: boolean }> {
+  if (!isDbConfigured()) return { ok: false };
+
+  try {
+    const updated = await query<{ id: string }>(
+      `UPDATE subscribers
+          SET status = 'unsubscribed',
+              unsubscribed_at = now()
+        WHERE email = $1 AND status <> 'unsubscribed'
+        RETURNING id`,
+      [normalize(email)],
+      TIMEOUT_MS,
+    );
+
+    const row = updated[0];
+    if (row) await logEvent(row.id, "unsubscribed", {});
+    return { ok: true };
+  } catch (err) {
+    console.warn("[subscribers] unsubscribe not recorded:", message(err));
+    return { ok: false };
+  }
+}
+
 /** How many people are actually subscribed. The one honest number. */
 export async function countConfirmed(): Promise<number | null> {
   if (!isDbConfigured()) return null;
